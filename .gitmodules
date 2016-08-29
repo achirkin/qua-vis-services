@@ -1,0 +1,3 @@
+[submodule "include/luci-connect"]
+	path = include/luci-connect
+	url = https://github.com/mtfranzen/luci-connect.git
