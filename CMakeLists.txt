@@ -1,17 +1,37 @@
 CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
 
+# CMAKE
+set (CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules")
+set (CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib")
+set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib")
+set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
+
 # Project
 project(quaviss)
-SET (VERSION_MAJOR 1)
-SET (VERSION_MINOR 0)
-SET (VERSION_PATCH 0)
-SET (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+set (VERSION_MAJOR 1)
+set (VERSION_MINOR 0)
+set (VERSION_PATCH 0)
+set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
-# Environment
+# Requirements
+find_package(Threads REQUIRED)
+find_package(Vulkan REQUIRED)
+
+# Headers
 include_directories (${PROJECT_SOURCE_DIR}/include)
-link_directories (${PROJECT_SOURCE_DIR}/lib)
+include_directories(${VULKAN_INCLUDE_DIR})
 
-# Subfolders
-add_subdirectory (bin)
-add_subdirectory (doc)
-add_subdirectory (test)
+# Linker
+link_directories (${PROJECT_SOURCE_DIR}/lib)
+link_libraries(${VULKAN_LIBRARY})
+
+# Compiler
+if(WIN32)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+else()
+    add_definitions(-std=c++14)
+endif()
+
+# Build
+add_executable(Initializer "${CMAKE_SOURCE_DIR}/src/initializer.cc")
