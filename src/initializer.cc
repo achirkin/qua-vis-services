@@ -1,7 +1,7 @@
 #include "qua-vis/initializer.h"
 
 void Initializer::Load() {
-
+  
 }
 
 int main(int argc, char** argv) {
