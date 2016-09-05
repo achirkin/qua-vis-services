@@ -27,6 +27,7 @@ void Context::InitializeVkInstance() {
     VK_API_VERSION_1_0 // vk version
   };
 
+  // TODO: Check if debug during instance creation and add glfw extension
   VkInstanceCreateInfo vkInstanceCreateInfo = VkInstanceCreateInfo {
     VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // type (see documentation)
     nullptr, // next structure (see documentation)
@@ -49,6 +50,16 @@ void Context::InitializeVkInstance() {
 }
 
 void Context::InitializeVkPhysicalDevice() {
+  // The method enumerates all available physical devies and chooses the
+  // final device using the following priorities:
+  // - choose devices with compute & graphics capability
+  // - ...
+  // - vkPhysicalDeviceExtensions
+  // - vkPhysicalDeviceFeatures
+  // - vkPhysicalDeviceFormats
+  // - vkPhysicalDeviceType: integrated gpu > discrete gpu > virtual gpu > cpu
+  // - vkPhysicalDeviceLimits: (...)
+  // - vkPhysicalDeviceMemoryProperties
   // TODO: Implement physical device initialization
 }
 

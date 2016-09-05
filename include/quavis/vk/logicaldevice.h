@@ -1,5 +1,5 @@
-#ifndef QUAVIS_LOGICALCONTEXT_H
-#define QUAVIS_LOGICALCONTEXT_H
+#ifndef QUAVIS_LOGICALDEVICE_H
+#define QUAVIS_LOGICALDEVICE_H
 
 namespace quavis {
   namespace vk {
