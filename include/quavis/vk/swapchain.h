@@ -3,7 +3,7 @@
 
 namespace quavis {
   namespace vk {
-    class SwapChain {
+    class Swapchain {
     };
   }
 }

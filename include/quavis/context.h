@@ -7,27 +7,25 @@
 #include "quavis/vk/swapchain.h"
 
 #include <vulkan/vulkan.h>
-#include <vector>
 #include <memory>
 
 namespace quavis {
   class Context {
   public:
-    Context() : physical_devices_(), logical_devices_() {
-
-    }
+    Context();
+    ~Context();
 
   private:
-    void initializeVkInstance();
-    void initializeVkPhysicalDevice();
-    void initializeVkLogicalDevice();
-    void initializeVkSwapChain();
-    void initializeVkPipeline();
+    void InitializeVkInstance();
+    void InitializeVkPhysicalDevice();
+    void InitializeVkLogicalDevice();
+    void InitializeVkPipeline();
+    void InitializeVkSwapChain();
 
-    std::vector<PhysicalDevice> physical_devices_;
-    std::vector<LogicalDevice> logical_devices_;
-    std::unique_ptr<Pipeline> pipeline_;
-    std::unique_ptr<Swapchain> swapchain_;
+    std::unique_ptr<vk::PhysicalDevice> physical_device_;
+    std::unique_ptr<vk::LogicalDevice> logical_device_;
+    std::unique_ptr<vk::Pipeline> pipeline_;
+    std::unique_ptr<vk::Swapchain> swapchain_;
   };
 }
 
