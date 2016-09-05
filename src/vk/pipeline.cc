@@ -1,1 +1,1 @@
-#include "qua-vis/vk/pipeline.h"
+#include "quavis/vk/pipeline.h"

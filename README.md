@@ -2,3 +2,4 @@
 
 * libvulkan-dev
 * libglm-dev
+* libglfw3-dev

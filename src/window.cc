@@ -1,1 +1,1 @@
-#include "qua-vis/window.h"
+#include "quavis/window.h"

@@ -1,1 +1,1 @@
-#include "qua-vis/vk/logicaldevice.h"
+#include "quavis/vk/logicaldevice.h"
