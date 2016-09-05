@@ -3,9 +3,10 @@
 
 // quavis version
 #include "quavis/version.h"
+#include "quavis/context.h"
 
 // vulkan base parts
-#include "quavis/context.h"
+#include "quavis/vk/result.h"
 #include "quavis/vk/physicaldevice.h"
 #include "quavis/vk/logicaldevice.h"
 #include "quavis/vk/pipeline.h"

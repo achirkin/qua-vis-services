@@ -3,6 +3,7 @@
 
 #include "quavis/version.h"
 
+#include "quavis/vk/result.h"
 #include "quavis/vk/physicaldevice.h"
 #include "quavis/vk/logicaldevice.h"
 #include "quavis/vk/pipeline.h"
@@ -28,6 +29,8 @@ namespace quavis {
     std::unique_ptr<vk::LogicalDevice> logical_device_;
     std::unique_ptr<vk::Pipeline> pipeline_;
     std::unique_ptr<vk::Swapchain> swapchain_;
+
+    VkInstance vk_instance_;
   };
 }
 

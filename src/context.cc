@@ -11,7 +11,7 @@ Context::Context() {
 }
 
 Context::~Context() {
-  // Implement context destructor
+  vkDestroyInstance(this->vk_instance_, nullptr);
 }
 
 void Context::InitializeVkInstance() {
@@ -27,6 +27,25 @@ void Context::InitializeVkInstance() {
     VK_API_VERSION_1_0 // vk version
   };
 
+  VkInstanceCreateInfo vkInstanceCreateInfo = VkInstanceCreateInfo {
+    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // type (see documentation)
+    nullptr, // next structure (see documentation)
+    0, // flags, reserver by vulkan api for future api versions
+    &vkApplicationInfo, // application info (see aboive)
+    0, // number of layers (atm no debug/validation layers used)
+    nullptr, // layer names
+    0, // number of extensions (atm no extensions used, here could be glfw)
+    nullptr // extension names
+  };
+
+  // create the instance object
+  vk::handleVkResult(
+    vkCreateInstance(
+      &vkInstanceCreateInfo, // creation info (see above)
+      nullptr, // allocation handler (gives specific info on memory locations)
+      &this->vk_instance_ // pointer where to store the instance
+    )
+  );
 }
 
 void Context::InitializeVkPhysicalDevice() {
