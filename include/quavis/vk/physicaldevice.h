@@ -23,9 +23,12 @@ namespace quavis {
       // descriptors
       VkPhysicalDeviceFeatures vkPhysicalDeviceFeatures_;
       VkPhysicalDeviceMemoryProperties vkPhysicalDeviceMemoryProperties_;
-      VkFormatProperties vkFormatProperties_;
-      VkImageFormatProperties vkImageFormatProperties_;
-      VkQueueFamilyProperties vkQueueFamilyProperties_;
+
+      // descriptor sets
+      // TODO: Add extension descriptor set to physical device
+      // TODO: Add format descriptor set to physical device
+      // TODO: Add image format descriptor set to physical device
+      // TODO: Add queue descriptor set to physical device
     };
   }
 }

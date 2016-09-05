@@ -7,6 +7,11 @@ namespace quavis {
   namespace vk {
     namespace {
       bool handleVkResult(VkResult vkResult) {
+        if (vkResult < 0)
+          throw "An error occurred in the gpu initialization";
+        // TODO: add better error handling
+
+        /*
         switch (vkResult) {
           case VK_SUCCESS:
           case VK_NOT_READY:
@@ -33,6 +38,7 @@ namespace quavis {
             // TODO: Handle vulkan error results
           break;
         }
+        */
       }
     }
   }

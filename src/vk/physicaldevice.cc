@@ -2,8 +2,6 @@
 
 using namespace quavis::vk;
 
-// TODO: Add extension selection for device, format properties, image format
-// properties, queues
 PhysicalDevice::PhysicalDevice(VkPhysicalDevice vkPhysicalDevice) {
   this->vkPhysicalDevice_ = vkPhysicalDevice;
 
