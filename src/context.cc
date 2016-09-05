@@ -15,6 +15,17 @@ Context::~Context() {
 }
 
 void Context::InitializeVkInstance() {
+  uint32_t version = VK_MAKE_VERSION(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH);
+
+  VkApplicationInfo vkApplicationInfo = VkApplicationInfo {
+    VK_STRUCTURE_TYPE_APPLICATION_INFO, // type (see documentation)
+    nullptr, // next structure (see documentation)
+    "Quavis", // application name
+    version, // quavis version
+    "Quavis", // engine name
+    version, // engine version,
+    VK_API_VERSION_1_0 // vk version
+  };
 
 }
 

@@ -8,8 +8,8 @@ set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 
 # Project
 project(quaviss)
-set (VERSION_MAJOR 1)
-set (VERSION_MINOR 0)
+set (VERSION_MAJOR 0)
+set (VERSION_MINOR 1)
 set (VERSION_PATCH 0)
 set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
@@ -41,6 +41,12 @@ if (WIN32)
 else (WIN32)
     add_definitions (-std=c++14)
 endif (WIN32)
+
+# Configure
+configure_file(
+  "${CMAKE_SOURCE_DIR}/cmake/config/quavis/version.h.in"
+  "${CMAKE_SOURCE_DIR}/include/quavis/version.h"
+)
 
 # Build
 add_library(quavis SHARED

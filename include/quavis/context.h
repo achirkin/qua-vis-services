@@ -1,6 +1,8 @@
 #ifndef QUAVIS_CONTEXT_H
 #define QUAVIS_CONTEXT_H
 
+#include "quavis/version.h"
+
 #include "quavis/vk/physicaldevice.h"
 #include "quavis/vk/logicaldevice.h"
 #include "quavis/vk/pipeline.h"
