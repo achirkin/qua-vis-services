@@ -14,10 +14,8 @@ public:
 
   void initializeVulkan() {
     this->context_ = new quavis::Context();
-
-    while (1) {};
   }
-  
+
   ~VulkanTest() {
     delete this->context_;
   }

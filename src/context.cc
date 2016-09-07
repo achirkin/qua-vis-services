@@ -10,8 +10,10 @@ Context::Context() {
 }
 
 Context::~Context() {
-  vkDestroyInstance(this->vk_instance_, nullptr);
+  vkDeviceWaitIdle(this->vk_logical_device_);
   vkDestroyDevice(this->vk_logical_device_, nullptr);
+  
+  vkDestroyInstance(this->vk_instance_, nullptr);
 }
 
 void Context::InitializeVkInstance() {
@@ -226,7 +228,7 @@ void Context::InitializeVkLogicalDevice() {
       &this->vk_logical_device_ // the allocated memory for the logical device
     )
   );
-  
+
   // get graphics queue
   vkGetDeviceQueue(
     this->vk_logical_device_, // the logical device
