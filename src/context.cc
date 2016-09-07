@@ -10,9 +10,15 @@ Context::Context() {
 }
 
 Context::~Context() {
+  // destroy shaders
+  vkDestroyShaderModule(this->vk_logical_device_, this->vk_vertex_shader_, nullptr);
+  vkDestroyShaderModule(this->vk_logical_device_, this->vk_fragment_shader_, nullptr);
+
+  // destroy logical device
   vkDeviceWaitIdle(this->vk_logical_device_);
   vkDestroyDevice(this->vk_logical_device_, nullptr);
-  
+
+  // destroy instance
   vkDestroyInstance(this->vk_instance_, nullptr);
 }
 
@@ -255,5 +261,39 @@ void Context::InitializeVkLogicalDevice() {
 }
 
 void Context::InitializeVkPipeline() {
-  // TODO: Implement pipeline initialization
+  // create vertex shader
+  VkShaderModuleCreateInfo vertex_shader_info = {
+    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->vertex_shader_code_.size(), // vertex shader size
+    (uint32_t*)this->vertex_shader_code_.data() // vertex shader code
+  };
+
+  vk::handleVkResult(
+    vkCreateShaderModule(
+      this->vk_logical_device_, // the logical device
+      &vertex_shader_info, // shader meta data
+      nullptr, // allocation callback (see documentation)
+      &this->vk_vertex_shader_ // the allocated memory for the logical device
+    )
+  );
+
+  // create fragment shader
+  VkShaderModuleCreateInfo fragment_shader_info = {
+    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->fragment_shader_code_.size(), // fragment shader size
+    (uint32_t*)this->fragment_shader_code_.data() // fragment shader code
+  };
+
+  vk::handleVkResult(
+    vkCreateShaderModule(
+      this->vk_logical_device_, // the logical device
+      &fragment_shader_info, // shader meta data
+      nullptr, // allocation callback (see documentation)
+      &this->vk_fragment_shader_ // the allocated memory for the logical device
+    )
+  );
 }
