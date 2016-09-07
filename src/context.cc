@@ -6,6 +6,7 @@ Context::Context() {
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
+  this->InitializeVkShaderModules();
   this->InitializeVkPipeline();
 }
 
@@ -260,7 +261,7 @@ void Context::InitializeVkLogicalDevice() {
   );
 }
 
-void Context::InitializeVkPipeline() {
+void Context::InitializeVkShaderModules() {
   // create vertex shader
   VkShaderModuleCreateInfo vertex_shader_info = {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
@@ -296,4 +297,29 @@ void Context::InitializeVkPipeline() {
       &this->vk_fragment_shader_ // the allocated memory for the logical device
     )
   );
+}
+
+void Context::InitializeVkPipeline() {
+  // create pipeline shader stages
+  VkPipelineShaderStageCreateInfo vertex_shader_stage_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, // sType (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_SHADER_STAGE_VERTEX_BIT, // stage flag
+    this->vk_vertex_shader_, // shader module
+    "main", // the pipeline's name
+    nullptr // VkSpecializationInfo (see documentation)
+  };
+
+  VkPipelineShaderStageCreateInfo fragment_shader_stage_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, // sType (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_SHADER_STAGE_FRAGMENT_BIT, // stage flag
+    this->vk_fragment_shader_, // shader module
+    "main", // the pipeline's name
+    nullptr // VkSpecializationInfo (see documentation)
+  };
+
+  VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_shader_stage_info, fragment_shader_stage_info};
 }

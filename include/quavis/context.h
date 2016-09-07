@@ -19,6 +19,7 @@ namespace quavis {
     void InitializeVkInstance();
     void InitializeVkPhysicalDevice();
     void InitializeVkLogicalDevice();
+    void InitializeVkShaderModules();
     void InitializeVkPipeline();
 
     VkInstance vk_instance_;
