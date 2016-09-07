@@ -116,8 +116,11 @@ void Context::InitializeVkPhysicalDevice() {
   }
 
   // Check if there are devices meeting the requirements
+  // if so, pick the first one (random)
   if (devices_set.size() == 0)
     throw "No suitible device";
+  else
+    this->vk_physical_device_ = *devices_set.begin();
 }
 
 void Context::InitializeVkLogicalDevice() {

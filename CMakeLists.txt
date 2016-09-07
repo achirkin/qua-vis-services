@@ -51,10 +51,6 @@ configure_file(
 # Build
 add_library(quavis SHARED
   "${CMAKE_SOURCE_DIR}/src/context.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/physicaldevice.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/logicaldevice.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/pipeline.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/swapchain.cc"
 )
 
 find_package(glfw3 3.2 REQUIRED)

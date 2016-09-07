@@ -2,12 +2,7 @@
 #define QUAVIS_CONTEXT_H
 
 #include "quavis/version.h"
-
 #include "quavis/vk/result.h"
-#include "quavis/vk/physicaldevice.h"
-#include "quavis/vk/logicaldevice.h"
-#include "quavis/vk/pipeline.h"
-#include "quavis/vk/swapchain.h"
 
 #include <vulkan/vulkan.h>
 #include <memory>
@@ -27,12 +22,8 @@ namespace quavis {
     void InitializeVkPipeline();
     void InitializeVkSwapChain();
 
-    std::unique_ptr<vk::PhysicalDevice> physical_device_;
-    std::unique_ptr<vk::LogicalDevice> logical_device_;
-    std::unique_ptr<vk::Pipeline> pipeline_;
-    std::unique_ptr<vk::Swapchain> swapchain_;
-
     VkInstance vk_instance_;
+    VkPhysicalDevice vk_physical_device_;
   };
 }
 

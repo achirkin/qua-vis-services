@@ -7,10 +7,6 @@
 
 // vulkan base parts
 #include "quavis/vk/result.h"
-#include "quavis/vk/physicaldevice.h"
-#include "quavis/vk/logicaldevice.h"
-#include "quavis/vk/pipeline.h"
-#include "quavis/vk/swapchain.h"
 
 // debugging parts
 #ifdef QUAVIS_DEBUG
