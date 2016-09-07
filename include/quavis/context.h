@@ -24,6 +24,15 @@ namespace quavis {
 
     VkInstance vk_instance_;
     VkPhysicalDevice vk_physical_device_;
+    VkDevice vk_logical_device_;
+
+    VkQueue vk_queue_graphics_;
+    VkQueue vk_queue_compute_;
+    VkQueue vk_queue_transfer_;
+
+    const std::vector<const char*> vk_logical_device_extension_names_ = {
+      VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
   };
 }
 
