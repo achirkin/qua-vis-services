@@ -11,6 +11,8 @@
 
 #include <vulkan/vulkan.h>
 #include <memory>
+#include <vector>
+#include <set>
 
 namespace quavis {
   class Context {
