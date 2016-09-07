@@ -53,7 +53,6 @@ add_library(quavis SHARED
   "${CMAKE_SOURCE_DIR}/src/context.cc"
 )
 
-find_package(glfw3 3.2 REQUIRED)
+add_definitions("-Wall -g")
 add_executable (testvulkan "${CMAKE_SOURCE_DIR}/test/vulkan.cc")
-target_link_libraries (testvulkan glfw)
-add_definitions (-DDEBUG -g)
+target_link_libraries (testvulkan quavis)

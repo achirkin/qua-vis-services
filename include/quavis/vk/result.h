@@ -2,6 +2,7 @@
 #define QUAVIS_VK_RESULT_H
 
 #include <vulkan/vulkan.h>
+#include <iostream>
 
 namespace quavis {
   namespace vk {
@@ -10,6 +11,7 @@ namespace quavis {
         if (vkResult < 0)
           throw "An error occurred in the gpu initialization";
         // TODO: add better error handling
+        return true;
       }
     }
   }

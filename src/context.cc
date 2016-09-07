@@ -7,7 +7,6 @@ Context::Context() {
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
   this->InitializeVkPipeline();
-  this->InitializeVkSwapChain();
 }
 
 Context::~Context() {
@@ -181,22 +180,23 @@ void Context::InitializeVkLogicalDevice() {
   // get index of suitible queue family
   // TODO: Maybe separate graphics, compute and transfer queue families
   uint32_t queue_family_index = 0;
-  float queue_family_priority = 1.0f;
   for (VkQueueFamilyProperties queue_family : queue_families) {
-    if (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT & VK_QUEUE_COMPUTE_BIT & VK_QUEUE_TRANSFER_BIT)
+    uint32_t requirements = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
+    if (queue_family.queueFlags & requirements)
       break;
     queue_family_index++;
   }
-
+  
   // Create graphics queue metadata
   // TODO: Seperate queue construction if multiple families are required
+  float queue_family_priorities[] = { 1.0f, 1.0f, 1.0f };
   VkDeviceQueueCreateInfo queue_create_info {
     VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType (see documentation)
     nullptr, // next structure (see documentation)
     0, // queue flags MUST be 0 (see documentation)
     queue_family_index, // queue family
     3, // number of queues: Graphics, Compute, Transfer
-    &queue_family_priority // queue priority
+    queue_family_priorities // queue priority
   };
 
   // Specify device features
@@ -210,7 +210,7 @@ void Context::InitializeVkLogicalDevice() {
     0, // flags (see documentation)
     1, // number of queue create info objects
     &queue_create_info, // queue meta data
-    1, // deprecated & ignored
+    0, // deprecated & ignored
     nullptr, // depcrecated & ignored
     (uint32_t)this->vk_logical_device_extension_names_.size(), // enabled extensions
     this->vk_logical_device_extension_names_.data(), // extension names
@@ -226,6 +226,7 @@ void Context::InitializeVkLogicalDevice() {
       &this->vk_logical_device_ // the allocated memory for the logical device
     )
   );
+
 
   // get graphics queue
   vkGetDeviceQueue(
@@ -250,10 +251,6 @@ void Context::InitializeVkLogicalDevice() {
     2, // the index of the queue we want < NUM_QUEUES_IN_FAMILY
     &this->vk_queue_transfer_ // the allocated memory for the queue
   );
-}
-
-void Context::InitializeVkSwapChain() {
-
 }
 
 void Context::InitializeVkPipeline() {

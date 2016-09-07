@@ -20,7 +20,6 @@ namespace quavis {
     void InitializeVkPhysicalDevice();
     void InitializeVkLogicalDevice();
     void InitializeVkPipeline();
-    void InitializeVkSwapChain();
 
     VkInstance vk_instance_;
     VkPhysicalDevice vk_physical_device_;
@@ -31,7 +30,6 @@ namespace quavis {
     VkQueue vk_queue_transfer_;
 
     const std::vector<const char*> vk_logical_device_extension_names_ = {
-      VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
   };
 }
