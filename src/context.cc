@@ -186,7 +186,7 @@ void Context::InitializeVkLogicalDevice() {
       break;
     queue_family_index++;
   }
-  
+
   // Create graphics queue metadata
   // TODO: Seperate queue construction if multiple families are required
   float queue_family_priorities[] = { 1.0f, 1.0f, 1.0f };
@@ -226,8 +226,7 @@ void Context::InitializeVkLogicalDevice() {
       &this->vk_logical_device_ // the allocated memory for the logical device
     )
   );
-
-
+  
   // get graphics queue
   vkGetDeviceQueue(
     this->vk_logical_device_, // the logical device
