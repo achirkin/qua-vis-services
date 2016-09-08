@@ -10,6 +10,9 @@ Context::Context() {
   this->InitializeVkRenderPass();
   this->InitializeVkGraphicsPipelineLayout();
   this->InitializeVkGraphicsPipeline();
+  // TODO: ComputePipeline
+  this->InitializeVkMemory();
+  this->InitializeVkCommandPool();
 }
 
 Context::~Context() {
@@ -57,7 +60,7 @@ void Context::InitializeVkInstance() {
   };
 
   // create the instance object
-  vk::handleVkResult(
+  debug::handleVkResult(
     vkCreateInstance(
       &vkInstanceCreateInfo, // creation info (see above)
       nullptr, // allocation handler (gives specific info on memory locations)
@@ -235,7 +238,7 @@ void Context::InitializeVkLogicalDevice() {
   };
 
   // create logical device
-  vk::handleVkResult(
+  debug::handleVkResult(
     vkCreateDevice(
       this->vk_physical_device_, // the physical device
       &device_create_info, // logical device metadata
@@ -281,7 +284,7 @@ void Context::InitializeVkShaderModules() {
     (uint32_t*)src_shaders_vert_spv // vertex shader code
   };
 
-  vk::handleVkResult(
+  debug::handleVkResult(
     vkCreateShaderModule(
       this->vk_logical_device_, // the logical device
       &vertex_shader_info, // shader meta data
@@ -299,7 +302,7 @@ void Context::InitializeVkShaderModules() {
     (uint32_t*)src_shaders_frag_spv // fragment shader code
   };
 
-  vk::handleVkResult(
+  debug::handleVkResult(
     vkCreateShaderModule(
       this->vk_logical_device_, // the logical device
       &fragment_shader_info, // shader meta data
@@ -378,7 +381,7 @@ void Context::InitializeVkRenderPass() {
     nullptr // dependencies
   };
 
-  vk::handleVkResult(
+  debug::handleVkResult(
     vkCreateRenderPass(
       this->vk_logical_device_,
       &render_pass_info,
@@ -401,7 +404,7 @@ void Context::InitializeVkGraphicsPipelineLayout() {
   };
 
   // Create pipeline layout
-  vk::handleVkResult(
+  debug::handleVkResult(
     vkCreatePipelineLayout(
       this->vk_logical_device_,
       &pipeline_layout_info,
@@ -573,7 +576,7 @@ void Context::InitializeVkGraphicsPipeline() {
     -1 // parent pipeline index
   };
 
-  vk::handleVkResult(
+  debug::handleVkResult(
     vkCreateGraphicsPipelines(
       this->vk_logical_device_, // logical device
       VK_NULL_HANDLE, // pipeline cache // TODO: Add pipeline cache (?)
@@ -583,4 +586,16 @@ void Context::InitializeVkGraphicsPipeline() {
       &this->vk_pipeline_ // allocated memory for the pipeline
     )
   );
+}
+
+void Context::InitializeVkMemory() {
+  // Create Images & ImageViews (color & depth)
+  // TODO: Create image & ImageView
+
+  // Create Framebuffers for color & stencil (color & depth)
+  // TODO: Create Framebuffers
+}
+
+void Context::InitializeVkCommandPool() {
+  // Create command pool
 }

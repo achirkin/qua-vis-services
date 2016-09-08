@@ -11,9 +11,21 @@
 #include <set>
 
 namespace quavis {
+  /**
+  * The Context class initializes and prepares the vulkan instance for fast
+  * computations on the graphics card.
+  */
   class Context {
   public:
+    /**
+    * Creates a new instance of the Context class. During its initialization,
+    * the vulkan devices and pipelines are prepared for rendering / computation.
+    */
     Context();
+
+    /**
+    * Destroy the object. All vulkan objects are cleanly removed here.
+    */
     ~Context();
 
   private:
@@ -24,6 +36,8 @@ namespace quavis {
     void InitializeVkRenderPass();
     void InitializeVkGraphicsPipeline();
     void InitializeVkGraphicsPipelineLayout();
+    void InitializeVkMemory();
+    void InitializeVkCommandPool();
 
     VkInstance vk_instance_;
     VkPhysicalDevice vk_physical_device_;

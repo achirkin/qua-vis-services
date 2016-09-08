@@ -5,7 +5,7 @@
 #include <iostream>
 
 namespace quavis {
-  namespace vk {
+  namespace debug {
     extern bool handleVkResult(VkResult vkResult) {
       std::cout << vkResult << std::endl;
       if (vkResult < 0)
