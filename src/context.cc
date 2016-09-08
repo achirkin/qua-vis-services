@@ -797,12 +797,36 @@ void Context::InitializeVkMemory() {
       this->vk_logical_device_, // the logical device
       &stencil_imageview_info, // info
       nullptr, // allocation callback
-      &this->vk_stencil_imageview_ // the offset in the memory
+      &this->vk_stencil_imageview_ // the allocated memory
     )
   );
 
   // Create Framebuffers for color & stencil (color & depth)
-  // TODO: Create Framebuffers
+  std::array<VkImageView, 2> attachments = {
+    this->vk_color_imageview_,
+    this->vk_stencil_imageview_
+  };
+
+  VkFramebufferCreateInfo framebuffer_info = {
+    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->vk_render_pass_, // render pass
+    attachments.size(), // attachment count
+    attachments.data(), // attachments
+    this->render_width_, // width
+    this->render_height_, // height
+    1 // layer count
+  };
+
+  debug::handleVkResult(
+    vkCreateFramebuffer(
+      this->vk_logical_device_, // the logical device
+      &framebuffer_info, // info
+      nullptr, // allocation callback
+      &this->vk_graphics_framebuffer_ // the allocated memory
+    )
+  );
 }
 
 void Context::InitializeVkCommandPool() {

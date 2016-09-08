@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <set>
+#include <array>
 
 namespace quavis {
   /**
@@ -67,6 +68,8 @@ namespace quavis {
     VkDeviceMemory vk_color_image_memory_;
     VkDeviceMemory vk_stencil_image_memory_;
 
+    // framebuffers
+    VkFramebuffer vk_graphics_framebuffer_;
 
     // meta data for initialization
     const std::vector<const char*> vk_logical_device_extension_names_ = {};
