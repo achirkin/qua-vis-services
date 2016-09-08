@@ -2,6 +2,7 @@
 #define QUAVIS_CONTEXT_H
 
 #include "quavis/version.h"
+#include "quavis/shaders.h"
 #include "quavis/vk/result.h"
 
 #include <vulkan/vulkan.h>

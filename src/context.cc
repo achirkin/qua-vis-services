@@ -277,8 +277,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    this->vertex_shader_code_.size(), // vertex shader size
-    (uint32_t*)this->vertex_shader_code_.data() // vertex shader code
+    src_shaders_vert_spv_len, // vertex shader size
+    (uint32_t*)src_shaders_vert_spv // vertex shader code
   };
 
   vk::handleVkResult(
@@ -295,8 +295,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    this->fragment_shader_code_.size(), // fragment shader size
-    (uint32_t*)this->fragment_shader_code_.data() // fragment shader code
+    src_shaders_frag_spv_len, // fragment shader size
+    (uint32_t*)src_shaders_frag_spv // fragment shader code
   };
 
   vk::handleVkResult(
