@@ -3,7 +3,7 @@
 
 #include "quavis/version.h"
 #include "quavis/shaders.h"
-#include "quavis/vk/result.h"
+#include "quavis/debug.h"
 
 #include <vulkan/vulkan.h>
 #include <memory>

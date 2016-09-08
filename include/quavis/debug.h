@@ -1,5 +1,5 @@
-#ifndef QUAVIS_VK_RESULT_H
-#define QUAVIS_VK_RESULT_H
+#ifndef QUAVIS_DEBUG_H
+#define QUAVIS_DEBUG_H
 
 #include <vulkan/vulkan.h>
 #include <iostream>
