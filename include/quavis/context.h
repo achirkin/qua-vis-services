@@ -20,7 +20,9 @@ namespace quavis {
     void InitializeVkPhysicalDevice();
     void InitializeVkLogicalDevice();
     void InitializeVkShaderModules();
+    void InitializeVkRenderPass();
     void InitializeVkGraphicsPipeline();
+    void InitializeVkGraphicsPipelineLayout();
 
     VkInstance vk_instance_;
     VkPhysicalDevice vk_physical_device_;
@@ -35,12 +37,19 @@ namespace quavis {
     VkShaderModule vk_vertex_shader_;
     VkShaderModule vk_fragment_shader_;
 
+    // pipeline
+    VkRenderPass vk_render_pass_;
+    VkPipelineLayout vk_pipeline_layout_;
+    VkPipeline vk_pipeline_;
+
     // meta data for initialization
     const std::vector<const char*> vk_logical_device_extension_names_ = {};
 
     // rendering attributes
     const uint32_t render_width_ = 1000.0f;
     const uint32_t render_height_ = 1000.0f;
+    const VkFormat color_format_ = VK_FORMAT_B8G8R8A8_UNORM;
+    const VkFormat stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
 
     // TODO: Find better way to encode shader code in library
     const std::string vertex_shader_code_ = "#version 450"

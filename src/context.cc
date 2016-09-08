@@ -7,10 +7,18 @@ Context::Context() {
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
   this->InitializeVkShaderModules();
+  this->InitializeVkRenderPass();
+  this->InitializeVkGraphicsPipelineLayout();
   this->InitializeVkGraphicsPipeline();
 }
 
 Context::~Context() {
+  // destroy render pass
+  vkDestroyRenderPass(this->vk_logical_device_, this->vk_render_pass_, nullptr);
+
+  // destroy pipeline
+  vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_pipeline_layout_, nullptr);
+
   // destroy shaders
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_vertex_shader_, nullptr);
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_fragment_shader_, nullptr);
@@ -204,7 +212,7 @@ void Context::InitializeVkLogicalDevice() {
     nullptr, // next structure (see documentation)
     0, // queue flags MUST be 0 (see documentation)
     queue_family_index, // queue family
-    3, // number of queues: Graphics, Compute, Transfer
+    3, // number of queues: Graphics, Compute, Transfer // TODO: Maybe add more queues for more parallelism (?)
     queue_family_priorities // queue priority
   };
 
@@ -301,6 +309,108 @@ void Context::InitializeVkShaderModules() {
   );
 }
 
+void Context::InitializeVkRenderPass() {
+  // create attachment descriptions for color / stencil
+  VkAttachmentDescription color_attachment_description = {
+    0, // flags (see documentation, 1 option)
+    this->color_format_, // color format
+    VK_SAMPLE_COUNT_1_BIT, // num samples per fragment
+    VK_ATTACHMENT_LOAD_OP_CLEAR, // operation when loading
+    VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
+    VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
+    VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
+    VK_IMAGE_LAYOUT_UNDEFINED, // initial layout
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // final layout (optimal for memory transfer)
+  };
+
+  VkAttachmentDescription stencil_attachment_description = {
+    0, // flags (see documentation, 1 option)
+    this->stencil_format_, // color format
+    VK_SAMPLE_COUNT_1_BIT, // num samples per fragment
+    VK_ATTACHMENT_LOAD_OP_CLEAR, // operation when loading
+    VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
+    VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
+    VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
+    VK_IMAGE_LAYOUT_UNDEFINED, // initial layout
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // final layout (optimal for memory transfer)
+  };
+
+  VkAttachmentDescription attachment_descriptions[] = {
+    color_attachment_description,
+    stencil_attachment_description
+  };
+
+  // create attachment refernces for color / stencil
+  VkAttachmentReference color_attachment_reference = {
+    0, // index
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // layout
+  };
+
+  VkAttachmentReference stencil_attachment_reference = {
+    1, // index
+    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // layout
+  };
+
+  // create subpass for attachments
+  VkSubpassDescription subpass_description = {
+    0, // flags (see documentation, must be 0)
+    VK_PIPELINE_BIND_POINT_GRAPHICS, // bind point (graphics / compute)
+    0, // input attachment count(0 for now) // TODO: Add correct vertex input
+    nullptr, // input attachments
+    1, // color attachment count
+    &color_attachment_reference, // color attachment references
+    nullptr, // resolve attachment references
+    &stencil_attachment_reference, // stencil attachment
+    0, // preserved attachment count
+    nullptr // preserved attachments
+  };
+
+  // create render pass
+  VkRenderPassCreateInfo render_pass_info = {
+    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags
+    2, // attachment count
+    attachment_descriptions, // attachment descriptions
+    1, // subpass count
+    &subpass_description, // subpass
+    0, // dependency count between subpasses
+    nullptr // dependencies
+  };
+
+  vk::handleVkResult(
+    vkCreateRenderPass(
+      this->vk_logical_device_,
+      &render_pass_info,
+      nullptr,
+      &this->vk_render_pass_
+    )
+  );
+}
+
+void Context::InitializeVkGraphicsPipelineLayout() {
+  // Define Pipeline layout
+  VkPipelineLayoutCreateInfo pipeline_layout_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    0, // layout count
+    nullptr, // layouts
+    0, // push constant range count
+    nullptr // push constant ranges
+  };
+
+  // Create pipeline layout
+  vk::handleVkResult(
+    vkCreatePipelineLayout(
+      this->vk_logical_device_,
+      &pipeline_layout_info,
+      nullptr,
+      &this->vk_pipeline_layout_
+    )
+  );
+}
+
 void Context::InitializeVkGraphicsPipeline() {
   // create pipeline shader stages
   VkPipelineShaderStageCreateInfo vertex_shader_stage_info = {
@@ -342,7 +452,7 @@ void Context::InitializeVkGraphicsPipeline() {
     nullptr, // pNext (see documentation, must be null)
     0, // flags (see documentation, must be 0)
     VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, // topology of vertices
-    false // whether there should be a special vertex index to reassemble
+    VK_FALSE // whether there should be a special vertex index to reassemble
   };
 
   // Define viewport
@@ -399,4 +509,78 @@ void Context::InitializeVkGraphicsPipeline() {
     VK_FALSE, // alpha-to-converge
     VK_FALSE // alpha-to-one
   };
+
+  // Define Blending
+  VkPipelineColorBlendAttachmentState color_blend_attachment_state {
+    VK_FALSE, // don't use the blending // TODO: If we want transparency, add blending
+    VK_BLEND_FACTOR_ONE, // blending factor source (color)
+    VK_BLEND_FACTOR_ZERO, // blending factor target (color)
+    VK_BLEND_OP_ADD, // blending operation (color)
+    VK_BLEND_FACTOR_ONE, // blending factor source (alpha)
+    VK_BLEND_FACTOR_ZERO, // blending factor target (alpha)
+    VK_BLEND_OP_ADD, // blending operation (alpha)
+    VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT // color mask
+  };
+
+  VkPipelineColorBlendStateCreateInfo color_blend_info {
+    VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_FALSE, // whether to combine framebuffers logically after first blending
+    VK_LOGIC_OP_COPY, // logical operation
+    1, // attachment count
+    &color_blend_attachment_state, // attachment state
+    {0.0f, 0.0f, 0.0f, 0.0f} // logical rgba factors
+  };
+
+  // TODO: Define VkPipelineDepthStencilStateCreateInfo correctly
+  // Define DepthStencil testing
+  VkPipelineDepthStencilStateCreateInfo depth_stencil_info {
+    VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_TRUE, // test depth
+    VK_TRUE, // write depth
+    VK_COMPARE_OP_LESS, // comparison operation // TODO: Check if depth comparator is correct
+    VK_FALSE, // depth bound test
+    VK_FALSE, // stencil test
+    {}, // front stencil op state
+    {}, // back stencil op state
+    0.0f, // min depth // TODO: Is min depth / max depth correct here?
+    1.0f // max depth
+  };
+
+  // Define pipeline info
+  VkGraphicsPipelineCreateInfo pipeline_info = {
+    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // pipeline create flags (have no child pipelines, so don't care)
+    2, // number of stages (we have 2 shaders for now)
+    shader_stages, // shader stage create infos
+    &vertex_input_info, // vertex input info
+    &input_assembly_info, // inpt assembly info
+    nullptr, // tesselation info
+    &viewport_info, // viewport info
+    &rasterizer_info, // rasterization info
+    &multisampling_info, // multisampling info
+    &depth_stencil_info, // depth stencil info
+    &color_blend_info, // blending info
+    nullptr, // dynamic states info (e.g. window size changes or so)
+    this->vk_pipeline_layout_, // pipeline layout
+    this->vk_render_pass_, // render pass
+    0, // subpass index for this pipeline (we only have 1)
+    VK_NULL_HANDLE, // parent pipeline
+    -1 // parent pipeline index
+  };
+
+  vk::handleVkResult(
+    vkCreateGraphicsPipelines(
+      this->vk_logical_device_, // logical device
+      VK_NULL_HANDLE, // pipeline cache // TODO: Add pipeline cache (?)
+      1, // pipeline count
+      &pipeline_info, // pipeline infos
+      nullptr, // allocation callback
+      &this->vk_pipeline_ // allocated memory for the pipeline
+    )
+  );
 }
