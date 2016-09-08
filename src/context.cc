@@ -16,6 +16,16 @@ Context::Context() {
 }
 
 Context::~Context() {
+  vkDeviceWaitIdle(this->vk_logical_device_);
+
+  // free all allocated memory
+  vkFreeMemory(this->vk_logical_device_, this->vk_color_image_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_stencil_image_memory_, nullptr);
+
+  // destroy images
+  vkDestroyImage(this->vk_logical_device_, this->vk_color_image_, nullptr);
+  vkDestroyImage(this->vk_logical_device_, this->vk_stencil_image_, nullptr);
+
   // destroy render pass
   vkDestroyRenderPass(this->vk_logical_device_, this->vk_render_pass_, nullptr);
 
@@ -199,12 +209,12 @@ void Context::InitializeVkLogicalDevice() {
 
   // get index of suitible queue family
   // TODO: Maybe separate graphics, compute and transfer queue families
-  uint32_t queue_family_index = 0;
+  this->queue_family_index_ = 0;
   for (VkQueueFamilyProperties queue_family : queue_families) {
     uint32_t requirements = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT;
     if (queue_family.queueFlags & requirements)
       break;
-    queue_family_index++;
+    this->queue_family_index_++;
   }
 
   // Create graphics queue metadata
@@ -214,7 +224,7 @@ void Context::InitializeVkLogicalDevice() {
     VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, // sType (see documentation)
     nullptr, // next structure (see documentation)
     0, // queue flags MUST be 0 (see documentation)
-    queue_family_index, // queue family
+    this->queue_family_index_, // queue family
     3, // number of queues: Graphics, Compute, Transfer // TODO: Maybe add more queues for more parallelism (?)
     queue_family_priorities // queue priority
   };
@@ -250,7 +260,7 @@ void Context::InitializeVkLogicalDevice() {
   // get graphics queue
   vkGetDeviceQueue(
     this->vk_logical_device_, // the logical device
-    queue_family_index, // the queue family from which we want the queue
+    this->queue_family_index_, // the queue family from which we want the queue
     0, // the index of the queue we want < NUM_QUEUES_IN_FAMILY
     &this->vk_queue_graphics_ // the allocated memory for the queue
   );
@@ -258,7 +268,7 @@ void Context::InitializeVkLogicalDevice() {
   // get compute queue
   vkGetDeviceQueue(
     this->vk_logical_device_, // the logical device
-    queue_family_index, // the queue family from which we want the queue
+    this->queue_family_index_, // the queue family from which we want the queue
     1, // the index of the queue we want < NUM_QUEUES_IN_FAMILY
     &this->vk_queue_compute_ // the allocated memory for the queue
   );
@@ -266,7 +276,7 @@ void Context::InitializeVkLogicalDevice() {
   // get transfer queue
   vkGetDeviceQueue(
     this->vk_logical_device_, // the logical device
-    queue_family_index, // the queue family from which we want the queue
+    this->queue_family_index_, // the queue family from which we want the queue
     2, // the index of the queue we want < NUM_QUEUES_IN_FAMILY
     &this->vk_queue_transfer_ // the allocated memory for the queue
   );
@@ -323,7 +333,7 @@ void Context::InitializeVkRenderPass() {
     VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
     VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
     VK_IMAGE_LAYOUT_UNDEFINED, // initial layout
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // final layout (optimal for memory transfer)
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // final layout (optimal for memory transfer)
   };
 
   VkAttachmentDescription stencil_attachment_description = {
@@ -335,7 +345,7 @@ void Context::InitializeVkRenderPass() {
     VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
     VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
     VK_IMAGE_LAYOUT_UNDEFINED, // initial layout
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // final layout (optimal for memory transfer)
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // final layout (optimal for memory transfer)
   };
 
   VkAttachmentDescription attachment_descriptions[] = {
@@ -346,12 +356,12 @@ void Context::InitializeVkRenderPass() {
   // create attachment refernces for color / stencil
   VkAttachmentReference color_attachment_reference = {
     0, // index
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // layout
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // layout
   };
 
   VkAttachmentReference stencil_attachment_reference = {
     1, // index
-    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL // layout
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // layout
   };
 
   // create subpass for attachments
@@ -589,8 +599,151 @@ void Context::InitializeVkGraphicsPipeline() {
 }
 
 void Context::InitializeVkMemory() {
-  // Create Images & ImageViews (color & depth)
-  // TODO: Create image & ImageView
+  ///////////////// COLOR IMAGE
+  // create color image
+  VkImageCreateInfo color_image_info = {
+    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
+    nullptr, // pNext (see documentation, must be null)
+    0, // image flags
+    VK_IMAGE_TYPE_2D, // image type
+    this->color_format_, // image format
+    {this->render_width_, this->render_height_, 1}, // image extent
+    1, // level of detail = 1
+    1, // layers = 1
+    VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
+    VK_IMAGE_TILING_OPTIMAL, // linear tiling
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, // used for color
+    VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
+    1, // number queue families
+    &this->queue_family_index_, // queue family index
+    VK_IMAGE_LAYOUT_UNDEFINED // initial layout
+  };
+
+  debug::handleVkResult(
+    vkCreateImage(
+      this->vk_logical_device_, // the logical device
+      &color_image_info, // the image info
+      nullptr, // allocation
+      &this->vk_color_image_ // memory allocated for image object
+    )
+  );
+
+  // allocate color image memory
+  VkMemoryRequirements color_memory_requirements;
+  vkGetImageMemoryRequirements(
+    this->vk_logical_device_,
+    this->vk_color_image_,
+    &color_memory_requirements
+  );
+
+  // get the first set bit in the type-bits. This bit is at the index position
+  // of a supported memory type in the physical device
+  uint32_t color_memory_type = 0;
+  uint32_t color_memory_type_bit = 1;
+  uint32_t color_memory_type_bits = color_memory_requirements.memoryTypeBits;
+  while ((color_memory_type_bit & color_memory_type_bits) == 0) {
+    color_memory_type_bit *= 2;
+    color_memory_type++;
+  }
+
+  VkMemoryAllocateInfo color_allocation_info = {
+    VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    color_memory_requirements.size, // the memory size
+    color_memory_type // the memory type index
+  };
+
+  debug::handleVkResult(
+    vkAllocateMemory(
+      this->vk_logical_device_, // the logical devcie
+      &color_allocation_info, // the allocation info
+      nullptr, // allocation callback
+      &this->vk_color_image_memory_ // allocated memory for memory object
+    )
+  );
+
+  debug::handleVkResult(
+    vkBindImageMemory(
+      this->vk_logical_device_, // the logical device
+      this->vk_color_image_, // the image
+      this->vk_color_image_memory_, // the image memory
+      0 // the offset in the memory
+    )
+  );
+
+  ///////////////// STENCIL IMAGE
+  // create stencil image
+  VkImageCreateInfo stencil_image_info = {
+    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
+    nullptr, // pNext (see documentation, must be null)
+    0, // image flags
+    VK_IMAGE_TYPE_2D, // image type
+    this->stencil_format_, // image format
+    {this->render_width_, this->render_height_, 1}, // image extent
+    1, // level of detail = 1
+    1, // layers = 1
+    VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
+    VK_IMAGE_TILING_OPTIMAL, // linear tiling
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, // used for color
+    VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
+    1, // number queue families
+    &this->queue_family_index_, // queue family index
+    VK_IMAGE_LAYOUT_UNDEFINED // initial layout
+  };
+
+  debug::handleVkResult(
+    vkCreateImage(
+      this->vk_logical_device_, // the logical device
+      &stencil_image_info, // the image info
+      nullptr, // allocation
+      &this->vk_stencil_image_ // memory allocated for image object
+    )
+  );
+
+  // allocate stencil image memory
+  VkMemoryRequirements stencil_memory_requirements;
+  vkGetImageMemoryRequirements(
+    this->vk_logical_device_,
+    this->vk_stencil_image_,
+    &stencil_memory_requirements
+  );
+
+  // get the first set bit in the type-bits. This bit is at the index position
+  // of a supported memory type in the physical device
+  uint32_t stencil_memory_type = 0;
+  uint32_t stencil_memory_type_bit = 1;
+  uint32_t stencil_memory_type_bits = stencil_memory_requirements.memoryTypeBits;
+  while ((stencil_memory_type_bit & stencil_memory_type_bits) == 0) {
+    stencil_memory_type_bit *= 2;
+    stencil_memory_type++;
+  }
+
+  VkMemoryAllocateInfo stencil_allocation_info = {
+    VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    stencil_memory_requirements.size, // the memory size
+    stencil_memory_type // the memory type index
+  };
+
+  debug::handleVkResult(
+    vkAllocateMemory(
+      this->vk_logical_device_, // the logical devcie
+      &stencil_allocation_info, // the allocation info
+      nullptr, // allocation callback
+      &this->vk_stencil_image_memory_ // allocated memory for memory object
+    )
+  );
+
+  debug::handleVkResult(
+    vkBindImageMemory(
+      this->vk_logical_device_, // the logical device
+      this->vk_stencil_image_, // the image
+      this->vk_stencil_image_memory_, // the image memory
+      0 // the offset in the memory
+    )
+  );
+
+  // Create Image views
 
   // Create Framebuffers for color & stencil (color & depth)
   // TODO: Create Framebuffers

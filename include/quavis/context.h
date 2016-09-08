@@ -39,9 +39,11 @@ namespace quavis {
     void InitializeVkMemory();
     void InitializeVkCommandPool();
 
+    // instance data
     VkInstance vk_instance_;
     VkPhysicalDevice vk_physical_device_;
     VkDevice vk_logical_device_;
+    uint32_t queue_family_index_;
 
     // queues
     VkQueue vk_queue_graphics_;
@@ -56,6 +58,13 @@ namespace quavis {
     VkRenderPass vk_render_pass_;
     VkPipelineLayout vk_pipeline_layout_;
     VkPipeline vk_pipeline_;
+
+    // images
+    VkImage vk_color_image_;
+    VkImage vk_stencil_image_;
+    VkDeviceMemory vk_color_image_memory_;
+    VkDeviceMemory vk_stencil_image_memory_;
+
 
     // meta data for initialization
     const std::vector<const char*> vk_logical_device_extension_names_ = {};
