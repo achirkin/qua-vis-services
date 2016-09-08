@@ -6,13 +6,11 @@
 
 namespace quavis {
   namespace vk {
-    namespace {
-      bool handleVkResult(VkResult vkResult) {
-        if (vkResult < 0)
-          throw "An error occurred in the gpu initialization";
-        // TODO: add better error handling
-        return true;
-      }
+    extern bool handleVkResult(VkResult vkResult) {
+      if (vkResult < 0)
+        throw "An error occurred in the gpu initialization";
+      // TODO: add better error handling
+      return true;
     }
   }
 }

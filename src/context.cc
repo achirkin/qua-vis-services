@@ -7,7 +7,7 @@ Context::Context() {
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
   this->InitializeVkShaderModules();
-  this->InitializeVkPipeline();
+  this->InitializeVkGraphicsPipeline();
 }
 
 Context::~Context() {
@@ -262,6 +262,8 @@ void Context::InitializeVkLogicalDevice() {
 }
 
 void Context::InitializeVkShaderModules() {
+  // TODO: Add better mechanism for shader loading
+
   // create vertex shader
   VkShaderModuleCreateInfo vertex_shader_info = {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
@@ -299,7 +301,7 @@ void Context::InitializeVkShaderModules() {
   );
 }
 
-void Context::InitializeVkPipeline() {
+void Context::InitializeVkGraphicsPipeline() {
   // create pipeline shader stages
   VkPipelineShaderStageCreateInfo vertex_shader_stage_info = {
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, // sType (see documentation)
@@ -322,4 +324,79 @@ void Context::InitializeVkPipeline() {
   };
 
   VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_shader_stage_info, fragment_shader_stage_info};
+
+  // Define input loading
+  // TODO: Load vertices correctly
+  VkPipelineVertexInputStateCreateInfo vertex_input_info {
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    0, // binding description count (spacing of data etc.)
+    nullptr, // binding descriptions, here we don't load vertices atm
+    0, // attribute description count (types passed to vertex shader etc.)
+    nullptr // attribute descriptions
+  };
+
+  VkPipelineInputAssemblyStateCreateInfo input_assembly_info {
+    VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, // topology of vertices
+    false // whether there should be a special vertex index to reassemble
+  };
+
+  // Define viewport
+  VkViewport viewport = {
+    0.0f, // upper left corner x
+    0.0f, // upper left corner y
+    (float)this->render_width_, // width
+    (float)this->render_height_, // height
+    0.0f, // min depth
+    1.0f // max depth
+  };
+
+  VkRect2D scissor = {
+    {0, 0}, // offset (casted to VkOffset2D)
+    {this->render_width_, this->render_height_} // extent (casted to VkExtent2D)
+  };
+
+  VkPipelineViewportStateCreateInfo viewport_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    1, // viewport count
+    &viewport, // viewport
+    1, // scissor count
+    &scissor, // scissor
+  };
+
+  // Define rasterizer
+  VkPipelineRasterizationStateCreateInfo rasterizer_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_FALSE, // depth clamping
+    VK_FALSE, // discard primitives before rendering?
+    VK_POLYGON_MODE_FILL, // fill polygons (alternatively: draw only edges / vertices)
+    VK_CULL_MODE_BACK_BIT, // discard one of the two faces of a polygon
+    VK_FRONT_FACE_CLOCKWISE, // clockwise = front
+    VK_FALSE, // depth bias // TODO: Find out whether we need depth bias
+    0.0f, // depth bias constant
+    0.0f, // depth bias clamp
+    0.0f, // depth bias slope
+    1.0f // line width // TODO: Change line width to 0
+  };
+
+  // Define Sampler
+  VkPipelineMultisampleStateCreateInfo multisampling_info {
+    VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_SAMPLE_COUNT_1_BIT, // rasterize per pixel (no anti-aliasing)
+    VK_FALSE, // shade per fragment
+    1.0f, // minimum sample shading
+    nullptr, // sampling mask
+    VK_FALSE, // alpha-to-converge
+    VK_FALSE // alpha-to-one
+  };
 }
