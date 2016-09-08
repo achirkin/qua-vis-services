@@ -39,6 +39,7 @@ namespace quavis {
     void InitializeVkGraphicsPipelineLayout();
     void InitializeVkMemory();
     void InitializeVkCommandPool();
+    void InitializeVkCommandBuffers();
 
     // instance data
     VkInstance vk_instance_;

@@ -13,6 +13,7 @@ Context::Context() {
   // TODO: ComputePipeline
   this->InitializeVkMemory();
   this->InitializeVkCommandPool();
+  this->InitializeVkCommandBuffers();
 }
 
 Context::~Context() {
@@ -850,4 +851,8 @@ void Context::InitializeVkCommandPool() {
       &this->vk_command_pool_ // the allocated memory
     )
   );
+}
+
+void InitializeVkCommandBuffers() {
+  // TODO
 }
