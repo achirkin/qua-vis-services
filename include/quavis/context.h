@@ -46,6 +46,9 @@ namespace quavis {
     VkDevice vk_logical_device_;
     uint32_t queue_family_index_;
 
+    // command pool
+    VkCommandPool vk_command_pool_;
+
     // queues
     VkQueue vk_queue_graphics_;
     VkQueue vk_queue_compute_;

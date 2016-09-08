@@ -30,6 +30,11 @@ Context::~Context() {
   vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_, nullptr);
   vkDestroyImageView(this->vk_logical_device_, this->vk_stencil_imageview_, nullptr);
 
+  // destroy framebuffer
+  vkDestroyFramebuffer(this->vk_logical_device_, this->vk_graphics_framebuffer_, nullptr);
+
+  // destroy command pool
+  vkDestroyCommandPool(this->vk_logical_device_, this->vk_command_pool_, nullptr);
 
   // destroy render pass
   vkDestroyRenderPass(this->vk_logical_device_, this->vk_render_pass_, nullptr);
@@ -693,7 +698,7 @@ void Context::InitializeVkMemory() {
     VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
     1, // number queue families
     &this->queue_family_index_, // queue family index
-    VK_IMAGE_LAYOUT_UNDEFINED // initial layout
+    VK_IMAGE_LAYOUT_UNDEFINED // initial layout // TODO: !!!Find out whether this has to be transisition first
   };
 
   debug::handleVkResult(
@@ -830,5 +835,19 @@ void Context::InitializeVkMemory() {
 }
 
 void Context::InitializeVkCommandPool() {
-  // Create command pool
+  VkCommandPoolCreateInfo command_pool_info = {
+    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->queue_family_index_ // the queue family
+  };
+
+  debug::handleVkResult(
+    vkCreateCommandPool(
+      this->vk_logical_device_, // the logical device
+      &command_pool_info, // info
+      nullptr, // allocation callback
+      &this->vk_command_pool_ // the allocated memory
+    )
+  );
 }
