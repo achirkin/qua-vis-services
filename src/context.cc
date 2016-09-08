@@ -26,6 +26,11 @@ Context::~Context() {
   vkDestroyImage(this->vk_logical_device_, this->vk_color_image_, nullptr);
   vkDestroyImage(this->vk_logical_device_, this->vk_stencil_image_, nullptr);
 
+  // destroy image views
+  vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_stencil_imageview_, nullptr);
+
+
   // destroy render pass
   vkDestroyRenderPass(this->vk_logical_device_, this->vk_render_pass_, nullptr);
 
@@ -744,6 +749,57 @@ void Context::InitializeVkMemory() {
   );
 
   // Create Image views
+  VkImageViewCreateInfo color_imageview_info = {
+    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->vk_color_image_, // the image
+    VK_IMAGE_VIEW_TYPE_2D, // the view type
+    this->color_format_, // the color format
+    {}, // color component mapping
+    { // VkImageSubresourceRange (what's in the image)
+      VK_IMAGE_ASPECT_COLOR_BIT, // aspect flag
+      0, // base level
+      1, // level count
+      0, // base layer
+      1 // layer count
+    }
+  };
+
+  debug::handleVkResult(
+    vkCreateImageView(
+      this->vk_logical_device_, // the logical device
+      &color_imageview_info, // info
+      nullptr, // allocation callback
+      &this->vk_color_imageview_ // the offset in the memory
+    )
+  );
+
+  VkImageViewCreateInfo stencil_imageview_info = {
+    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->vk_stencil_image_, // the image
+    VK_IMAGE_VIEW_TYPE_2D, // the view type
+    this->stencil_format_, // the stencil format
+    {}, // stencil component mapping
+    { // VkImageSubresourceRange (what's in the image)
+      VK_IMAGE_ASPECT_DEPTH_BIT, // aspect flag
+      0, // base level
+      1, // level count
+      0, // base layer
+      1 // layer count
+    }
+  };
+
+  debug::handleVkResult(
+    vkCreateImageView(
+      this->vk_logical_device_, // the logical device
+      &stencil_imageview_info, // info
+      nullptr, // allocation callback
+      &this->vk_stencil_imageview_ // the offset in the memory
+    )
+  );
 
   // Create Framebuffers for color & stencil (color & depth)
   // TODO: Create Framebuffers

@@ -60,6 +60,8 @@ namespace quavis {
     VkPipeline vk_pipeline_;
 
     // images
+    VkImageView vk_color_imageview_;
+    VkImageView vk_stencil_imageview_;
     VkImage vk_color_image_;
     VkImage vk_stencil_image_;
     VkDeviceMemory vk_color_image_memory_;
