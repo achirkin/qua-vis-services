@@ -10,10 +10,10 @@ Context::Context() {
   this->InitializeVkRenderPass();
   this->InitializeVkGraphicsPipelineLayout();
   this->InitializeVkGraphicsPipeline();
-  // TODO: ComputePipeline
-  this->InitializeVkMemory();
   this->InitializeVkCommandPool();
+  this->InitializeVkMemory();
   this->InitializeVkCommandBuffers();
+  this->VkDraw();
 }
 
 Context::~Context() {
@@ -33,6 +33,13 @@ Context::~Context() {
 
   // destroy framebuffer
   vkDestroyFramebuffer(this->vk_logical_device_, this->vk_graphics_framebuffer_, nullptr);
+
+  // destroy semaphores
+  vkDestroySemaphore(this->vk_logical_device_, this->vk_render_semaphore_, nullptr);
+  vkDestroySemaphore(this->vk_logical_device_, this->vk_render_finished_semaphore_, nullptr);
+
+  // free command buffer
+  vkFreeCommandBuffers(this->vk_logical_device_, this->vk_command_pool_, 1, &this->vk_graphics_commandbuffer_);
 
   // destroy command pool
   vkDestroyCommandPool(this->vk_logical_device_, this->vk_command_pool_, nullptr);
@@ -609,6 +616,24 @@ void Context::InitializeVkGraphicsPipeline() {
   );
 }
 
+void Context::InitializeVkCommandPool() {
+  VkCommandPoolCreateInfo command_pool_info = {
+    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->queue_family_index_ // the queue family
+  };
+
+  debug::handleVkResult(
+    vkCreateCommandPool(
+      this->vk_logical_device_, // the logical device
+      &command_pool_info, // info
+      nullptr, // allocation callback
+      &this->vk_command_pool_ // the allocated memory
+    )
+  );
+}
+
 void Context::InitializeVkMemory() {
   ///////////////// COLOR IMAGE
   // create color image
@@ -838,26 +863,130 @@ void Context::InitializeVkMemory() {
       &this->vk_graphics_framebuffer_ // the allocated memory
     )
   );
-}
 
-void Context::InitializeVkCommandPool() {
-  VkCommandPoolCreateInfo command_pool_info = {
-    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
-    nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
-    this->queue_family_index_ // the queue family
+  // create command buffers
+  VkCommandBufferAllocateInfo graphics_command_buffer_info = {
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    this->vk_command_pool_, // the command pool
+    VK_COMMAND_BUFFER_LEVEL_PRIMARY, // can be submitted to the queue
+    1 // number of command buffers
   };
 
   debug::handleVkResult(
-    vkCreateCommandPool(
+    vkAllocateCommandBuffers(
       this->vk_logical_device_, // the logical device
-      &command_pool_info, // info
-      nullptr, // allocation callback
-      &this->vk_command_pool_ // the allocated memory
+      &graphics_command_buffer_info, // info
+      &this->vk_graphics_commandbuffer_ // allocated memory
     )
   );
 }
 
 void Context::InitializeVkCommandBuffers() {
-  // TODO
+  VkCommandBufferBeginInfo command_buffer_begin_info = {
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, // can be submitted and run simultaniously
+    nullptr // VkCommandBufferInheritanceInfo (we don't need it)
+  };
+
+  debug::handleVkResult(
+    vkBeginCommandBuffer(
+      this->vk_graphics_commandbuffer_,
+      &command_buffer_begin_info
+    )
+  );
+
+  VkClearValue clear_value = {0.0f, 0.0f, 0.0f, 1.0f};
+
+  VkRenderPassBeginInfo render_pass_info = {
+    VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    this->vk_render_pass_, // render pass
+    this->vk_graphics_framebuffer_, // framebuffer
+    {{0,0}, {this->render_width_, this->render_height_}}, // render area (VkRect2D)
+    1, // number of clear values
+    &clear_value // clear values
+  };
+
+  vkCmdBeginRenderPass(
+    this->vk_graphics_commandbuffer_, // command buffer
+    &render_pass_info, // render pass info
+    VK_SUBPASS_CONTENTS_INLINE // store contents in primary command buffer
+  );
+
+  // bind graphics pipeline
+  vkCmdBindPipeline(
+    this->vk_graphics_commandbuffer_, // command buffer
+    VK_PIPELINE_BIND_POINT_GRAPHICS, // pipeline type
+    this->vk_pipeline_ // graphics pipeline
+  );
+
+  // draw
+  vkCmdDraw(
+    this->vk_graphics_commandbuffer_, // command buffer
+    3, // num vertices // TODO
+    1, // num instances // TODO
+    0, // first vertex index
+    0 // first instance ID
+  );
+
+  vkCmdEndRenderPass(this->vk_graphics_commandbuffer_);
+
+  debug::handleVkResult(
+    vkEndCommandBuffer(
+      this->vk_graphics_commandbuffer_
+    )
+  );
+}
+
+void Context::VkDraw() {
+  // create semaphore
+  VkSemaphoreCreateInfo render_semaphore_info = {
+    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType,
+    nullptr, // next (see documentaton, must be null)
+    0, // flags (see documentation, must be 0)
+  };
+
+  debug::handleVkResult(
+    vkCreateSemaphore(
+      this->vk_logical_device_, // the logical device
+      &render_semaphore_info, // semaphore info
+      nullptr, // allocation callback
+      &this->vk_render_semaphore_ // allocated memory
+    )
+  );
+
+  debug::handleVkResult(
+    vkCreateSemaphore(
+      this->vk_logical_device_, // the logical device
+      &render_semaphore_info, // semaphore info
+      nullptr, // allocation callback
+      &this->vk_render_finished_semaphore_ // allocated memory
+    )
+  );
+
+  // submit the graphics command buffer
+  VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+
+  VkSubmitInfo submit_info = {
+    VK_STRUCTURE_TYPE_SUBMIT_INFO, // sType,
+    nullptr, // next (see documentaton, must be null)
+    1, // wait semaphore count
+    &this->vk_render_semaphore_, // semaphore to wait for
+    wait_stages, // stage until next semaphore is triggered
+    1, //
+    &this->vk_graphics_commandbuffer_,
+    0,
+    nullptr
+  };
+
+  debug::handleVkResult(
+    vkQueueSubmit(
+      this->vk_queue_graphics_, // queue
+      1, // num infos
+      &submit_info, // info
+      VK_NULL_HANDLE // fence (we don't need it)
+    )
+  );
 }

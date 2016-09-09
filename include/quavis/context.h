@@ -40,6 +40,7 @@ namespace quavis {
     void InitializeVkMemory();
     void InitializeVkCommandPool();
     void InitializeVkCommandBuffers();
+    void VkDraw();
 
     // instance data
     VkInstance vk_instance_;
@@ -74,6 +75,13 @@ namespace quavis {
 
     // framebuffers
     VkFramebuffer vk_graphics_framebuffer_;
+
+    // command buffers
+    VkCommandBuffer vk_graphics_commandbuffer_;
+
+    // semaphores
+    VkSemaphore vk_render_semaphore_;
+    VkSemaphore vk_render_finished_semaphore_;
 
     // meta data for initialization
     const std::vector<const char*> vk_logical_device_extension_names_ = {};
