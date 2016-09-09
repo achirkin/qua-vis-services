@@ -754,6 +754,11 @@ void Context::InitializeVkMemory() {
     )
   );
 
+  // TODO: Allocate image memory with linear tiling to copy the original ones
+  // for host usage (linear tiling is incompatible with color / depth attachment)
+  // the new memory must reside in host visible, host coherent memory and have a
+  // compatible format
+
   // Create Image views
   VkImageViewCreateInfo color_imageview_info = {
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
@@ -853,6 +858,6 @@ void Context::InitializeVkCommandPool() {
   );
 }
 
-void InitializeVkCommandBuffers() {
+void Context::InitializeVkCommandBuffers() {
   // TODO
 }
