@@ -5,6 +5,9 @@
 #include "quavis/shaders.h"
 #include "quavis/debug.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <string.h>
@@ -44,6 +47,11 @@ namespace quavis {
     void InitializeVkCommandBuffers();
     void VkDraw();
 
+    void copyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
+    VkCommandBuffer beginSingleTimeCommands();
+    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
+    void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+
     // instance data
     VkInstance vk_instance_;
     VkPhysicalDevice vk_physical_device_;
@@ -72,8 +80,10 @@ namespace quavis {
     VkImageView vk_stencil_imageview_;
     VkImage vk_color_image_;
     VkImage vk_stencil_image_;
+    VkImage vk_host_visible_image_;
     VkDeviceMemory vk_color_image_memory_;
     VkDeviceMemory vk_stencil_image_memory_;
+    VkDeviceMemory vk_host_visible_image_memory_;
 
     // framebuffers
     VkFramebuffer vk_graphics_framebuffer_;
@@ -102,7 +112,7 @@ namespace quavis {
     // rendering attributes
     const uint32_t render_width_ = 1000.0f;
     const uint32_t render_height_ = 1000.0f;
-    const VkFormat color_format_ = VK_FORMAT_B8G8R8A8_UNORM;
+    const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
     const VkFormat stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
   };
 }
