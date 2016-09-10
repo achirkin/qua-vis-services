@@ -49,6 +49,7 @@ Context::~Context() {
 
   // destroy pipeline
   vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_pipeline_layout_, nullptr);
+  vkDestroyPipeline(this->vk_logical_device_, this->vk_pipeline_, nullptr);
 
   // destroy shaders
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_vertex_shader_, nullptr);
@@ -398,8 +399,7 @@ void Context::InitializeVkRenderPass() {
   };
 
   VkAttachmentDescription attachment_descriptions[] = {
-    color_attachment_description,
-    stencil_attachment_description
+    color_attachment_description
   };
 
   // create attachment refernces for color / stencil
@@ -440,7 +440,7 @@ void Context::InitializeVkRenderPass() {
     VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, // sType
     nullptr, // next (see documentation, must be null)
     0, // flags
-    2, // attachment count
+    1, // attachment count
     attachment_descriptions, // attachment descriptions
     1, // subpass count
     &subpass_description, // subpass
@@ -877,9 +877,8 @@ void Context::InitializeVkMemory() {
   );
 
   // Create Framebuffers for color & stencil (color & depth)
-  std::array<VkImageView, 2> attachments = {
-    this->vk_color_imageview_,
-    this->vk_stencil_imageview_
+  std::array<VkImageView, 1> attachments = {
+    this->vk_color_imageview_
   };
 
   VkFramebufferCreateInfo framebuffer_info = {
