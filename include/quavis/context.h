@@ -6,6 +6,8 @@
 #include "quavis/debug.h"
 
 #include <vulkan/vulkan.h>
+#include <stdio.h>
+#include <string.h>
 #include <memory>
 #include <vector>
 #include <set>
@@ -84,7 +86,18 @@ namespace quavis {
     VkSemaphore vk_render_finished_semaphore_;
 
     // meta data for initialization
-    const std::vector<const char*> vk_logical_device_extension_names_ = {};
+    const std::vector<const char*> vk_instance_extension_names_ = {
+      "VK_EXT_debug_report"
+    };
+
+    // meta data for initialization
+    const std::vector<const char*> vk_logical_device_extension_names_ = {
+    };
+
+    const std::vector<const char*> vk_validation_layers_ = {
+      "VK_LAYER_LUNARG_standard_validation"
+    };
+
 
     // rendering attributes
     const uint32_t render_width_ = 1000.0f;

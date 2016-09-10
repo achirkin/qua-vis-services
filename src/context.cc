@@ -17,7 +17,7 @@ Context::Context() {
 }
 
 Context::~Context() {
-  vkDeviceWaitIdle(this->vk_logical_device_);
+  debug::handleVkResult(vkDeviceWaitIdle(this->vk_logical_device_));
 
   // free all allocated memory
   vkFreeMemory(this->vk_logical_device_, this->vk_color_image_memory_, nullptr);
@@ -81,10 +81,10 @@ void Context::InitializeVkInstance() {
     nullptr, // next structure (see documentation)
     0, // flags, reserver by vulkan api for future api versions
     &vkApplicationInfo, // application info (see aboive)
-    0, // number of layers (atm no debug/validation layers used)
-    nullptr, // layer names
-    0, // number of extensions (atm no extensions used, here could be glfw)
-    nullptr // extension names
+    this->vk_validation_layers_.size(), // number of layers (atm no debug/validation layers used)
+    this->vk_validation_layers_.data(), // layer names
+    this->vk_instance_extension_names_.size(), // number of extensions (atm no extensions used, here could be glfw)
+    this->vk_instance_extension_names_.data() // extension names
   };
 
   // create the instance object
@@ -125,6 +125,36 @@ void Context::InitializeVkPhysicalDevice() {
   std::set<VkPhysicalDevice>::iterator device_it;
   for (device_it = devices_set.begin(); device_it != devices_set.end();) {
 
+    /////////////////// BEGIN LAYER CHECK
+    uint32_t num_layers;
+    vkEnumerateInstanceLayerProperties(&num_layers, nullptr);
+
+    std::vector<VkLayerProperties> available_layers(num_layers);
+    vkEnumerateInstanceLayerProperties(&num_layers, available_layers.data());
+
+    bool all_found = true;
+    for (const char* layerName : this->vk_validation_layers_) {
+        bool layerFound = false;
+
+        for (const auto& layerProperties : available_layers) {
+            std::cout << layerProperties.layerName << std::endl;
+            if (strcmp(layerName, layerProperties.layerName) == 0) {
+                layerFound = true;
+                break;
+            }
+        }
+
+        if (!layerFound) {
+            device_it = devices_set.erase(device_it);
+            all_found = false;
+            break;
+        }
+    }
+
+    if (!all_found) {
+      continue;
+    }
+
     /////////////////// BEGIN CHECK QUEUE FAMILIES
     bool has_graphics_queue = false;
     bool has_compute_queue = false;
@@ -136,6 +166,7 @@ void Context::InitializeVkPhysicalDevice() {
       &num_queue_families, // the allocated memory for the number of families
       nullptr // the allocated memory for the queue family properties
     );
+
 
     // No queues
     if (num_queue_families == 0) {
@@ -165,12 +196,13 @@ void Context::InitializeVkPhysicalDevice() {
       continue;
     }
 
+
     /////////////////// BEGIN CHECK EXTENSION SUPPORT
     // get number of supported extension in device
     uint32_t extension_count;
     vkEnumerateDeviceExtensionProperties(
       *device_it, // the physical device
-      nullptr, // the layer name
+      this->vk_validation_layers_[0], // the layer name
       &extension_count, // the allocated memory for the number of extensions
       nullptr // the allocated memory for the extension properties
     );
@@ -179,7 +211,7 @@ void Context::InitializeVkPhysicalDevice() {
     std::vector<VkExtensionProperties> available_extensions(extension_count);
     vkEnumerateDeviceExtensionProperties(
       *device_it, // the physical device
-      nullptr, // the layer name
+      this->vk_validation_layers_[0], // the layer name
       &extension_count, // the allocated memory for the number of extensions
       available_extensions.data() // the allocated memory for the extension properties
     );
@@ -194,7 +226,6 @@ void Context::InitializeVkPhysicalDevice() {
       device_it = devices_set.erase(device_it);
       continue;
     }
-
     /////////////////// END REQUIREMENT CHECK
     device_it++;
   }
@@ -391,10 +422,18 @@ void Context::InitializeVkRenderPass() {
     1, // color attachment count
     &color_attachment_reference, // color attachment references
     nullptr, // resolve attachment references
-    &stencil_attachment_reference, // stencil attachment
+    nullptr, // stencil attachment
     0, // preserved attachment count
     nullptr // preserved attachments
   };
+
+  VkSubpassDependency dependency = {};
+  dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  dependency.dstSubpass = 0;
+  dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
   // create render pass
   VkRenderPassCreateInfo render_pass_info = {
@@ -405,8 +444,8 @@ void Context::InitializeVkRenderPass() {
     attachment_descriptions, // attachment descriptions
     1, // subpass count
     &subpass_description, // subpass
-    0, // dependency count between subpasses
-    nullptr // dependencies
+    1, // dependency count between subpasses
+    &dependency // dependencies
   };
 
   debug::handleVkResult(
@@ -647,7 +686,7 @@ void Context::InitializeVkMemory() {
     1, // level of detail = 1
     1, // layers = 1
     VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
-    VK_IMAGE_TILING_OPTIMAL, // linear tiling
+    VK_IMAGE_TILING_OPTIMAL, // optimal tiling
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, // used for color
     VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
     1, // number queue families
@@ -897,7 +936,7 @@ void Context::InitializeVkCommandBuffers() {
     )
   );
 
-  VkClearValue clear_value = {0.0f, 0.0f, 0.0f, 1.0f};
+  VkClearValue clear_value[] = {{0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f}};
 
   VkRenderPassBeginInfo render_pass_info = {
     VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, // sType
@@ -905,8 +944,8 @@ void Context::InitializeVkCommandBuffers() {
     this->vk_render_pass_, // render pass
     this->vk_graphics_framebuffer_, // framebuffer
     {{0,0}, {this->render_width_, this->render_height_}}, // render area (VkRect2D)
-    1, // number of clear values
-    &clear_value // clear values
+    2, // number of clear values
+    clear_value // clear values
   };
 
   vkCmdBeginRenderPass(
@@ -972,8 +1011,8 @@ void Context::VkDraw() {
   VkSubmitInfo submit_info = {
     VK_STRUCTURE_TYPE_SUBMIT_INFO, // sType,
     nullptr, // next (see documentaton, must be null)
-    1, // wait semaphore count
-    &this->vk_render_semaphore_, // semaphore to wait for
+    0, // wait semaphore count
+    nullptr, // semaphore to wait for
     wait_stages, // stage until next semaphore is triggered
     1, //
     &this->vk_graphics_commandbuffer_,

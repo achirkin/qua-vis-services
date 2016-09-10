@@ -15,15 +15,16 @@ set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 # Requirements
 find_package (Threads REQUIRED)
-find_package (Vulkan REQUIRED)
 
 # Headers
 include_directories (${PROJECT_SOURCE_DIR}/include)
-include_directories (${VULKAN_INCLUDE_DIR})
+include_directories ("/usr/local/x86_64/include")
 
 # Linker
 link_directories (${PROJECT_SOURCE_DIR}/lib)
-link_libraries (${VULKAN_LIBRARY})
+link_directories ("/usr/local/x86_64/lib" )
+
+set (ENV{VK_LAYER_PATH} "/usr/local/x86_64/etc/explicit_layer.d/")
 
 ## Threads
 if(THREADS_HAVE_PTHREAD_ARG)
@@ -53,6 +54,7 @@ configure_file(
 add_library(quavis SHARED
   "${CMAKE_SOURCE_DIR}/src/context.cc"
 )
+target_link_libraries(quavis vulkan)
 
 add_definitions("-Wall -g")
 add_executable (testvulkan "${CMAKE_SOURCE_DIR}/test/vulkan.cc")
