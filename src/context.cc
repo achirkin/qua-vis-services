@@ -935,7 +935,7 @@ void Context::InitializeVkCommandBuffers() {
     )
   );
 
-  VkClearValue clear_value[] = {{0.0f, 0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f, 1.0f}};
+  VkClearValue clear_value[] = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
   VkRenderPassBeginInfo render_pass_info = {
     VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO, // sType
@@ -943,7 +943,7 @@ void Context::InitializeVkCommandBuffers() {
     this->vk_render_pass_, // render pass
     this->vk_graphics_framebuffer_, // framebuffer
     {{0,0}, {this->render_width_, this->render_height_}}, // render area (VkRect2D)
-    2, // number of clear values
+    1, // number of clear values
     clear_value // clear values
   };
 
