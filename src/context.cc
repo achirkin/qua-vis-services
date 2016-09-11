@@ -678,23 +678,23 @@ void Context::InitializeVkCommandPool() {
 void Context::InitializeVkMemory() {
   ///////////////// COLOR IMAGE
   // create color image
-  VkImageCreateInfo color_image_info = {
-    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
-    nullptr, // pNext (see documentation, must be null)
-    0, // image flags
-    VK_IMAGE_TYPE_2D, // image type
-    this->color_format_, // image format
-    {this->render_width_, this->render_height_, 1}, // image extent
-    1, // level of detail = 1
-    1, // layers = 1
-    VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
-    VK_IMAGE_TILING_OPTIMAL, // optimal tiling
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, // used for color
-    VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
-    1, // number queue families
-    &this->queue_family_index_, // queue family index
-    VK_IMAGE_LAYOUT_PREINITIALIZED // initial layout
-  };
+    VkImageCreateInfo color_image_info = {
+      VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
+      nullptr, // pNext (see documentation, must be null)
+      0, // image flags
+      VK_IMAGE_TYPE_2D, // image type
+      this->color_format_, // image format
+      {this->render_width_, this->render_height_, 1}, // image extent
+      1, // level of detail = 1
+      1, // layers = 1
+      VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
+      VK_IMAGE_TILING_OPTIMAL, // optimal tiling
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, // used for color
+      VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
+      1, // number queue families
+      &this->queue_family_index_, // queue family index
+      VK_IMAGE_LAYOUT_PREINITIALIZED // initial layout
+    };
 
   debug::handleVkResult(
     vkCreateImage(
@@ -712,6 +712,8 @@ void Context::InitializeVkMemory() {
     this->vk_color_image_,
     &color_memory_requirements
   );
+
+  std::cout << std::to_string(color_memory_requirements.size) << std::endl;
 
   // get the first set bit in the type-bits. This bit is at the index position
   // of a supported memory type in the physical device
@@ -882,7 +884,7 @@ void Context::InitializeVkMemory() {
     host_visible_memory_type // the memory type index
   };
 
-  std::cout << physical_device_memory_properties.memoryTypes[host_visible_memory_type].propertyFlags << std::endl;
+  std::cout << host_visible_memory_requirements.size<< std::endl;
 
   debug::handleVkResult(
     vkAllocateMemory(
@@ -1117,6 +1119,10 @@ void Context::VkDraw() {
 
   debug::handleVkResult(vkDeviceWaitIdle(this->vk_logical_device_));
 
+  VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
+  VkSubresourceLayout subresource_layout;
+  vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_host_visible_image_, &subresource, &subresource_layout);
+
   VkMemoryRequirements host_visible_memory_requirements;
   vkGetImageMemoryRequirements(
     this->vk_logical_device_,
@@ -1131,8 +1137,10 @@ void Context::VkDraw() {
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
 
+  vkQueueWaitIdle(this->vk_queue_graphics_);
+
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  stbi_write_png("test.png", this->render_width_, this->render_height_, 4, (void*)pixels, 0);
+  stbi_write_png("bin/test.png", subresource_layout.rowPitch/4, this->render_height_, 4, (void*)pixels, 0);
 
   vkQueueWaitIdle(this->vk_queue_graphics_);
 }
