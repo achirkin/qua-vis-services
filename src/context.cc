@@ -1117,8 +1117,6 @@ void Context::VkDraw() {
   this->copyImage(this->vk_color_image_, this->vk_host_visible_image_, this->render_width_, this->render_height_);
   this->transitionImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 
-  debug::handleVkResult(vkDeviceWaitIdle(this->vk_logical_device_));
-
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
   vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_host_visible_image_, &subresource, &subresource_layout);
@@ -1137,12 +1135,8 @@ void Context::VkDraw() {
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
 
-  vkQueueWaitIdle(this->vk_queue_graphics_);
-
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
   stbi_write_png("bin/test.png", subresource_layout.rowPitch/4, this->render_height_, 4, (void*)pixels, 0);
-
-  vkQueueWaitIdle(this->vk_queue_graphics_);
 }
 
 void Context::copyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) {
