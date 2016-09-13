@@ -17,11 +17,6 @@
 #include <array>
 
 namespace quavis {
-  typedef struct vec2 {
-    float x;
-    float y;
-  } vec2;
-
   typedef struct vec3 {
     float x;
     float y;
@@ -32,8 +27,14 @@ namespace quavis {
     float data[16];
   } mat4;
 
+  struct UniformBufferObject {
+    mat4 model;
+    mat4 view;
+    mat4 proj;
+  };
+
   struct Vertex {
-      vec2 pos;
+      vec3 pos;
       vec3 color;
 
       static VkVertexInputBindingDescription getBindingDescription() {
@@ -83,8 +84,10 @@ namespace quavis {
     void InitializeVkLogicalDevice();
     void InitializeVkShaderModules();
     void InitializeVkRenderPass();
-    void InitializeVkGraphicsPipeline();
+    void InitializeVkDescriptorPool();
+    void InitializeVkDescriptorSetLayout();
     void InitializeVkGraphicsPipelineLayout();
+    void InitializeVkGraphicsPipeline();
     void InitializeVkMemory();
     void InitializeVkCommandBuffers();
     void VkDraw();
@@ -92,6 +95,7 @@ namespace quavis {
     void CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory);
     void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
     void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlagBits flags, VkImageView* imageview);
+    void CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
     void CreateFrameBuffer();
     void CreateCommandPool();
     void CreateCommandBuffer();
@@ -104,6 +108,7 @@ namespace quavis {
 
     void SubmitVertexData();
     void SubmitIndexData();
+    void SubmitUniformData();
     void RetrieveImage();
 
     // instance data
@@ -129,15 +134,24 @@ namespace quavis {
     VkPipelineLayout vk_pipeline_layout_;
     VkPipeline vk_pipeline_;
 
+    // descriptors
+    VkDescriptorPool vk_descriptor_pool_;
+    VkDescriptorSetLayout vk_descriptor_set_layout_;
+    VkDescriptorSet vk_descriptor_set_;
+
     // vertex data
     VkBuffer vk_vertex_staging_buffer_;
     VkBuffer vk_vertex_buffer_;
     VkBuffer vk_index_staging_buffer_;
     VkBuffer vk_index_buffer_;
+    VkBuffer vk_uniform_staging_buffer_;
+    VkBuffer vk_uniform_buffer_;
     VkDeviceMemory vk_vertex_staging_buffer_memory_;
     VkDeviceMemory vk_vertex_buffer_memory_;
     VkDeviceMemory vk_index_staging_buffer_memory_;
     VkDeviceMemory vk_index_buffer_memory_;
+    VkDeviceMemory vk_uniform_staging_buffer_memory_;
+    VkDeviceMemory vk_uniform_buffer_memory_;
 
     // images
     VkImageView vk_color_imageview_;
@@ -171,20 +185,41 @@ namespace quavis {
 
 
     // rendering attributes
-    const uint32_t render_width_ = 500;
-    const uint32_t render_height_ = 500;
+    const uint32_t render_width_ = 512;
+    const uint32_t render_height_ = 512;
     const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
     const VkFormat stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
 
     const std::vector<Vertex> vertices_ = {
-      {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-      {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-      {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-      {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+      {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+      {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+      {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+      {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
     };
 
     const std::vector<uint16_t> indices_ = {
       0, 1, 2, 2, 3, 0
+    };
+
+    const UniformBufferObject uniform_ = {
+      mat4 { // model
+        1,0,0,0,
+        0,1,0,0,
+        0,0,1,0,
+        0,0,0,1
+      },
+      mat4 { // view
+        1,0,0,0,
+        0,1,0,0,
+        0,0,1,0,
+        0,0,0,1
+      },
+      mat4 { // proj
+        1,0,0,0,
+        0,1,0,0,
+        0,0,1,0,
+        0,0,0,1
+      },
     };
   };
 }

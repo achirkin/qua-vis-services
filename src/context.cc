@@ -8,14 +8,21 @@ Context::Context() {
   this->InitializeVkLogicalDevice();
   this->InitializeVkShaderModules();
   this->InitializeVkRenderPass();
+  this->InitializeVkDescriptorPool();
+  this->InitializeVkDescriptorSetLayout();
   this->InitializeVkGraphicsPipelineLayout();
   this->InitializeVkGraphicsPipeline();
   this->InitializeVkMemory();
-  this->InitializeVkCommandBuffers();
 
   this->SubmitVertexData();
   this->SubmitIndexData();
+  this->SubmitUniformData();
+  VkDescriptorSetLayout layouts[] = {this->vk_descriptor_set_layout_};
+  this->CreateAndUpdateDescriptorSet(layouts, sizeof(UniformBufferObject), this->vk_uniform_buffer_, &this->vk_descriptor_set_);
+
+  this->InitializeVkCommandBuffers();
   this->VkDraw();
+
   this->RetrieveImage();
 }
 
@@ -29,12 +36,16 @@ Context::~Context() {
   vkFreeMemory(this->vk_logical_device_, this->vk_vertex_staging_buffer_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_index_buffer_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_index_staging_buffer_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_uniform_buffer_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_uniform_staging_buffer_memory_, nullptr);
 
   // destroy vertex buffer
   vkDestroyBuffer(this->vk_logical_device_, this->vk_vertex_buffer_, nullptr);
   vkDestroyBuffer(this->vk_logical_device_, this->vk_vertex_staging_buffer_, nullptr);
   vkDestroyBuffer(this->vk_logical_device_, this->vk_index_buffer_, nullptr);
   vkDestroyBuffer(this->vk_logical_device_, this->vk_index_staging_buffer_, nullptr);
+  vkDestroyBuffer(this->vk_logical_device_, this->vk_uniform_buffer_, nullptr);
+  vkDestroyBuffer(this->vk_logical_device_, this->vk_uniform_staging_buffer_, nullptr);
 
   // destroy images
   vkDestroyImage(this->vk_logical_device_, this->vk_color_image_, nullptr);
@@ -58,6 +69,10 @@ Context::~Context() {
 
   // destroy render pass
   vkDestroyRenderPass(this->vk_logical_device_, this->vk_render_pass_, nullptr);
+
+  // destroy descriptor set layout
+  vkDestroyDescriptorSetLayout(this->vk_logical_device_, this->vk_descriptor_set_layout_, nullptr);
+  vkDestroyDescriptorPool(this->vk_logical_device_, this->vk_descriptor_pool_, nullptr);
 
   // destroy pipeline
   vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_pipeline_layout_, nullptr);
@@ -453,14 +468,52 @@ void Context::InitializeVkRenderPass() {
   );
 }
 
+void Context::InitializeVkDescriptorSetLayout() {
+  VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+  uboLayoutBinding.binding = 0;
+  uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  uboLayoutBinding.descriptorCount = 1;
+  uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+  VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+  layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  layoutInfo.bindingCount = 1;
+  layoutInfo.pBindings = &uboLayoutBinding;
+
+  debug::handleVkResult(
+    vkCreateDescriptorSetLayout(
+      this->vk_logical_device_,
+      &layoutInfo,
+      nullptr,
+      &this->vk_descriptor_set_layout_
+    )
+  );
+}
+
+void Context::InitializeVkDescriptorPool() {
+  VkDescriptorPoolSize poolSize = {};
+  poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  poolSize.descriptorCount = 1;
+
+  VkDescriptorPoolCreateInfo poolInfo = {};
+  poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+  poolInfo.poolSizeCount = 1;
+  poolInfo.pPoolSizes = &poolSize;
+  poolInfo.maxSets = 1;
+
+  debug::handleVkResult(
+    vkCreateDescriptorPool(this->vk_logical_device_, &poolInfo, nullptr, &this->vk_descriptor_pool_)
+  );
+}
+
 void Context::InitializeVkGraphicsPipelineLayout() {
   // Define Pipeline layout
   VkPipelineLayoutCreateInfo pipeline_layout_info = {
     VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // sType
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    0, // layout count
-    nullptr, // layouts
+    1, // layout count
+    &this->vk_descriptor_set_layout_, // layouts
     0, // push constant range count
     nullptr // push constant ranges
   };
@@ -655,7 +708,7 @@ void Context::InitializeVkGraphicsPipeline() {
 }
 
 void Context::InitializeVkMemory() {
-  // input buffer
+  // vertex buffer
   this->CreateBuffer(
     VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -668,6 +721,7 @@ void Context::InitializeVkMemory() {
     sizeof(this->vertices_[0]) * this->vertices_.size(),
     &this->vk_vertex_staging_buffer_, &this->vk_vertex_staging_buffer_memory_);
 
+  // index buffer
   this->CreateBuffer(
     VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -679,6 +733,19 @@ void Context::InitializeVkMemory() {
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
     sizeof(this->indices_[0]) * this->indices_.size(),
     &this->vk_index_staging_buffer_, &this->vk_index_staging_buffer_memory_);
+
+  // uniform buffer
+  this->CreateBuffer(
+    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    sizeof(UniformBufferObject),
+    &this->vk_uniform_buffer_, &this->vk_uniform_buffer_memory_);
+
+  this->CreateBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    sizeof(UniformBufferObject),
+    &this->vk_uniform_staging_buffer_, &this->vk_uniform_staging_buffer_memory_);
 
   // images
   this->CreateImage(this->color_format_,
@@ -756,6 +823,18 @@ void Context::InitializeVkCommandBuffers() {
     1, // number of bindings
     vertexBuffers, // vertex buffers
     offsets // offsets
+  );
+
+  // uniform buffer object
+  vkCmdBindDescriptorSets(
+    this->vk_graphics_commandbuffer_,
+    VK_PIPELINE_BIND_POINT_GRAPHICS,
+    this->vk_pipeline_layout_,
+    0,
+    1,
+    &this->vk_descriptor_set_,
+    0,
+    nullptr
   );
 
   vkCmdBindIndexBuffer(this->vk_graphics_commandbuffer_, this->vk_index_buffer_, 0, VK_INDEX_TYPE_UINT16);
@@ -886,6 +965,33 @@ void Context::SubmitIndexData() {
   this->EndSingleTimeBuffer(commandbuffer);
 }
 
+void Context::SubmitUniformData() {
+  // copy vertex data from host to staging buffer
+  VkMemoryRequirements buffer_memory_requirements;
+  vkGetBufferMemoryRequirements(
+    this->vk_logical_device_,
+    this->vk_uniform_staging_buffer_,
+    &buffer_memory_requirements
+  );
+  uint32_t buffersize = buffer_memory_requirements.size;
+
+  void* vertex_data;
+  vkMapMemory(this->vk_logical_device_, this->vk_uniform_staging_buffer_memory_, 0, buffersize, 0, &vertex_data);
+  memcpy(vertex_data, &this->uniform_, (size_t)buffersize);
+  vkUnmapMemory(this->vk_logical_device_, this->vk_uniform_staging_buffer_memory_);
+
+  // copy from stating buffer to device local buffer
+  VkCommandBuffer commandbuffer = this->BeginSingleTimeBuffer();
+
+  VkBufferCopy copyRegion = {};
+  copyRegion.srcOffset = 0; // Optional
+  copyRegion.dstOffset = 0; // Optional
+  copyRegion.size = buffersize;
+  vkCmdCopyBuffer(commandbuffer, this->vk_uniform_staging_buffer_, this->vk_uniform_buffer_, 1, &copyRegion);
+
+  this->EndSingleTimeBuffer(commandbuffer);
+}
+
 void Context::RetrieveImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
 
@@ -969,6 +1075,37 @@ void Context::CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memor
     )
   );
 }
+
+void Context::CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set) {
+  VkDescriptorSetAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.descriptorPool = this->vk_descriptor_pool_;
+  allocInfo.descriptorSetCount = 1;
+  allocInfo.pSetLayouts = layouts;
+
+  debug::handleVkResult(
+    vkAllocateDescriptorSets(this->vk_logical_device_, &allocInfo, descriptor_set)
+  );
+
+  VkDescriptorBufferInfo bufferInfo = {};
+  bufferInfo.buffer = buffer;
+  bufferInfo.offset = 0;
+  bufferInfo.range = size;
+
+  VkWriteDescriptorSet descriptorWrite = {};
+  descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  descriptorWrite.dstSet = *descriptor_set;
+  descriptorWrite.dstBinding = 0;
+  descriptorWrite.dstArrayElement = 0;
+  descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  descriptorWrite.descriptorCount = 1;
+  descriptorWrite.pBufferInfo = &bufferInfo;
+  descriptorWrite.pImageInfo = nullptr; // Optional
+  descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+  vkUpdateDescriptorSets(this->vk_logical_device_, 1, &descriptorWrite, 0, nullptr);
+}
+
 
 void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {
   VkImageCreateInfo image_info = {
