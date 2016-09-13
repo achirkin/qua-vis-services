@@ -17,6 +17,45 @@
 #include <array>
 
 namespace quavis {
+  typedef struct vec2 {
+    float x;
+    float y;
+  } vec2;
+
+  typedef struct vec3 {
+    float x;
+    float y;
+    float z;
+  } vec3;
+
+  struct Vertex {
+      vec2 pos;
+      vec3 color;
+
+      static VkVertexInputBindingDescription getBindingDescription() {
+          VkVertexInputBindingDescription bindingDescription = {};
+          bindingDescription.binding = 0;
+          bindingDescription.stride = sizeof(Vertex);
+          bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+          return bindingDescription;
+      }
+
+      static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+          std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
+          attributeDescriptions[0].binding = 0;
+          attributeDescriptions[0].location = 0;
+          attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+          attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+          attributeDescriptions[1].binding = 0;
+          attributeDescriptions[1].location = 1;
+          attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+          attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+          return attributeDescriptions;
+      }
+  };
+
   /**
   * The Context class initializes and prepares the vulkan instance for fast
   * computations on the graphics card.
@@ -46,17 +85,21 @@ namespace quavis {
     void InitializeVkCommandBuffers();
     void VkDraw();
 
+    void CreateVertexBuffer();
+    void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
+    void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlagBits flags, VkImageView* imageview);
     void CreateFrameBuffer();
     void CreateCommandPool();
     void CreateCommandBuffer();
-    void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
-    void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlagBits flags, VkImageView* imageview);
 
     void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
     void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
 
     VkCommandBuffer BeginSingleTimeBuffer();
     void EndSingleTimeBuffer(VkCommandBuffer commandBuffer);
+
+    void SubmitVertexData();
+    void RetrieveImage();
 
     // instance data
     VkInstance vk_instance_;
@@ -81,14 +124,15 @@ namespace quavis {
     VkPipelineLayout vk_pipeline_layout_;
     VkPipeline vk_pipeline_;
 
+    // vertex data
+    VkBuffer vk_vertex_buffer_;
+    VkDeviceMemory vk_vertex_buffer_memory_;
+
     // images
     VkImageView vk_color_imageview_;
-    VkImageView vk_stencil_imageview_;
     VkImage vk_color_image_;
-    VkImage vk_stencil_image_;
     VkImage vk_host_visible_image_;
     VkDeviceMemory vk_color_image_memory_;
-    VkDeviceMemory vk_stencil_image_memory_;
     VkDeviceMemory vk_host_visible_image_memory_;
 
     // framebuffers
@@ -120,6 +164,12 @@ namespace quavis {
     const uint32_t render_height_ = 500;
     const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
     const VkFormat stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
+
+    const std::vector<Vertex> vertices_ = {
+        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
   };
 }
 

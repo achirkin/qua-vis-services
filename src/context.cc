@@ -12,7 +12,10 @@ Context::Context() {
   this->InitializeVkGraphicsPipeline();
   this->InitializeVkMemory();
   this->InitializeVkCommandBuffers();
+
+  this->SubmitVertexData();
   this->VkDraw();
+  this->RetrieveImage();
 }
 
 Context::~Context() {
@@ -21,6 +24,10 @@ Context::~Context() {
   // free all allocated memory
   vkFreeMemory(this->vk_logical_device_, this->vk_color_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_vertex_buffer_memory_, nullptr);
+
+  // destroy vertex buffer
+  vkDestroyBuffer(this->vk_logical_device_, this->vk_vertex_buffer_, nullptr);
 
   // destroy images
   vkDestroyImage(this->vk_logical_device_, this->vk_color_image_, nullptr);
@@ -486,16 +493,20 @@ void Context::InitializeVkGraphicsPipeline() {
 
   VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_shader_stage_info, fragment_shader_stage_info};
 
+  // Get vertex data
+  VkVertexInputBindingDescription vertex_binding = Vertex::getBindingDescription();
+  std::vector<VkVertexInputAttributeDescription> vertex_attributes = Vertex::getAttributeDescriptions();
+
   // Define input loading
   // TODO: Load vertices correctly
   VkPipelineVertexInputStateCreateInfo vertex_input_info {
     VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO, // sType
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    0, // binding description count (spacing of data etc.)
-    nullptr, // binding descriptions, here we don't load vertices atm
-    0, // attribute description count (types passed to vertex shader etc.)
-    nullptr // attribute descriptions
+    1, // binding description count (spacing of data etc.)
+    &vertex_binding, // binding descriptions, here we don't load vertices atm
+    (uint32_t)vertex_attributes.size(), // attribute description count (types passed to vertex shader etc.)
+    vertex_attributes.data() // attribute descriptions
   };
 
   VkPipelineInputAssemblyStateCreateInfo input_assembly_info {
@@ -637,6 +648,10 @@ void Context::InitializeVkGraphicsPipeline() {
 }
 
 void Context::InitializeVkMemory() {
+  // inputbuffer
+  this->CreateVertexBuffer();
+
+  // images
   this->CreateImage(this->color_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_TILING_OPTIMAL,
@@ -644,7 +659,6 @@ void Context::InitializeVkMemory() {
     0,
     &this->vk_color_image_,
     &this->vk_color_image_memory_);
-
   this->CreateImage(this->color_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_TILING_LINEAR,
@@ -653,9 +667,13 @@ void Context::InitializeVkMemory() {
     &this->vk_host_visible_image_,
     &this->vk_host_visible_image_memory_);
 
+  // image views
   this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_);
+
+  // framebuffer
   this->CreateFrameBuffer();
 
+  // command buffers
   this->CreateCommandPool();
   this->CreateCommandBuffer();
 }
@@ -698,6 +716,16 @@ void Context::InitializeVkCommandBuffers() {
     this->vk_graphics_commandbuffer_, // command buffer
     VK_PIPELINE_BIND_POINT_GRAPHICS, // pipeline type
     this->vk_pipeline_ // graphics pipeline
+  );
+
+  // vertex data
+  VkBuffer vertexBuffers[] = {this->vk_vertex_buffer_};
+  VkDeviceSize offsets[] = {0};
+  vkCmdBindVertexBuffers(this->vk_graphics_commandbuffer_,
+    0, // vertex buffer binding index
+    1, // number of bindings
+    vertexBuffers, // vertex buffers
+    offsets // offsets
   );
 
   // draw
@@ -767,7 +795,27 @@ void Context::VkDraw() {
       VK_NULL_HANDLE // fence (we don't need it)
     )
   );
+}
 
+/// TRANSFER ROUTINES
+
+void Context::SubmitVertexData() {
+  // copy vertex data
+  VkMemoryRequirements vertex_buffer_memory_requirements;
+  vkGetBufferMemoryRequirements(
+    this->vk_logical_device_,
+    this->vk_vertex_buffer_,
+    &vertex_buffer_memory_requirements
+  );
+  uint32_t buffersize = vertex_buffer_memory_requirements.size;
+
+  void* vertex_data;
+  vkMapMemory(this->vk_logical_device_, this->vk_vertex_buffer_memory_, 0, buffersize, 0, &vertex_data);
+  memcpy(vertex_data, this->vertices_.data(), (size_t)buffersize);
+  vkUnmapMemory(this->vk_logical_device_, this->vk_vertex_buffer_memory_);
+}
+
+void Context::RetrieveImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
 
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -799,69 +847,60 @@ void Context::VkDraw() {
 
 /// CREATION ROUTINES
 
-void Context::CreateFrameBuffer() {
-  // Create Framebuffers for color & stencil (color & depth)
-  std::array<VkImageView, 1> attachments = {
-    this->vk_color_imageview_
-  };
+void Context::CreateVertexBuffer() {
+    VkBufferCreateInfo bufferInfo = {};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = sizeof(this->vertices_[0]) * this->vertices_.size();
+    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-  VkFramebufferCreateInfo framebuffer_info = {
-    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, // sType
-    nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
-    this->vk_render_pass_, // render pass
-    attachments.size(), // attachment count
-    attachments.data(), // attachments
-    this->render_width_, // width
-    this->render_height_, // height
-    1 // layer count
-  };
+    debug::handleVkResult(
+      vkCreateBuffer(this->vk_logical_device_, &bufferInfo, nullptr, &this->vk_vertex_buffer_)
+    );
 
-  debug::handleVkResult(
-    vkCreateFramebuffer(
-      this->vk_logical_device_, // the logical device
-      &framebuffer_info, // info
-      nullptr, // allocation callback
-      &this->vk_graphics_framebuffer_ // the allocated memory
-    )
-  );
-}
+    VkMemoryRequirements memory_requirements;
+    vkGetBufferMemoryRequirements(this->vk_logical_device_, this->vk_vertex_buffer_, &memory_requirements);
 
-void Context::CreateCommandPool() {
-  VkCommandPoolCreateInfo command_pool_info = {
-    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
-    nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
-    this->queue_family_index_ // the queue family
-  };
+    VkMemoryPropertyFlags memoryflags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
-  debug::handleVkResult(
-    vkCreateCommandPool(
-      this->vk_logical_device_, // the logical device
-      &command_pool_info, // info
-      nullptr, // allocation callback
-      &this->vk_command_pool_ // the allocated memory
-    )
-  );
-}
+    // find suitible memor-type
+    uint32_t memory_type = 0;
+    uint32_t memory_type_bits = memory_requirements.memoryTypeBits;
+    VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
+    vkGetPhysicalDeviceMemoryProperties(this->vk_physical_device_, &physical_device_memory_properties);
+    for (uint32_t i = 0; i < physical_device_memory_properties.memoryTypeCount; i++) {
+      if ((memory_type_bits & (1 << i)) && (physical_device_memory_properties.memoryTypes[i].propertyFlags & memoryflags) == memoryflags) {
+        memory_type = i;
+        break;
+      }
+    }
 
-void Context::CreateCommandBuffer() {
-  // create command buffers
-  VkCommandBufferAllocateInfo graphics_command_buffer_info = {
-    VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
-    nullptr, // pNext (see documentation, must be null)
-    this->vk_command_pool_, // the command pool
-    VK_COMMAND_BUFFER_LEVEL_PRIMARY, // can be submitted to the queue
-    1 // number of command buffers
-  };
+    VkMemoryAllocateInfo allocation_info = {
+      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
+      nullptr, // pNext (see documentation, must be null)
+      memory_requirements.size, // the memory size
+      memory_type // the memory type index
+    };
 
-  debug::handleVkResult(
-    vkAllocateCommandBuffers(
-      this->vk_logical_device_, // the logical device
-      &graphics_command_buffer_info, // info
-      &this->vk_graphics_commandbuffer_ // allocated memory
-    )
-  );
+    debug::handleVkResult(
+      vkAllocateMemory(
+        this->vk_logical_device_, // the logical devcie
+        &allocation_info, // the allocation info
+        nullptr, // allocation callback
+        &this->vk_vertex_buffer_memory_ // allocated memory for memory object
+      )
+    );
+
+    debug::handleVkResult(
+      vkBindBufferMemory(
+        this->vk_logical_device_, // the logical device
+        this->vk_vertex_buffer_, // the buffer
+        this->vk_vertex_buffer_memory_, // the buffer memory
+        0 // the offset in the memory
+      )
+    );
+
+    // TODO: Distill AllocateAndBindBuffer(), AllocateAndBindImage()
 }
 
 void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {
@@ -962,6 +1001,71 @@ void Context::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlagB
       &imageview_info, // info
       nullptr, // allocation callback
       imageview // the allocated memory
+    )
+  );
+}
+
+void Context::CreateFrameBuffer() {
+  // Create Framebuffers for color & stencil (color & depth)
+  std::array<VkImageView, 1> attachments = {
+    this->vk_color_imageview_
+  };
+
+  VkFramebufferCreateInfo framebuffer_info = {
+    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->vk_render_pass_, // render pass
+    attachments.size(), // attachment count
+    attachments.data(), // attachments
+    this->render_width_, // width
+    this->render_height_, // height
+    1 // layer count
+  };
+
+  debug::handleVkResult(
+    vkCreateFramebuffer(
+      this->vk_logical_device_, // the logical device
+      &framebuffer_info, // info
+      nullptr, // allocation callback
+      &this->vk_graphics_framebuffer_ // the allocated memory
+    )
+  );
+}
+
+void Context::CreateCommandPool() {
+  VkCommandPoolCreateInfo command_pool_info = {
+    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->queue_family_index_ // the queue family
+  };
+
+  debug::handleVkResult(
+    vkCreateCommandPool(
+      this->vk_logical_device_, // the logical device
+      &command_pool_info, // info
+      nullptr, // allocation callback
+      &this->vk_command_pool_ // the allocated memory
+    )
+  );
+}
+
+void Context::CreateCommandBuffer() {
+  // create command buffers
+  VkCommandBufferAllocateInfo graphics_command_buffer_info = {
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    this->vk_command_pool_, // the command pool
+    VK_COMMAND_BUFFER_LEVEL_PRIMARY, // can be submitted to the queue
+    1 // number of command buffers
+  };
+
+  debug::handleVkResult(
+    vkAllocateCommandBuffers(
+      this->vk_logical_device_, // the logical device
+      &graphics_command_buffer_info, // info
+      &this->vk_graphics_commandbuffer_ // allocated memory
     )
   );
 }
