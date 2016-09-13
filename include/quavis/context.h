@@ -8,6 +8,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tinyobjloader.h"
+
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <string.h>
@@ -49,7 +52,7 @@ namespace quavis {
           std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
           attributeDescriptions[0].binding = 0;
           attributeDescriptions[0].location = 0;
-          attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+          attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
           attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
           attributeDescriptions[1].binding = 0;
@@ -185,19 +188,21 @@ namespace quavis {
 
 
     // rendering attributes
-    const uint32_t render_width_ = 512;
-    const uint32_t render_height_ = 512;
+    const uint32_t render_width_ = 1024;
+    const uint32_t render_height_ = 1024;
     const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
     const VkFormat stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
 
-    const std::vector<Vertex> vertices_ = {
-      {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-      {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+    std::vector<Vertex> vertices_ = {
+
+      {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+      {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
       {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
       {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
+
     };
 
-    const std::vector<uint16_t> indices_ = {
+    std::vector<uint32_t> indices_ = {
       0, 1, 2, 2, 3, 0
     };
 

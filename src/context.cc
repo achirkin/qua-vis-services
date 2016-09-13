@@ -3,6 +3,40 @@
 using namespace quavis;
 
 Context::Context() {
+  // TODO: Remove this
+  /*
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string err;
+  std::string path = "/home/mfranzen/Downloads/chalet.obj";
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
+    throw std::runtime_error(err);
+  }
+
+  for (const auto& shape : shapes) {
+    for (const auto& index : shape.mesh.indices) {
+      Vertex vertex = {};
+
+      vertex.pos = {
+          attrib.vertices[3 * index.vertex_index + 0],
+          attrib.vertices[3 * index.vertex_index + 1],
+          attrib.vertices[3 * index.vertex_index + 2]
+      };
+
+
+      vertex.color = {
+          0.0f,
+          0.0f,
+          attrib.vertices[3 * index.vertex_index + 2]
+      };
+
+      vertices_.push_back(vertex);
+      indices_.push_back(indices_.size());
+    }
+  }
+  */
+
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -775,6 +809,8 @@ void Context::InitializeVkMemory() {
   this->CreateCommandBuffer();
 }
 
+// RENDERING
+
 void Context::InitializeVkCommandBuffers() {
   VkCommandBufferBeginInfo command_buffer_begin_info = {
     VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, // sType
@@ -837,7 +873,7 @@ void Context::InitializeVkCommandBuffers() {
     nullptr
   );
 
-  vkCmdBindIndexBuffer(this->vk_graphics_commandbuffer_, this->vk_index_buffer_, 0, VK_INDEX_TYPE_UINT16);
+  vkCmdBindIndexBuffer(this->vk_graphics_commandbuffer_, this->vk_index_buffer_, 0, VK_INDEX_TYPE_UINT32);
 
   // draw
   vkCmdDrawIndexed(
@@ -1105,7 +1141,6 @@ void Context::CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint
 
   vkUpdateDescriptorSets(this->vk_logical_device_, 1, &descriptorWrite, 0, nullptr);
 }
-
 
 void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {
   VkImageCreateInfo image_info = {
