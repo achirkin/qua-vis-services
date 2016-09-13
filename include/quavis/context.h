@@ -43,14 +43,20 @@ namespace quavis {
     void InitializeVkGraphicsPipeline();
     void InitializeVkGraphicsPipelineLayout();
     void InitializeVkMemory();
-    void InitializeVkCommandPool();
     void InitializeVkCommandBuffers();
     void VkDraw();
 
-    void copyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
-    VkCommandBuffer beginSingleTimeCommands();
-    void endSingleTimeCommands(VkCommandBuffer commandBuffer);
-    void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void CreateFrameBuffer();
+    void CreateCommandPool();
+    void CreateCommandBuffer();
+    void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
+    void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlagBits flags, VkImageView* imageview);
+
+    void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
+
+    VkCommandBuffer BeginSingleTimeBuffer();
+    void EndSingleTimeBuffer(VkCommandBuffer commandBuffer);
 
     // instance data
     VkInstance vk_instance_;

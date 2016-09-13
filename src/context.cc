@@ -10,7 +10,6 @@ Context::Context() {
   this->InitializeVkRenderPass();
   this->InitializeVkGraphicsPipelineLayout();
   this->InitializeVkGraphicsPipeline();
-  this->InitializeVkCommandPool();
   this->InitializeVkMemory();
   this->InitializeVkCommandBuffers();
   this->VkDraw();
@@ -21,17 +20,14 @@ Context::~Context() {
 
   // free all allocated memory
   vkFreeMemory(this->vk_logical_device_, this->vk_color_image_memory_, nullptr);
-  vkFreeMemory(this->vk_logical_device_, this->vk_stencil_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, nullptr);
 
   // destroy images
   vkDestroyImage(this->vk_logical_device_, this->vk_color_image_, nullptr);
-  vkDestroyImage(this->vk_logical_device_, this->vk_stencil_image_, nullptr);
   vkDestroyImage(this->vk_logical_device_, this->vk_host_visible_image_, nullptr);
 
   // destroy image views
   vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_, nullptr);
-  vkDestroyImageView(this->vk_logical_device_, this->vk_stencil_imageview_, nullptr);
 
   // destroy framebuffer
   vkDestroyFramebuffer(this->vk_logical_device_, this->vk_graphics_framebuffer_, nullptr);
@@ -84,9 +80,9 @@ void Context::InitializeVkInstance() {
     nullptr, // next structure (see documentation)
     0, // flags, reserver by vulkan api for future api versions
     &vkApplicationInfo, // application info (see aboive)
-    this->vk_validation_layers_.size(), // number of layers (atm no debug/validation layers used)
+    (uint32_t)this->vk_validation_layers_.size(), // number of layers (atm no debug/validation layers used)
     this->vk_validation_layers_.data(), // layer names
-    this->vk_instance_extension_names_.size(), // number of extensions (atm no extensions used, here could be glfw)
+    (uint32_t)this->vk_instance_extension_names_.size(), // number of extensions (atm no extensions used, here could be glfw)
     this->vk_instance_extension_names_.data() // extension names
   };
 
@@ -388,18 +384,6 @@ void Context::InitializeVkRenderPass() {
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // final layout (optimal for memory transfer)
   };
 
-  VkAttachmentDescription stencil_attachment_description = {
-    0, // flags (see documentation, 1 option)
-    this->stencil_format_, // color format
-    VK_SAMPLE_COUNT_1_BIT, // num samples per fragment
-    VK_ATTACHMENT_LOAD_OP_CLEAR, // operation when loading
-    VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
-    VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
-    VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
-    VK_IMAGE_LAYOUT_PREINITIALIZED, // initial layout
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // final layout (optimal for memory transfer)
-  };
-
   VkAttachmentDescription attachment_descriptions[] = {
     color_attachment_description
   };
@@ -408,11 +392,6 @@ void Context::InitializeVkRenderPass() {
   VkAttachmentReference color_attachment_reference = {
     0, // index
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // layout
-  };
-
-  VkAttachmentReference stencil_attachment_reference = {
-    1, // index
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // layout
   };
 
   // create subpass for attachments
@@ -657,352 +636,31 @@ void Context::InitializeVkGraphicsPipeline() {
   );
 }
 
-void Context::InitializeVkCommandPool() {
-  VkCommandPoolCreateInfo command_pool_info = {
-    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
-    nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
-    this->queue_family_index_ // the queue family
-  };
-
-  debug::handleVkResult(
-    vkCreateCommandPool(
-      this->vk_logical_device_, // the logical device
-      &command_pool_info, // info
-      nullptr, // allocation callback
-      &this->vk_command_pool_ // the allocated memory
-    )
-  );
-}
-
 void Context::InitializeVkMemory() {
-  ///////////////// COLOR IMAGE
-  // create color image
-    VkImageCreateInfo color_image_info = {
-      VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
-      nullptr, // pNext (see documentation, must be null)
-      0, // image flags
-      VK_IMAGE_TYPE_2D, // image type
-      this->color_format_, // image format
-      {this->render_width_, this->render_height_, 1}, // image extent
-      1, // level of detail = 1
-      1, // layers = 1
-      VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
-      VK_IMAGE_TILING_OPTIMAL, // optimal tiling
-      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, // used for color
-      VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
-      1, // number queue families
-      &this->queue_family_index_, // queue family index
-      VK_IMAGE_LAYOUT_PREINITIALIZED // initial layout
-    };
+  this->CreateImage(this->color_format_,
+    VK_IMAGE_LAYOUT_PREINITIALIZED,
+    VK_IMAGE_TILING_OPTIMAL,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+    0,
+    &this->vk_color_image_,
+    &this->vk_color_image_memory_);
 
-  debug::handleVkResult(
-    vkCreateImage(
-      this->vk_logical_device_, // the logical device
-      &color_image_info, // the image info
-      nullptr, // allocation
-      &this->vk_color_image_ // memory allocated for image object
-    )
-  );
+  this->CreateImage(this->color_format_,
+    VK_IMAGE_LAYOUT_PREINITIALIZED,
+    VK_IMAGE_TILING_LINEAR,
+    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    &this->vk_host_visible_image_,
+    &this->vk_host_visible_image_memory_);
 
-  // allocate color image memory
-  VkMemoryRequirements color_memory_requirements;
-  vkGetImageMemoryRequirements(
-    this->vk_logical_device_,
-    this->vk_color_image_,
-    &color_memory_requirements
-  );
+  this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_);
+  this->CreateFrameBuffer();
 
-  std::cout << std::to_string(color_memory_requirements.size) << std::endl;
-
-  // get the first set bit in the type-bits. This bit is at the index position
-  // of a supported memory type in the physical device
-  uint32_t color_memory_type = 0;
-  uint32_t color_memory_type_bit = 1;
-  uint32_t color_memory_type_bits = color_memory_requirements.memoryTypeBits;
-  while ((color_memory_type_bit & color_memory_type_bits) == 0) {
-    color_memory_type_bit *= 2;
-    color_memory_type++;
-  }
-
-  VkMemoryAllocateInfo color_allocation_info = {
-    VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
-    nullptr, // pNext (see documentation, must be null)
-    color_memory_requirements.size, // the memory size
-    color_memory_type // the memory type index
-  };
-
-  debug::handleVkResult(
-    vkAllocateMemory(
-      this->vk_logical_device_, // the logical devcie
-      &color_allocation_info, // the allocation info
-      nullptr, // allocation callback
-      &this->vk_color_image_memory_ // allocated memory for memory object
-    )
-  );
-
-  debug::handleVkResult(
-    vkBindImageMemory(
-      this->vk_logical_device_, // the logical device
-      this->vk_color_image_, // the image
-      this->vk_color_image_memory_, // the image memory
-      0 // the offset in the memory
-    )
-  );
-
-  ///////////////// STENCIL IMAGE
-  // create stencil image
-  VkImageCreateInfo stencil_image_info = {
-    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
-    nullptr, // pNext (see documentation, must be null)
-    0, // image flags
-    VK_IMAGE_TYPE_2D, // image type
-    this->stencil_format_, // image format
-    {this->render_width_, this->render_height_, 1}, // image extent
-    1, // level of detail = 1
-    1, // layers = 1
-    VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
-    VK_IMAGE_TILING_OPTIMAL, // linear tiling
-    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, // used for color
-    VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
-    1, // number queue families
-    &this->queue_family_index_, // queue family index
-    VK_IMAGE_LAYOUT_PREINITIALIZED // initial layout // TODO: !!!Find out whether this has to be transisition first
-  };
-
-  debug::handleVkResult(
-    vkCreateImage(
-      this->vk_logical_device_, // the logical device
-      &stencil_image_info, // the image info
-      nullptr, // allocation
-      &this->vk_stencil_image_ // memory allocated for image object
-    )
-  );
-
-  // allocate stencil image memory
-  VkMemoryRequirements stencil_memory_requirements;
-  vkGetImageMemoryRequirements(
-    this->vk_logical_device_,
-    this->vk_stencil_image_,
-    &stencil_memory_requirements
-  );
-
-  // get the first set bit in the type-bits. This bit is at the index position
-  // of a supported memory type in the physical device
-  uint32_t stencil_memory_type = 0;
-  uint32_t stencil_memory_type_bit = 1;
-  uint32_t stencil_memory_type_bits = stencil_memory_requirements.memoryTypeBits;
-  while ((stencil_memory_type_bit & stencil_memory_type_bits) == 0) {
-    stencil_memory_type_bit *= 2;
-    stencil_memory_type++;
-  }
-
-  VkMemoryAllocateInfo stencil_allocation_info = {
-    VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
-    nullptr, // pNext (see documentation, must be null)
-    stencil_memory_requirements.size, // the memory size
-    stencil_memory_type // the memory type index
-  };
-
-  debug::handleVkResult(
-    vkAllocateMemory(
-      this->vk_logical_device_, // the logical devcie
-      &stencil_allocation_info, // the allocation info
-      nullptr, // allocation callback
-      &this->vk_stencil_image_memory_ // allocated memory for memory object
-    )
-  );
-
-  debug::handleVkResult(
-    vkBindImageMemory(
-      this->vk_logical_device_, // the logical device
-      this->vk_stencil_image_, // the image
-      this->vk_stencil_image_memory_, // the image memory
-      0 // the offset in the memory
-    )
-  );
-
-  // TODO: Allocate image memory with linear tiling to copy the original ones
-  // for host usage (linear tiling is incompatible with color / depth attachment)
-  // the new memory must reside in host visible, host coherent memory and have a
-  // compatible format
-  //////////////// HOST VISIBLE IMAGE
-  // create stencil image
-  VkImageCreateInfo host_visible_image_info = {
-    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
-    nullptr, // pNext (see documentation, must be null)
-    0, // image flags
-    VK_IMAGE_TYPE_2D, // image type
-    this->color_format_, // image format
-    {this->render_width_, this->render_height_, 1}, // image extent
-    1, // level of detail = 1
-    1, // layers = 1
-    VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
-    VK_IMAGE_TILING_LINEAR, // linear tiling
-    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // used for color
-    VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
-    1, // number queue families
-    &this->queue_family_index_, // queue family index
-    VK_IMAGE_LAYOUT_PREINITIALIZED // initial layout // TODO: !!!Find out whether this has to be transisition first
-  };
-
-  debug::handleVkResult(
-    vkCreateImage(
-      this->vk_logical_device_, // the logical device
-      &host_visible_image_info, // the image info
-      nullptr, // allocation
-      &this->vk_host_visible_image_ // memory allocated for image object
-    )
-  );
-
-  // allocate host_visible image memory
-  VkMemoryRequirements host_visible_memory_requirements;
-  vkGetImageMemoryRequirements(
-    this->vk_logical_device_,
-    this->vk_host_visible_image_,
-    &host_visible_memory_requirements
-  );
-
-  // get the first set bit in the type-bits. This bit is at the index position
-  // of a supported memory type in the physical device
-  uint32_t host_visible_memory_type = 0;
-  uint32_t host_visible_memory_type_bits = host_visible_memory_requirements.memoryTypeBits;
-  VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(this->vk_physical_device_, &physical_device_memory_properties);
-  uint32_t properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-  for (uint32_t i = 0; i < physical_device_memory_properties.memoryTypeCount; i++) {
-    if ((host_visible_memory_type_bits & (1 << i)) && (physical_device_memory_properties.memoryTypes[i].propertyFlags & properties) == properties) {
-      host_visible_memory_type = i;
-      break;
-    }
-  }
-
-  VkMemoryAllocateInfo host_visible_allocation_info = {
-    VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
-    nullptr, // pNext (see documentation, must be null)
-    host_visible_memory_requirements.size, // the memory size
-    host_visible_memory_type // the memory type index
-  };
-
-  std::cout << host_visible_memory_requirements.size<< std::endl;
-
-  debug::handleVkResult(
-    vkAllocateMemory(
-      this->vk_logical_device_, // the logical devcie
-      &host_visible_allocation_info, // the allocation info
-      nullptr, // allocation callback
-      &this->vk_host_visible_image_memory_ // allocated memory for memory object
-    )
-  );
-
-  debug::handleVkResult(
-    vkBindImageMemory(
-      this->vk_logical_device_, // the logical device
-      this->vk_host_visible_image_, // the image
-      this->vk_host_visible_image_memory_, // the image memory
-      0 // the offset in the memory
-    )
-  );
-
-  // Create Image views
-  VkImageViewCreateInfo color_imageview_info = {
-    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
-    nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
-    this->vk_color_image_, // the image
-    VK_IMAGE_VIEW_TYPE_2D, // the view type
-    this->color_format_, // the color format
-    {}, // color component mapping
-    { // VkImageSubresourceRange (what's in the image)
-      VK_IMAGE_ASPECT_COLOR_BIT, // aspect flag
-      0, // base level
-      1, // level count
-      0, // base layer
-      1 // layer count
-    }
-  };
-
-  debug::handleVkResult(
-    vkCreateImageView(
-      this->vk_logical_device_, // the logical device
-      &color_imageview_info, // info
-      nullptr, // allocation callback
-      &this->vk_color_imageview_ // the offset in the memory
-    )
-  );
-
-  VkImageViewCreateInfo stencil_imageview_info = {
-    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
-    nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
-    this->vk_stencil_image_, // the image
-    VK_IMAGE_VIEW_TYPE_2D, // the view type
-    this->stencil_format_, // the stencil format
-    {}, // stencil component mapping
-    { // VkImageSubresourceRange (what's in the image)
-      VK_IMAGE_ASPECT_DEPTH_BIT, // aspect flag
-      0, // base level
-      1, // level count
-      0, // base layer
-      1 // layer count
-    }
-  };
-
-  debug::handleVkResult(
-    vkCreateImageView(
-      this->vk_logical_device_, // the logical device
-      &stencil_imageview_info, // info
-      nullptr, // allocation callback
-      &this->vk_stencil_imageview_ // the allocated memory
-    )
-  );
-
-  // Create Framebuffers for color & stencil (color & depth)
-  std::array<VkImageView, 1> attachments = {
-    this->vk_color_imageview_
-  };
-
-  VkFramebufferCreateInfo framebuffer_info = {
-    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, // sType
-    nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
-    this->vk_render_pass_, // render pass
-    attachments.size(), // attachment count
-    attachments.data(), // attachments
-    this->render_width_, // width
-    this->render_height_, // height
-    1 // layer count
-  };
-
-  debug::handleVkResult(
-    vkCreateFramebuffer(
-      this->vk_logical_device_, // the logical device
-      &framebuffer_info, // info
-      nullptr, // allocation callback
-      &this->vk_graphics_framebuffer_ // the allocated memory
-    )
-  );
-
-  // create command buffers
-  VkCommandBufferAllocateInfo graphics_command_buffer_info = {
-    VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
-    nullptr, // pNext (see documentation, must be null)
-    this->vk_command_pool_, // the command pool
-    VK_COMMAND_BUFFER_LEVEL_PRIMARY, // can be submitted to the queue
-    1 // number of command buffers
-  };
-
-  debug::handleVkResult(
-    vkAllocateCommandBuffers(
-      this->vk_logical_device_, // the logical device
-      &graphics_command_buffer_info, // info
-      &this->vk_graphics_commandbuffer_ // allocated memory
-    )
-  );
+  this->CreateCommandPool();
+  this->CreateCommandBuffer();
 }
 
 void Context::InitializeVkCommandBuffers() {
-
   VkCommandBufferBeginInfo command_buffer_begin_info = {
     VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, // sType
     nullptr, // pNext (see documentation, must be null)
@@ -1112,10 +770,10 @@ void Context::VkDraw() {
 
   vkQueueWaitIdle(this->vk_queue_graphics_);
 
-  this->transitionImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-  this->transitionImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-  this->copyImage(this->vk_color_image_, this->vk_host_visible_image_, this->render_width_, this->render_height_);
-  this->transitionImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  this->CopyImage(this->vk_color_image_, this->vk_host_visible_image_, this->render_width_, this->render_height_);
+  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
@@ -1139,69 +797,179 @@ void Context::VkDraw() {
   stbi_write_png("bin/test.png", subresource_layout.rowPitch/4, this->render_height_, 4, (void*)pixels, 0);
 }
 
-void Context::copyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+/// CREATION ROUTINES
 
-    VkImageSubresourceLayers subResource = {};
-    subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subResource.baseArrayLayer = 0;
-    subResource.mipLevel = 0;
-    subResource.layerCount = 1;
+void Context::CreateFrameBuffer() {
+  // Create Framebuffers for color & stencil (color & depth)
+  std::array<VkImageView, 1> attachments = {
+    this->vk_color_imageview_
+  };
 
-    VkImageCopy region = {};
-    region.srcSubresource = subResource;
-    region.dstSubresource = subResource;
-    region.srcOffset = {0, 0, 0};
-    region.dstOffset = {0, 0, 0};
-    region.extent.width = this->render_width_;
-    region.extent.height = this->render_height_;
-    region.extent.depth = 1;
+  VkFramebufferCreateInfo framebuffer_info = {
+    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->vk_render_pass_, // render pass
+    attachments.size(), // attachment count
+    attachments.data(), // attachments
+    this->render_width_, // width
+    this->render_height_, // height
+    1 // layer count
+  };
 
-    vkCmdCopyImage(
-        commandBuffer,
-        srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-        1, &region
-    );
-
-    endSingleTimeCommands(commandBuffer);
+  debug::handleVkResult(
+    vkCreateFramebuffer(
+      this->vk_logical_device_, // the logical device
+      &framebuffer_info, // info
+      nullptr, // allocation callback
+      &this->vk_graphics_framebuffer_ // the allocated memory
+    )
+  );
 }
 
-VkCommandBuffer Context::beginSingleTimeCommands() {
-    VkCommandBufferAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = this->vk_command_pool_;
-    allocInfo.commandBufferCount = 1;
+void Context::CreateCommandPool() {
+  VkCommandPoolCreateInfo command_pool_info = {
+    VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    this->queue_family_index_ // the queue family
+  };
 
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(this->vk_logical_device_, &allocInfo, &commandBuffer);
-
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-    return commandBuffer;
+  debug::handleVkResult(
+    vkCreateCommandPool(
+      this->vk_logical_device_, // the logical device
+      &command_pool_info, // info
+      nullptr, // allocation callback
+      &this->vk_command_pool_ // the allocated memory
+    )
+  );
 }
 
-void Context::endSingleTimeCommands(VkCommandBuffer commandBuffer) {
-    vkEndCommandBuffer(commandBuffer);
+void Context::CreateCommandBuffer() {
+  // create command buffers
+  VkCommandBufferAllocateInfo graphics_command_buffer_info = {
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    this->vk_command_pool_, // the command pool
+    VK_COMMAND_BUFFER_LEVEL_PRIMARY, // can be submitted to the queue
+    1 // number of command buffers
+  };
 
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
-
-    vkQueueSubmit(this->vk_queue_graphics_, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(this->vk_queue_graphics_);
-
-    vkFreeCommandBuffers(this->vk_logical_device_, this->vk_command_pool_, 1, &commandBuffer);
+  debug::handleVkResult(
+    vkAllocateCommandBuffers(
+      this->vk_logical_device_, // the logical device
+      &graphics_command_buffer_info, // info
+      &this->vk_graphics_commandbuffer_ // allocated memory
+    )
+  );
 }
 
-void Context::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout) {
-    VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {
+  VkImageCreateInfo image_info = {
+    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
+    nullptr, // pNext (see documentation, must be null)
+    0, // image flags
+    VK_IMAGE_TYPE_2D, // image type
+    format, // image format
+    {this->render_width_, this->render_height_, 1}, // image extent
+    1, // level of detail = 1
+    1, // layers = 1
+    VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
+    tiling, // linear tiling
+    usage, // used for transfer
+    VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
+    1, // number queue families
+    &this->queue_family_index_, // queue family index
+    layout // initial layout
+  };
+
+  debug::handleVkResult(
+    vkCreateImage(
+      this->vk_logical_device_, // the logical device
+      &image_info, // the image info
+      nullptr, // allocation
+      image// memory allocated for image object
+    )
+  );
+
+  VkMemoryRequirements memory_requirements;
+  vkGetImageMemoryRequirements(
+    this->vk_logical_device_,
+    *image,
+    &memory_requirements
+  );
+
+  // get the first set bit in the type-bits. This bit is at the index position
+  // of a supported memory type in the physical device
+  uint32_t memory_type = 0;
+  uint32_t memory_type_bits = memory_requirements.memoryTypeBits;
+  VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
+    vkGetPhysicalDeviceMemoryProperties(this->vk_physical_device_, &physical_device_memory_properties);
+  for (uint32_t i = 0; i < physical_device_memory_properties.memoryTypeCount; i++) {
+    if ((memory_type_bits & (1 << i)) && (physical_device_memory_properties.memoryTypes[i].propertyFlags & memoryflags) == memoryflags) {
+      memory_type = i;
+      break;
+    }
+  }
+
+  VkMemoryAllocateInfo allocation_info = {
+    VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    memory_requirements.size, // the memory size
+    memory_type // the memory type index
+  };
+
+  debug::handleVkResult(
+    vkAllocateMemory(
+      this->vk_logical_device_, // the logical devcie
+      &allocation_info, // the allocation info
+      nullptr, // allocation callback
+      image_memory // allocated memory for memory object
+    )
+  );
+
+  debug::handleVkResult(
+    vkBindImageMemory(
+      this->vk_logical_device_, // the logical device
+      *image, // the image
+      *image_memory, // the image memory
+      0 // the offset in the memory
+    )
+  );
+}
+
+void Context::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlagBits flags, VkImageView* imageview) {
+  VkImageViewCreateInfo imageview_info = {
+    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
+    nullptr,// pNext (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    image, // the image
+    VK_IMAGE_VIEW_TYPE_2D, // the view type
+    format, // the stencil format
+    {}, // stencil component mapping
+    { // VkImageSubresourceRange (what's in the image)
+      flags, // aspect flag
+      0, // base level
+      1, // level count
+      0, // base layer
+      1 // layer count
+    }
+  };
+
+  debug::handleVkResult(
+    vkCreateImageView(
+      this->vk_logical_device_, // the logical device
+      &imageview_info, // info
+      nullptr, // allocation callback
+      imageview // the allocated memory
+    )
+  );
+}
+
+/// TRANSFORMATION ROUTINES
+
+void Context::TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout) {
+    VkCommandBuffer commandBuffer = BeginSingleTimeBuffer();
 
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1225,5 +993,68 @@ void Context::transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkIm
         1, &barrier
     );
 
-    endSingleTimeCommands(commandBuffer);
+    EndSingleTimeBuffer(commandBuffer);
+}
+
+void Context::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) {
+    VkCommandBuffer commandBuffer = BeginSingleTimeBuffer();
+
+    VkImageSubresourceLayers subResource = {};
+    subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subResource.baseArrayLayer = 0;
+    subResource.mipLevel = 0;
+    subResource.layerCount = 1;
+
+    VkImageCopy region = {};
+    region.srcSubresource = subResource;
+    region.dstSubresource = subResource;
+    region.srcOffset = {0, 0, 0};
+    region.dstOffset = {0, 0, 0};
+    region.extent.width = this->render_width_;
+    region.extent.height = this->render_height_;
+    region.extent.depth = 1;
+
+    vkCmdCopyImage(
+        commandBuffer,
+        srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1, &region
+    );
+
+    EndSingleTimeBuffer(commandBuffer);
+}
+
+/// UTILITY ROUTINES
+
+VkCommandBuffer Context::BeginSingleTimeBuffer() {
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = this->vk_command_pool_;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(this->vk_logical_device_, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    return commandBuffer;
+}
+
+void Context::EndSingleTimeBuffer(VkCommandBuffer commandBuffer) {
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(this->vk_queue_graphics_, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(this->vk_queue_graphics_);
+
+    vkFreeCommandBuffers(this->vk_logical_device_, this->vk_command_pool_, 1, &commandBuffer);
 }
