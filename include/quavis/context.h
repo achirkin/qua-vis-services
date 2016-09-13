@@ -8,9 +8,6 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#include "tinyobjloader.h"
-
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <string.h>
@@ -97,13 +94,13 @@ namespace quavis {
 
     void CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory);
     void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
-    void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlagBits flags, VkImageView* imageview);
+    void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview);
     void CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
     void CreateFrameBuffer();
     void CreateCommandPool();
     void CreateCommandBuffer();
 
-    void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags flags);
     void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
 
     VkCommandBuffer BeginSingleTimeBuffer();
@@ -158,9 +155,12 @@ namespace quavis {
 
     // images
     VkImageView vk_color_imageview_;
+    VkImageView vk_depth_stencil_imageview_;
     VkImage vk_color_image_;
+    VkImage vk_depth_stencil_image_;
     VkImage vk_host_visible_image_;
     VkDeviceMemory vk_color_image_memory_;
+    VkDeviceMemory vk_depth_stencil_image_memory_;
     VkDeviceMemory vk_host_visible_image_memory_;
 
     // framebuffers
@@ -191,7 +191,7 @@ namespace quavis {
     const uint32_t render_width_ = 1024;
     const uint32_t render_height_ = 1024;
     const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
-    const VkFormat stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
 
     std::vector<Vertex> vertices_ = {
 
