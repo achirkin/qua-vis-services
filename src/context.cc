@@ -14,6 +14,7 @@ Context::Context() {
   this->InitializeVkCommandBuffers();
 
   this->SubmitVertexData();
+  this->SubmitIndexData();
   this->VkDraw();
   this->RetrieveImage();
 }
@@ -25,9 +26,15 @@ Context::~Context() {
   vkFreeMemory(this->vk_logical_device_, this->vk_color_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_vertex_buffer_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_vertex_staging_buffer_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_index_buffer_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_index_staging_buffer_memory_, nullptr);
 
   // destroy vertex buffer
   vkDestroyBuffer(this->vk_logical_device_, this->vk_vertex_buffer_, nullptr);
+  vkDestroyBuffer(this->vk_logical_device_, this->vk_vertex_staging_buffer_, nullptr);
+  vkDestroyBuffer(this->vk_logical_device_, this->vk_index_buffer_, nullptr);
+  vkDestroyBuffer(this->vk_logical_device_, this->vk_index_staging_buffer_, nullptr);
 
   // destroy images
   vkDestroyImage(this->vk_logical_device_, this->vk_color_image_, nullptr);
@@ -648,8 +655,30 @@ void Context::InitializeVkGraphicsPipeline() {
 }
 
 void Context::InitializeVkMemory() {
-  // inputbuffer
-  this->CreateVertexBuffer();
+  // input buffer
+  this->CreateBuffer(
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    sizeof(this->vertices_[0]) * this->vertices_.size(),
+    &this->vk_vertex_buffer_, &this->vk_vertex_buffer_memory_);
+
+  this->CreateBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    sizeof(this->vertices_[0]) * this->vertices_.size(),
+    &this->vk_vertex_staging_buffer_, &this->vk_vertex_staging_buffer_memory_);
+
+  this->CreateBuffer(
+    VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    sizeof(this->indices_[0]) * this->indices_.size(),
+    &this->vk_index_buffer_, &this->vk_index_buffer_memory_);
+
+  this->CreateBuffer(
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    sizeof(this->indices_[0]) * this->indices_.size(),
+    &this->vk_index_staging_buffer_, &this->vk_index_staging_buffer_memory_);
 
   // images
   this->CreateImage(this->color_format_,
@@ -659,6 +688,7 @@ void Context::InitializeVkMemory() {
     0,
     &this->vk_color_image_,
     &this->vk_color_image_memory_);
+
   this->CreateImage(this->color_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_TILING_LINEAR,
@@ -728,13 +758,16 @@ void Context::InitializeVkCommandBuffers() {
     offsets // offsets
   );
 
+  vkCmdBindIndexBuffer(this->vk_graphics_commandbuffer_, this->vk_index_buffer_, 0, VK_INDEX_TYPE_UINT16);
+
   // draw
-  vkCmdDraw(
+  vkCmdDrawIndexed(
     this->vk_graphics_commandbuffer_, // command buffer
-    3, // num vertices // TODO
+    this->indices_.size(), // num indexes
     1, // num instances // TODO
-    0, // first vertex index
-    0 // first instance ID
+    0, // first index
+    0, // vertex index offset
+    0 // first instance
   );
 
   vkCmdEndRenderPass(this->vk_graphics_commandbuffer_);
@@ -800,7 +833,7 @@ void Context::VkDraw() {
 /// TRANSFER ROUTINES
 
 void Context::SubmitVertexData() {
-  // copy vertex data
+  // copy vertex data from host to staging buffer
   VkMemoryRequirements vertex_buffer_memory_requirements;
   vkGetBufferMemoryRequirements(
     this->vk_logical_device_,
@@ -810,9 +843,47 @@ void Context::SubmitVertexData() {
   uint32_t buffersize = vertex_buffer_memory_requirements.size;
 
   void* vertex_data;
-  vkMapMemory(this->vk_logical_device_, this->vk_vertex_buffer_memory_, 0, buffersize, 0, &vertex_data);
+  vkMapMemory(this->vk_logical_device_, this->vk_vertex_staging_buffer_memory_, 0, buffersize, 0, &vertex_data);
   memcpy(vertex_data, this->vertices_.data(), (size_t)buffersize);
-  vkUnmapMemory(this->vk_logical_device_, this->vk_vertex_buffer_memory_);
+  vkUnmapMemory(this->vk_logical_device_, this->vk_vertex_staging_buffer_memory_);
+
+  // copy from stating buffer to device local buffer
+  VkCommandBuffer commandbuffer = this->BeginSingleTimeBuffer();
+
+  VkBufferCopy copyRegion = {};
+  copyRegion.srcOffset = 0; // Optional
+  copyRegion.dstOffset = 0; // Optional
+  copyRegion.size = buffersize;
+  vkCmdCopyBuffer(commandbuffer, this->vk_vertex_staging_buffer_, this->vk_vertex_buffer_, 1, &copyRegion);
+
+  this->EndSingleTimeBuffer(commandbuffer);
+}
+
+void Context::SubmitIndexData() {
+  // copy vertex data from host to staging buffer
+  VkMemoryRequirements buffer_memory_requirements;
+  vkGetBufferMemoryRequirements(
+    this->vk_logical_device_,
+    this->vk_index_staging_buffer_,
+    &buffer_memory_requirements
+  );
+  uint32_t buffersize = buffer_memory_requirements.size;
+
+  void* vertex_data;
+  vkMapMemory(this->vk_logical_device_, this->vk_index_staging_buffer_memory_, 0, buffersize, 0, &vertex_data);
+  memcpy(vertex_data, this->indices_.data(), (size_t)buffersize);
+  vkUnmapMemory(this->vk_logical_device_, this->vk_index_staging_buffer_memory_);
+
+  // copy from stating buffer to device local buffer
+  VkCommandBuffer commandbuffer = this->BeginSingleTimeBuffer();
+
+  VkBufferCopy copyRegion = {};
+  copyRegion.srcOffset = 0; // Optional
+  copyRegion.dstOffset = 0; // Optional
+  copyRegion.size = buffersize;
+  vkCmdCopyBuffer(commandbuffer, this->vk_index_staging_buffer_, this->vk_index_buffer_, 1, &copyRegion);
+
+  this->EndSingleTimeBuffer(commandbuffer);
 }
 
 void Context::RetrieveImage() {
@@ -847,60 +918,56 @@ void Context::RetrieveImage() {
 
 /// CREATION ROUTINES
 
-void Context::CreateVertexBuffer() {
-    VkBufferCreateInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = sizeof(this->vertices_[0]) * this->vertices_.size();
-    bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+void Context::CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory) {
+  VkBufferCreateInfo bufferInfo = {};
+  bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+  bufferInfo.size = size;
+  bufferInfo.usage = usage;
+  bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    debug::handleVkResult(
-      vkCreateBuffer(this->vk_logical_device_, &bufferInfo, nullptr, &this->vk_vertex_buffer_)
-    );
+  debug::handleVkResult(
+    vkCreateBuffer(this->vk_logical_device_, &bufferInfo, nullptr, buffer)
+  );
 
-    VkMemoryRequirements memory_requirements;
-    vkGetBufferMemoryRequirements(this->vk_logical_device_, this->vk_vertex_buffer_, &memory_requirements);
+  VkMemoryRequirements memory_requirements;
+  vkGetBufferMemoryRequirements(this->vk_logical_device_, *buffer, &memory_requirements);
 
-    VkMemoryPropertyFlags memoryflags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-    // find suitible memor-type
-    uint32_t memory_type = 0;
-    uint32_t memory_type_bits = memory_requirements.memoryTypeBits;
-    VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(this->vk_physical_device_, &physical_device_memory_properties);
-    for (uint32_t i = 0; i < physical_device_memory_properties.memoryTypeCount; i++) {
-      if ((memory_type_bits & (1 << i)) && (physical_device_memory_properties.memoryTypes[i].propertyFlags & memoryflags) == memoryflags) {
-        memory_type = i;
-        break;
-      }
+  // find suitible memor-type
+  uint32_t memory_type = 0;
+  uint32_t memory_type_bits = memory_requirements.memoryTypeBits;
+  VkPhysicalDeviceMemoryProperties physical_device_memory_properties;
+  vkGetPhysicalDeviceMemoryProperties(this->vk_physical_device_, &physical_device_memory_properties);
+  for (uint32_t i = 0; i < physical_device_memory_properties.memoryTypeCount; i++) {
+    if ((memory_type_bits & (1 << i)) && (physical_device_memory_properties.memoryTypes[i].propertyFlags & memoryflags) == memoryflags) {
+      memory_type = i;
+      break;
     }
+  }
 
-    VkMemoryAllocateInfo allocation_info = {
-      VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
-      nullptr, // pNext (see documentation, must be null)
-      memory_requirements.size, // the memory size
-      memory_type // the memory type index
-    };
+  VkMemoryAllocateInfo allocation_info = {
+    VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    memory_requirements.size, // the memory size
+    memory_type // the memory type index
+  };
 
-    debug::handleVkResult(
-      vkAllocateMemory(
-        this->vk_logical_device_, // the logical devcie
-        &allocation_info, // the allocation info
-        nullptr, // allocation callback
-        &this->vk_vertex_buffer_memory_ // allocated memory for memory object
-      )
-    );
+  debug::handleVkResult(
+    vkAllocateMemory(
+      this->vk_logical_device_, // the logical devcie
+      &allocation_info, // the allocation info
+      nullptr, // allocation callback
+      buffer_memory // allocated memory for memory object
+    )
+  );
 
-    debug::handleVkResult(
-      vkBindBufferMemory(
-        this->vk_logical_device_, // the logical device
-        this->vk_vertex_buffer_, // the buffer
-        this->vk_vertex_buffer_memory_, // the buffer memory
-        0 // the offset in the memory
-      )
-    );
-
-    // TODO: Distill AllocateAndBindBuffer(), AllocateAndBindImage()
+  debug::handleVkResult(
+    vkBindBufferMemory(
+      this->vk_logical_device_, // the logical device
+      *buffer, // the buffer
+      *buffer_memory, // the buffer memory
+      0 // the offset in the memory
+    )
+  );
 }
 
 void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {

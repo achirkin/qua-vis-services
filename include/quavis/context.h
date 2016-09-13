@@ -85,7 +85,7 @@ namespace quavis {
     void InitializeVkCommandBuffers();
     void VkDraw();
 
-    void CreateVertexBuffer();
+    void CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory);
     void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
     void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlagBits flags, VkImageView* imageview);
     void CreateFrameBuffer();
@@ -99,6 +99,7 @@ namespace quavis {
     void EndSingleTimeBuffer(VkCommandBuffer commandBuffer);
 
     void SubmitVertexData();
+    void SubmitIndexData();
     void RetrieveImage();
 
     // instance data
@@ -125,8 +126,14 @@ namespace quavis {
     VkPipeline vk_pipeline_;
 
     // vertex data
+    VkBuffer vk_vertex_staging_buffer_;
     VkBuffer vk_vertex_buffer_;
+    VkBuffer vk_index_staging_buffer_;
+    VkBuffer vk_index_buffer_;
+    VkDeviceMemory vk_vertex_staging_buffer_memory_;
     VkDeviceMemory vk_vertex_buffer_memory_;
+    VkDeviceMemory vk_index_staging_buffer_memory_;
+    VkDeviceMemory vk_index_buffer_memory_;
 
     // images
     VkImageView vk_color_imageview_;
@@ -166,9 +173,14 @@ namespace quavis {
     const VkFormat stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
 
     const std::vector<Vertex> vertices_ = {
-        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+      {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+      {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+      {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+      {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    const std::vector<uint16_t> indices_ = {
+      0, 1, 2, 2, 3, 0
     };
   };
 }
