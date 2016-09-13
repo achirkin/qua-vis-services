@@ -28,6 +28,10 @@ namespace quavis {
     float z;
   } vec3;
 
+  typedef struct mat4 {
+    float data[16];
+  } mat4;
+
   struct Vertex {
       vec2 pos;
       vec3 color;
