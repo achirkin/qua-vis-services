@@ -194,7 +194,6 @@ namespace quavis {
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
 
     std::vector<Vertex> vertices_ = {
-
       {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
       {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
       {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},

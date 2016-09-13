@@ -169,7 +169,6 @@ void Context::InitializeVkPhysicalDevice() {
         bool layerFound = false;
 
         for (const auto& layerProperties : available_layers) {
-            std::cout << layerProperties.layerName << std::endl;
             if (strcmp(layerName, layerProperties.layerName) == 0) {
                 layerFound = true;
                 break;
@@ -1049,7 +1048,6 @@ void Context::RetrieveImage() {
     &host_visible_memory_requirements
   );
   size_t image_size = host_visible_memory_requirements.size;
-  std::cout << std::to_string(image_size) << std::endl;
   uint8_t *data;
   uint8_t pixels[image_size];
   vkMapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, 0, image_size, 0, (void **)&data);

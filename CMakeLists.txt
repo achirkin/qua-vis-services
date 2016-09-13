@@ -56,6 +56,6 @@ add_library(quavis SHARED
 )
 target_link_libraries(quavis vulkan)
 
-add_definitions("-Wall -g")
+add_definitions("-Wall -O3")
 add_executable (testvulkan "${CMAKE_SOURCE_DIR}/test/vulkan.cc")
 target_link_libraries (testvulkan quavis)
