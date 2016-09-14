@@ -3,33 +3,6 @@
 using namespace quavis;
 
 Context::Context() {
-  this->uniform_.proj[1][1] *= -1;
-
-  tinyobj::attrib_t attrib;
-  std::vector<tinyobj::shape_t> shapes;
-  std::vector<tinyobj::material_t> materials;
-  std::string err;
-  std::string path = "/home/mfranzen/Downloads/chalet.obj";
-  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
-    throw std::runtime_error(err);
-  }
-  for (const auto& shape : shapes) {
-    for (const auto& index : shape.mesh.indices) {
-      Vertex vertex = {};
-      vertex.pos = {
-          attrib.vertices[3 * index.vertex_index + 0],
-          attrib.vertices[3 * index.vertex_index + 1],
-          attrib.vertices[3 * index.vertex_index + 2]
-      };
-      vertex.color = {
-          0.0f,
-          0.0f,
-          attrib.vertices[3 * index.vertex_index + 2]
-      };
-      vertices_.push_back(vertex);
-      indices_.push_back(indices_.size());
-    }
-  }
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -1080,8 +1053,6 @@ void Context::RetrieveImage() {
   vkMapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
-
-  std::cout << image_size << std::endl;
 
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
