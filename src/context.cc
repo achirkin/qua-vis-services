@@ -3,6 +3,8 @@
 using namespace quavis;
 
 Context::Context() {
+  this->uniform_.proj[1][1] *= -1;
+
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -438,7 +440,7 @@ void Context::InitializeVkRenderPass() {
     VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
     VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
     VK_IMAGE_LAYOUT_PREINITIALIZED, // initial layout
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // final layout (optimal for memory transfer)
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // final layout
   };
 
   VkAttachmentDescription depth_attachment_description = {
@@ -450,7 +452,7 @@ void Context::InitializeVkRenderPass() {
     VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
     VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
     VK_IMAGE_LAYOUT_PREINITIALIZED, // initial layout
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // final layout (optimal for memory transfer)
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // final layout
   };
 
   VkAttachmentDescription attachment_descriptions[] = {
@@ -709,12 +711,12 @@ void Context::InitializeVkGraphicsPipeline() {
     0, // flags (see documentation, must be 0)
     VK_TRUE, // test depth
     VK_TRUE, // write depth
-    VK_COMPARE_OP_LESS, // comparison operation // TODO: Check if depth comparator is correct
+    VK_COMPARE_OP_LESS, // comparison operation
     VK_FALSE, // depth bound test
     VK_FALSE, // stencil test
     {}, // front stencil op state
     {}, // back stencil op state
-    0.0f, // min depth // TODO: Is min depth / max depth correct here?
+    0.0f, // min depth
     1.0f // max depth
   };
 
@@ -1080,7 +1082,7 @@ void Context::RetrieveImage() {
   vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
 
   uint8_t image[this->render_width_ * this->render_height_];
-  for (int i = 0; i < 4 * this->render_width_ * this->render_height_; i += 8) {
+  for (int i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
     memcpy(&px, pixels + i, 4);
     image[i/4] = floor(px*255);

@@ -11,6 +11,11 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
 
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <math.h>
 #include <vulkan/vulkan.h>
 #include <stdio.h>
@@ -32,9 +37,9 @@ namespace quavis {
   } mat4;
 
   struct UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
+    glm::mat4 model;
+    glm::mat4 view;
+    glm::mat4 proj;
   };
 
   struct Vertex {
@@ -208,27 +213,10 @@ namespace quavis {
       //0, 1, 2, 2, 3, 0
     };
 
-    const UniformBufferObject uniform_ = {
-      mat4 { // model
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,0,1
-      },
-
-      mat4 { // view
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,0,1
-      },
-
-      mat4 { // proj
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,0,1
-      },
+    UniformBufferObject uniform_ = {
+      glm::rotate(glm::mat4(), glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+      glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
+      glm::perspective(glm::radians(45.0f), this->render_width_ / (float) this->render_height_, 0.1f, 10.0f)
     };
   };
 }
