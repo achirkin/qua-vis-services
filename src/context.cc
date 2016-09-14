@@ -425,7 +425,7 @@ void Context::InitializeVkRenderPass() {
     VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
     VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
     VK_IMAGE_LAYOUT_PREINITIALIZED, // initial layout
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // final layout (optimal for memory transfer)
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // final layout (optimal for memory transfer)
   };
 
   VkAttachmentDescription attachment_descriptions[] = {
@@ -1048,14 +1048,15 @@ void Context::RetrieveImage() {
     &host_visible_memory_requirements
   );
   size_t image_size = host_visible_memory_requirements.size;
-  uint8_t *data;
-  uint8_t pixels[image_size];
+  void *data;
+  void *pixels = malloc(image_size);
   vkMapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
 
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
   stbi_write_png("bin/test.png", subresource_layout.rowPitch/4, this->render_height_, 4, (void*)pixels, 0);
+  free(pixels);
 }
 
 /// CREATION ROUTINES
