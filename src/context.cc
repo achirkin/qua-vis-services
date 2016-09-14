@@ -659,7 +659,7 @@ void Context::InitializeVkGraphicsPipeline() {
     VK_FALSE, // discard primitives before rendering?
     VK_POLYGON_MODE_FILL, // fill polygons (alternatively: draw only edges / vertices)
     VK_CULL_MODE_BACK_BIT, // discard one of the two faces of a polygon
-    VK_FRONT_FACE_CLOCKWISE, // clockwise = front
+    VK_FRONT_FACE_COUNTER_CLOCKWISE, // clockwise = front
     VK_FALSE, // depth bias // TODO: Find out whether we need depth bias
     0.0f, // depth bias constant
     0.0f, // depth bias clamp
@@ -1080,6 +1080,8 @@ void Context::RetrieveImage() {
   vkMapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
+
+  std::cout << image_size << std::endl;
 
   uint8_t image[this->render_width_ * this->render_height_];
   for (int i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
