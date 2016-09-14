@@ -3,6 +3,31 @@
 using namespace quavis;
 
 Context::Context() {
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string err;
+  std::string path = "/home/mfranzen/Downloads/chalet.obj";
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
+    throw std::runtime_error(err);
+  }
+  for (const auto& shape : shapes) {
+    for (const auto& index : shape.mesh.indices) {
+      Vertex vertex = {};
+      vertex.pos = {
+          attrib.vertices[3 * index.vertex_index + 0],
+          attrib.vertices[3 * index.vertex_index + 1],
+          attrib.vertices[3 * index.vertex_index + 2]
+      };
+      vertex.color = {
+          0.0f,
+          0.0f,
+          attrib.vertices[3 * index.vertex_index + 2]
+      };
+      vertices_.push_back(vertex);
+      indices_.push_back(indices_.size());
+    }
+  }
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -780,12 +805,12 @@ void Context::InitializeVkMemory() {
   this->CreateImage(this->depth_stencil_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_TILING_OPTIMAL,
-    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+    VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
     0,
     &this->vk_depth_stencil_image_,
     &this->vk_depth_stencil_image_memory_);
 
-  this->CreateImage(this->color_format_,
+  this->CreateImage(this->depth_stencil_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_TILING_LINEAR,
     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
@@ -796,7 +821,7 @@ void Context::InitializeVkMemory() {
   // image views
   this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_);
 
-  VkImageAspectFlags flags = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+  VkImageAspectFlags flags = VK_IMAGE_ASPECT_DEPTH_BIT;
   this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, flags, &this->vk_depth_stencil_imageview_);
 
   // framebuffer
@@ -1032,12 +1057,12 @@ void Context::SubmitUniformData() {
 void Context::RetrieveImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
 
-  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->CopyImage(this->vk_color_image_, this->vk_host_visible_image_, this->render_width_, this->render_height_);
-  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_host_visible_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT);
+  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-  VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
+  VkImageSubresource subresource = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
   vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_host_visible_image_, &subresource, &subresource_layout);
 
@@ -1054,8 +1079,15 @@ void Context::RetrieveImage() {
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
 
+  uint8_t image[this->render_width_ * this->render_height_];
+  for (int i = 0; i < 4 * this->render_width_ * this->render_height_; i += 8) {
+    float px;
+    memcpy(&px, pixels + i, 4);
+    image[i/4] = floor(px*255);
+  }
+
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  stbi_write_png("bin/test.png", subresource_layout.rowPitch/4, this->render_height_, 4, (void*)pixels, 0);
+  stbi_write_png("bin/test.png", this->render_width_, this->render_height_, 1, (void*)image, 0);
   free(pixels);
 }
 
@@ -1341,11 +1373,11 @@ void Context::TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkIma
     EndSingleTimeBuffer(commandBuffer);
 }
 
-void Context::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) {
+void Context::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags) {
     VkCommandBuffer commandBuffer = BeginSingleTimeBuffer();
 
     VkImageSubresourceLayers subResource = {};
-    subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    subResource.aspectMask = aspectFlags;
     subResource.baseArrayLayer = 0;
     subResource.mipLevel = 0;
     subResource.layerCount = 1;

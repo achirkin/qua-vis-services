@@ -8,6 +8,10 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tinyobjloader.h"
+
+#include <math.h>
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <string.h>
@@ -101,7 +105,7 @@ namespace quavis {
     void CreateCommandBuffer();
 
     void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags flags);
-    void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
+    void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags);
 
     VkCommandBuffer BeginSingleTimeBuffer();
     void EndSingleTimeBuffer(VkCommandBuffer commandBuffer);
@@ -188,21 +192,20 @@ namespace quavis {
 
 
     // rendering attributes
-    const uint32_t render_width_ = 4096;
-    const uint32_t render_height_ = 4096;
+    const uint32_t render_width_ = 1024;
+    const uint32_t render_height_ = 1024;
     const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
-    const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT_S8_UINT;
+    const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
 
     std::vector<Vertex> vertices_ = {
-      {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
+      /*{{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
       {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
       {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-      {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
-
+      {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}*/
     };
 
     std::vector<uint32_t> indices_ = {
-      0, 1, 2, 2, 3, 0
+      //0, 1, 2, 2, 3, 0
     };
 
     const UniformBufferObject uniform_ = {
@@ -212,12 +215,14 @@ namespace quavis {
         0,0,1,0,
         0,0,0,1
       },
+
       mat4 { // view
         1,0,0,0,
         0,1,0,0,
         0,0,1,0,
         0,0,0,1
       },
+
       mat4 { // proj
         1,0,0,0,
         0,1,0,0,
