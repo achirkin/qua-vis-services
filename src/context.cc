@@ -1084,9 +1084,9 @@ void Context::RetrieveImage() {
   std::cout << image_size << std::endl;
 
   uint8_t image[this->render_width_ * this->render_height_];
-  for (int i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
+  for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
-    memcpy(&px, pixels + i, 4);
+    memcpy(&px, (uint8_t*)pixels + i, 4);
     image[i/4] = floor(px*255);
   }
 
