@@ -26,7 +26,7 @@ Context::Context() {
   this->InitializeVkImageLayouts();
 
   auto t1 = std::chrono::high_resolution_clock::now();
-  int N = 10000;
+  int N = 100000;
   for (int i = 0; i < N; i++)
     this->VkDraw();
   auto t2 = std::chrono::high_resolution_clock::now();
@@ -233,11 +233,15 @@ void Context::InitializeVkPhysicalDevice() {
 
 
     /////////////////// BEGIN CHECK EXTENSION SUPPORT
+    const char* validation_layer_name = nullptr;
+    if (this->vk_validation_layers_.size() > 0)
+      validation_layer_name = this->vk_validation_layers_[0];
+
     // get number of supported extension in device
     uint32_t extension_count;
     vkEnumerateDeviceExtensionProperties(
       *device_it, // the physical device
-      this->vk_validation_layers_[0], // the layer name
+      validation_layer_name, // the layer name
       &extension_count, // the allocated memory for the number of extensions
       nullptr // the allocated memory for the extension properties
     );
@@ -246,7 +250,7 @@ void Context::InitializeVkPhysicalDevice() {
     std::vector<VkExtensionProperties> available_extensions(extension_count);
     vkEnumerateDeviceExtensionProperties(
       *device_it, // the physical device
-      this->vk_validation_layers_[0], // the layer name
+      validation_layer_name, // the layer name
       &extension_count, // the allocated memory for the number of extensions
       available_extensions.data() // the allocated memory for the extension properties
     );

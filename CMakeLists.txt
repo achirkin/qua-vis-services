@@ -42,6 +42,7 @@ if (WIN32)
 else (WIN32)
     add_definitions (-std=c++14)
     add_definitions (-pipe)
+    add_definitions ("-Wall -O3")
 endif (WIN32)
 
 # Configure
@@ -55,7 +56,5 @@ add_library(quavis SHARED
   "${CMAKE_SOURCE_DIR}/src/context.cc"
 )
 target_link_libraries(quavis vulkan)
-
-add_definitions("-Wall -O3")
 add_executable (testvulkan "${CMAKE_SOURCE_DIR}/test/vulkan.cc")
 target_link_libraries (testvulkan quavis)
