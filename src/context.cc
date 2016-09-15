@@ -1,4 +1,5 @@
 #include "quavis/context.h"
+#include <chrono>
 
 using namespace quavis;
 
@@ -22,7 +23,14 @@ Context::Context() {
 
 
   this->InitializeVkCommandBuffers();
-  this->VkDraw();
+  this->InitializeVkImageLayouts();
+
+  auto t1 = std::chrono::high_resolution_clock::now();
+  int N = 10000;
+  for (int i = 0; i < N; i++)
+    this->VkDraw();
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
 
   this->RetrieveImage();
 }
@@ -60,10 +68,6 @@ Context::~Context() {
 
   // destroy framebuffer
   vkDestroyFramebuffer(this->vk_logical_device_, this->vk_graphics_framebuffer_, nullptr);
-
-  // destroy semaphores
-  vkDestroySemaphore(this->vk_logical_device_, this->vk_render_semaphore_, nullptr);
-  vkDestroySemaphore(this->vk_logical_device_, this->vk_render_finished_semaphore_, nullptr);
 
   // free command buffer
   vkFreeCommandBuffers(this->vk_logical_device_, this->vk_command_pool_, 1, &this->vk_graphics_commandbuffer_);
@@ -412,7 +416,7 @@ void Context::InitializeVkRenderPass() {
     VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
     VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
     VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
-    VK_IMAGE_LAYOUT_PREINITIALIZED, // initial layout
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, // initial layout
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // final layout
   };
 
@@ -424,7 +428,7 @@ void Context::InitializeVkRenderPass() {
     VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
     VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
     VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
-    VK_IMAGE_LAYOUT_PREINITIALIZED, // initial layout
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, // initial layout
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // final layout
   };
 
@@ -773,7 +777,7 @@ void Context::InitializeVkMemory() {
     VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_TILING_OPTIMAL,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-    0,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     &this->vk_color_image_,
     &this->vk_color_image_memory_);
 
@@ -781,7 +785,7 @@ void Context::InitializeVkMemory() {
     VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_TILING_OPTIMAL,
     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-    0,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     &this->vk_depth_stencil_image_,
     &this->vk_depth_stencil_image_memory_);
 
@@ -895,32 +899,12 @@ void Context::InitializeVkCommandBuffers() {
   );
 }
 
+void Context::InitializeVkImageLayouts() {
+    this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+    this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+}
+
 void Context::VkDraw() {
-  // create semaphore
-  VkSemaphoreCreateInfo render_semaphore_info = {
-    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, // sType,
-    nullptr, // next (see documentaton, must be null)
-    0, // flags (see documentation, must be 0)
-  };
-
-  debug::handleVkResult(
-    vkCreateSemaphore(
-      this->vk_logical_device_, // the logical device
-      &render_semaphore_info, // semaphore info
-      nullptr, // allocation callback
-      &this->vk_render_semaphore_ // allocated memory
-    )
-  );
-
-  debug::handleVkResult(
-    vkCreateSemaphore(
-      this->vk_logical_device_, // the logical device
-      &render_semaphore_info, // semaphore info
-      nullptr, // allocation callback
-      &this->vk_render_finished_semaphore_ // allocated memory
-    )
-  );
-
   // submit the graphics command buffer
   VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 
@@ -944,6 +928,8 @@ void Context::VkDraw() {
       VK_NULL_HANDLE // fence (we don't need it)
     )
   );
+
+  vkQueueWaitIdle(this->vk_queue_graphics_);
 }
 
 /// TRANSFER ROUTINES
