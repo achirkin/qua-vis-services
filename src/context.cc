@@ -12,17 +12,26 @@ Context::Context() {
   this->InitializeVkDescriptorPool();
   this->InitializeVkDescriptorSetLayout();
   this->InitializeVkGraphicsPipelineLayout();
+  this->InitializeVkComputePipelineLayout();
   this->InitializeVkGraphicsPipeline();
+  this->InitializeVkComputePipeline();
   this->InitializeVkMemory();
 
   this->SubmitVertexData();
   this->SubmitIndexData();
   this->SubmitUniformData();
-  VkDescriptorSetLayout layouts[] = {this->vk_descriptor_set_layout_};
-  this->CreateAndUpdateDescriptorSet(layouts, sizeof(UniformBufferObject), this->vk_uniform_buffer_, &this->vk_descriptor_set_);
+
+  // initialize graphics descriptor set
+  VkDescriptorSetLayout layouts[] = {this->vk_graphics_descriptor_set_layout_};
+  this->CreateAndUpdateDescriptorSet(layouts, sizeof(UniformBufferObject), this->vk_uniform_buffer_, &this->vk_graphics_descriptor_set_);
+
+  // initialize compute descriptor set
+  //VkDescriptorSetLayout layouts[] = {this->vk_compute_descriptor_set_layout_};
+  //this->CreateAndUpdateDescriptorSet(layouts, sizeof(UniformBufferObject), this->vk_compute_image_memory_, &this->vk_compute_descriptor_set_); // TODO: COMPUTESHADER
 
 
-  this->InitializeVkCommandBuffers();
+  this->InitializeVkGraphicsCommandBuffers();
+  //this->InitializeVkComputeCommandBuffers(); // TODO:COMPUTESHADER
   this->InitializeVkImageLayouts();
 
   auto t1 = std::chrono::high_resolution_clock::now();
@@ -70,21 +79,21 @@ Context::~Context() {
   vkDestroyFramebuffer(this->vk_logical_device_, this->vk_graphics_framebuffer_, nullptr);
 
   // free command buffer
-  vkFreeCommandBuffers(this->vk_logical_device_, this->vk_command_pool_, 1, &this->vk_graphics_commandbuffer_);
+  vkFreeCommandBuffers(this->vk_logical_device_, this->vk_graphics_command_pool_, 1, &this->vk_graphics_commandbuffer_);
 
   // destroy command pool
-  vkDestroyCommandPool(this->vk_logical_device_, this->vk_command_pool_, nullptr);
+  vkDestroyCommandPool(this->vk_logical_device_, this->vk_graphics_command_pool_, nullptr);
 
   // destroy render pass
   vkDestroyRenderPass(this->vk_logical_device_, this->vk_render_pass_, nullptr);
 
   // destroy descriptor set layout
-  vkDestroyDescriptorSetLayout(this->vk_logical_device_, this->vk_descriptor_set_layout_, nullptr);
+  vkDestroyDescriptorSetLayout(this->vk_logical_device_, this->vk_graphics_descriptor_set_layout_, nullptr);
   vkDestroyDescriptorPool(this->vk_logical_device_, this->vk_descriptor_pool_, nullptr);
 
   // destroy pipeline
-  vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_pipeline_layout_, nullptr);
-  vkDestroyPipeline(this->vk_logical_device_, this->vk_pipeline_, nullptr);
+  vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_graphics_pipeline_layout_, nullptr);
+  vkDestroyPipeline(this->vk_logical_device_, this->vk_graphics_pipeline_, nullptr);
 
   // destroy shaders
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_vertex_shader_, nullptr);
@@ -408,6 +417,24 @@ void Context::InitializeVkShaderModules() {
       &this->vk_fragment_shader_ // the allocated memory for the logical device
     )
   );
+
+  // create compute shader
+  VkShaderModuleCreateInfo compute_shader_info = {
+    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    src_shaders_comp_spv_len, // fragment shader size
+    (uint32_t*)src_shaders_comp_spv // fragment shader code
+  };
+
+  debug::handleVkResult(
+    vkCreateShaderModule(
+      this->vk_logical_device_, // the logical device
+      &compute_shader_info, // shader meta data
+      nullptr, // allocation callback (see documentation)
+      &this->vk_compute_shader_ // the allocated memory for the logical device
+    )
+  );
 }
 
 void Context::InitializeVkRenderPass() {
@@ -498,37 +525,87 @@ void Context::InitializeVkRenderPass() {
 }
 
 void Context::InitializeVkDescriptorSetLayout() {
-  VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-  uboLayoutBinding.binding = 0;
-  uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  uboLayoutBinding.descriptorCount = 1;
-  uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  // Graphics
+  VkDescriptorSetLayoutBinding graphicsLayoutBinding = {};
+  graphicsLayoutBinding.binding = 0;
+  graphicsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  graphicsLayoutBinding.descriptorCount = 1;
+  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-  VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-  layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  layoutInfo.bindingCount = 1;
-  layoutInfo.pBindings = &uboLayoutBinding;
+  VkDescriptorSetLayoutCreateInfo graphicsLayoutInfo = {};
+  graphicsLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  graphicsLayoutInfo.bindingCount = 1;
+  graphicsLayoutInfo.pBindings = &graphicsLayoutBinding;
 
   debug::handleVkResult(
     vkCreateDescriptorSetLayout(
       this->vk_logical_device_,
-      &layoutInfo,
+      &graphicsLayoutInfo,
       nullptr,
-      &this->vk_descriptor_set_layout_
+      &this->vk_graphics_descriptor_set_layout_
+    )
+  );
+
+  // Compute
+  VkDescriptorSetLayoutBinding computeLayoutBindingIn = {};
+  computeLayoutBindingIn.binding = 0;
+  computeLayoutBindingIn.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // read depth attachment
+  computeLayoutBindingIn.descriptorCount = 1;
+  computeLayoutBindingIn.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+  VkDescriptorSetLayoutBinding computeLayoutBindingOut = {};
+  computeLayoutBindingOut.binding = 0;
+  computeLayoutBindingOut.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // TODO: COMPUTESHADERTODO
+  computeLayoutBindingOut.descriptorCount = 1;
+  computeLayoutBindingOut.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+  std::vector<VkDescriptorSetLayoutBinding> bindings = {
+    computeLayoutBindingIn,
+    computeLayoutBindingOut
+  };
+
+  VkDescriptorSetLayoutCreateInfo computeLayoutInfo = {};
+  computeLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  computeLayoutInfo.bindingCount = bindings.size();
+  computeLayoutInfo.pBindings = bindings.data();
+
+  debug::handleVkResult(
+    vkCreateDescriptorSetLayout(
+      this->vk_logical_device_,
+      &computeLayoutInfo,
+      nullptr,
+      &this->vk_compute_descriptor_set_layout_
     )
   );
 }
 
 void Context::InitializeVkDescriptorPool() {
-  VkDescriptorPoolSize poolSize = {};
-  poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-  poolSize.descriptorCount = 1;
+  // graphics
+  VkDescriptorPoolSize graphicsPoolSize = {};
+  graphicsPoolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+  graphicsPoolSize.descriptorCount = 1;
+
+  // compute
+  VkDescriptorPoolSize computePoolSizeIn = {};
+  computePoolSizeIn.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+  computePoolSizeIn.descriptorCount = 1;
+
+  VkDescriptorPoolSize computePoolSizeOut = {};
+  computePoolSizeOut.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; //TODO: COMPUTESHADERTODO
+  computePoolSizeOut.descriptorCount = 1;
+
+  // create pool
+  std::vector<VkDescriptorPoolSize> poolSizes = {
+    graphicsPoolSize,
+    computePoolSizeIn,
+    computePoolSizeOut
+  };
 
   VkDescriptorPoolCreateInfo poolInfo = {};
   poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-  poolInfo.poolSizeCount = 1;
-  poolInfo.pPoolSizes = &poolSize;
-  poolInfo.maxSets = 1;
+  poolInfo.poolSizeCount = poolSizes.size();
+  poolInfo.pPoolSizes = poolSizes.data();
+  poolInfo.maxSets = 3;
 
   debug::handleVkResult(
     vkCreateDescriptorPool(this->vk_logical_device_, &poolInfo, nullptr, &this->vk_descriptor_pool_)
@@ -542,7 +619,7 @@ void Context::InitializeVkGraphicsPipelineLayout() {
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
     1, // layout count
-    &this->vk_descriptor_set_layout_, // layouts
+    &this->vk_graphics_descriptor_set_layout_, // layouts
     0, // push constant range count
     nullptr // push constant ranges
   };
@@ -553,7 +630,30 @@ void Context::InitializeVkGraphicsPipelineLayout() {
       this->vk_logical_device_,
       &pipeline_layout_info,
       nullptr,
-      &this->vk_pipeline_layout_
+      &this->vk_graphics_pipeline_layout_
+    )
+  );
+}
+
+void Context::InitializeVkComputePipelineLayout() {
+  // Define Pipeline layout
+  VkPipelineLayoutCreateInfo pipeline_layout_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    1, // layout count
+    &this->vk_compute_descriptor_set_layout_, // layouts
+    0, // push constant range count
+    nullptr // push constant ranges
+  };
+
+  // Create pipeline layout
+  debug::handleVkResult(
+    vkCreatePipelineLayout(
+      this->vk_logical_device_,
+      &pipeline_layout_info,
+      nullptr,
+      &this->vk_compute_pipeline_layout_
     )
   );
 }
@@ -717,7 +817,7 @@ void Context::InitializeVkGraphicsPipeline() {
     &depth_stencil_info, // depth stencil info
     &color_blend_info, // blending info
     nullptr, // dynamic states info (e.g. window size changes or so)
-    this->vk_pipeline_layout_, // pipeline layout
+    this->vk_graphics_pipeline_layout_, // pipeline layout
     this->vk_render_pass_, // render pass
     0, // subpass index for this pipeline (we only have 1)
     VK_NULL_HANDLE, // parent pipeline
@@ -731,9 +831,46 @@ void Context::InitializeVkGraphicsPipeline() {
       1, // pipeline count
       &pipeline_info, // pipeline infos
       nullptr, // allocation callback
-      &this->vk_pipeline_ // allocated memory for the pipeline
+      &this->vk_graphics_pipeline_ // allocated memory for the pipeline
     )
   );
+}
+
+
+void Context::InitializeVkComputePipeline() {
+  // create pipeline shader stages
+  VkPipelineShaderStageCreateInfo compute_shader_stage_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, // sType (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_SHADER_STAGE_COMPUTE_BIT, // stage flag
+    this->vk_compute_shader_, // shader module
+    "main", // the pipeline's name
+    nullptr // VkSpecializationInfo (see documentation)
+  };
+
+  // Define pipeline info
+  VkComputePipelineCreateInfo pipeline_info = {
+    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // pipeline create flags (have no child pipelines, so don't care)
+    compute_shader_stage_info, // shader stage create infos
+    this->vk_compute_pipeline_layout_,
+    VK_NULL_HANDLE,
+    -1 // parent pipeline index
+  };
+
+  debug::handleVkResult(
+    vkCreateComputePipelines(
+      this->vk_logical_device_, // logical device
+      VK_NULL_HANDLE, // pipeline cache // TODO: Add pipeline cache (?)
+      1, // pipeline count
+      &pipeline_info, // pipeline infos
+      nullptr, // allocation callback
+      &this->vk_compute_pipeline_ // allocated memory for the pipeline
+    )
+  );
+
 }
 
 void Context::InitializeVkMemory() {
@@ -801,6 +938,14 @@ void Context::InitializeVkMemory() {
     &this->vk_host_visible_image_,
     &this->vk_host_visible_image_memory_);
 
+  this->CreateImage(this->color_format_,
+    VK_IMAGE_LAYOUT_PREINITIALIZED,
+    VK_IMAGE_TILING_OPTIMAL,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    &this->vk_compute_image_,
+    &this->vk_compute_image_memory_);
+
   // image views
   this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_);
 
@@ -810,14 +955,18 @@ void Context::InitializeVkMemory() {
   // framebuffer
   this->CreateFrameBuffer();
 
-  // command buffers
-  this->CreateCommandPool();
-  this->CreateCommandBuffer();
+  // graphics command buffers
+  this->CreateCommandPool(&this->vk_graphics_command_pool_);
+  this->CreateCommandBuffer(this->vk_graphics_command_pool_, &this->vk_graphics_commandbuffer_);
+
+  // compute command buffers
+  this->CreateCommandPool(&this->vk_compute_command_pool_);
+  this->CreateCommandBuffer(this->vk_compute_command_pool_, &this->vk_compute_commandbuffer_);
 }
 
 // RENDERING
 
-void Context::InitializeVkCommandBuffers() {
+void Context::InitializeVkGraphicsCommandBuffers() {
   VkCommandBufferBeginInfo command_buffer_begin_info = {
     VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, // sType
     nullptr, // pNext (see documentation, must be null)
@@ -857,7 +1006,7 @@ void Context::InitializeVkCommandBuffers() {
   vkCmdBindPipeline(
     this->vk_graphics_commandbuffer_, // command buffer
     VK_PIPELINE_BIND_POINT_GRAPHICS, // pipeline type
-    this->vk_pipeline_ // graphics pipeline
+    this->vk_graphics_pipeline_ // graphics pipeline
   );
 
   // vertex data
@@ -874,10 +1023,10 @@ void Context::InitializeVkCommandBuffers() {
   vkCmdBindDescriptorSets(
     this->vk_graphics_commandbuffer_,
     VK_PIPELINE_BIND_POINT_GRAPHICS,
-    this->vk_pipeline_layout_,
+    this->vk_graphics_pipeline_layout_,
     0,
     1,
-    &this->vk_descriptor_set_,
+    &this->vk_graphics_descriptor_set_,
     0,
     nullptr
   );
@@ -899,6 +1048,52 @@ void Context::InitializeVkCommandBuffers() {
   debug::handleVkResult(
     vkEndCommandBuffer(
       this->vk_graphics_commandbuffer_
+    )
+  );
+}
+
+void Context::InitializeVkComputeCommandBuffers() {
+  VkCommandBufferBeginInfo command_buffer_begin_info = {
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, // can be submitted and run simultaniously
+    nullptr // VkCommandBufferInheritanceInfo (we don't need it)
+  };
+
+  debug::handleVkResult(
+    vkBeginCommandBuffer(
+      this->vk_compute_commandbuffer_,
+      &command_buffer_begin_info
+    )
+  );
+
+  vkCmdBindPipeline(
+    this->vk_compute_commandbuffer_,
+    VK_PIPELINE_BIND_POINT_COMPUTE,
+    this->vk_compute_pipeline_
+  );
+
+  vkCmdBindDescriptorSets(
+    this->vk_compute_commandbuffer_,
+    VK_PIPELINE_BIND_POINT_COMPUTE,
+    this->vk_compute_pipeline_layout_,
+    0,
+    1,
+    &this->vk_compute_descriptor_set_,
+    0,
+    0
+  );
+
+  vkCmdDispatch(
+    this->vk_compute_commandbuffer_,
+    this->render_width_ / 16,
+    this->render_height_ / 16,
+    1
+  ); //TODO: COMPUTESHADERTODO
+
+  debug::handleVkResult(
+    vkEndCommandBuffer(
+      this->vk_compute_commandbuffer_
     )
   );
 }
@@ -1271,7 +1466,7 @@ void Context::CreateFrameBuffer() {
   );
 }
 
-void Context::CreateCommandPool() {
+void Context::CreateCommandPool(VkCommandPool* pool) {
   VkCommandPoolCreateInfo command_pool_info = {
     VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
     nullptr,// pNext (see documentation, must be null)
@@ -1284,17 +1479,17 @@ void Context::CreateCommandPool() {
       this->vk_logical_device_, // the logical device
       &command_pool_info, // info
       nullptr, // allocation callback
-      &this->vk_command_pool_ // the allocated memory
+      pool // the allocated memory
     )
   );
 }
 
-void Context::CreateCommandBuffer() {
+void Context::CreateCommandBuffer(VkCommandPool pool, VkCommandBuffer* buffer) {
   // create command buffers
-  VkCommandBufferAllocateInfo graphics_command_buffer_info = {
+  VkCommandBufferAllocateInfo command_buffer_info = {
     VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO, // sType
     nullptr, // pNext (see documentation, must be null)
-    this->vk_command_pool_, // the command pool
+    pool, // the command pool
     VK_COMMAND_BUFFER_LEVEL_PRIMARY, // can be submitted to the queue
     1 // number of command buffers
   };
@@ -1302,8 +1497,8 @@ void Context::CreateCommandBuffer() {
   debug::handleVkResult(
     vkAllocateCommandBuffers(
       this->vk_logical_device_, // the logical device
-      &graphics_command_buffer_info, // info
-      &this->vk_graphics_commandbuffer_ // allocated memory
+      &command_buffer_info, // info
+      buffer // allocated memory
     )
   );
 }
@@ -1372,7 +1567,7 @@ VkCommandBuffer Context::BeginSingleTimeBuffer() {
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = this->vk_command_pool_;
+    allocInfo.commandPool = this->vk_graphics_command_pool_;
     allocInfo.commandBufferCount = 1;
 
     VkCommandBuffer commandBuffer;
@@ -1398,5 +1593,5 @@ void Context::EndSingleTimeBuffer(VkCommandBuffer commandBuffer) {
     vkQueueSubmit(this->vk_queue_graphics_, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(this->vk_queue_graphics_);
 
-    vkFreeCommandBuffers(this->vk_logical_device_, this->vk_command_pool_, 1, &commandBuffer);
+    vkFreeCommandBuffers(this->vk_logical_device_, this->vk_graphics_command_pool_, 1, &commandBuffer);
 }

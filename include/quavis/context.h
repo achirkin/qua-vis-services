@@ -87,9 +87,12 @@ namespace quavis {
     void InitializeVkDescriptorPool();
     void InitializeVkDescriptorSetLayout();
     void InitializeVkGraphicsPipelineLayout();
+    void InitializeVkComputePipelineLayout();
     void InitializeVkGraphicsPipeline();
+    void InitializeVkComputePipeline();
     void InitializeVkMemory();
-    void InitializeVkCommandBuffers();
+    void InitializeVkGraphicsCommandBuffers();
+    void InitializeVkComputeCommandBuffers();
     void InitializeVkImageLayouts();
     void VkDraw();
 
@@ -98,8 +101,8 @@ namespace quavis {
     void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview);
     void CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
     void CreateFrameBuffer();
-    void CreateCommandPool();
-    void CreateCommandBuffer();
+    void CreateCommandPool(VkCommandPool* pool);
+    void CreateCommandBuffer(VkCommandPool pool, VkCommandBuffer* buffer);
 
     void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags flags);
     void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags);
@@ -119,7 +122,8 @@ namespace quavis {
     uint32_t queue_family_index_;
 
     // command pool
-    VkCommandPool vk_command_pool_;
+    VkCommandPool vk_graphics_command_pool_;
+    VkCommandPool vk_compute_command_pool_;
 
     // queues
     VkQueue vk_queue_graphics_;
@@ -129,16 +133,21 @@ namespace quavis {
     // shaders
     VkShaderModule vk_vertex_shader_;
     VkShaderModule vk_fragment_shader_;
+    VkShaderModule vk_compute_shader_;
 
     // pipeline
     VkRenderPass vk_render_pass_;
-    VkPipelineLayout vk_pipeline_layout_;
-    VkPipeline vk_pipeline_;
+    VkPipelineLayout vk_graphics_pipeline_layout_;
+    VkPipelineLayout vk_compute_pipeline_layout_;
+    VkPipeline vk_graphics_pipeline_;
+    VkPipeline vk_compute_pipeline_;
 
     // descriptors
     VkDescriptorPool vk_descriptor_pool_;
-    VkDescriptorSetLayout vk_descriptor_set_layout_;
-    VkDescriptorSet vk_descriptor_set_;
+    VkDescriptorSetLayout vk_graphics_descriptor_set_layout_;
+    VkDescriptorSetLayout vk_compute_descriptor_set_layout_;
+    VkDescriptorSet vk_graphics_descriptor_set_;
+    VkDescriptorSet vk_compute_descriptor_set_;
 
     // vertex data
     VkBuffer vk_vertex_staging_buffer_;
@@ -160,15 +169,18 @@ namespace quavis {
     VkImage vk_color_image_;
     VkImage vk_depth_stencil_image_;
     VkImage vk_host_visible_image_;
+    VkImage vk_compute_image_;
     VkDeviceMemory vk_color_image_memory_;
     VkDeviceMemory vk_depth_stencil_image_memory_;
     VkDeviceMemory vk_host_visible_image_memory_;
+    VkDeviceMemory vk_compute_image_memory_;
 
     // framebuffers
     VkFramebuffer vk_graphics_framebuffer_;
 
     // command buffers
     VkCommandBuffer vk_graphics_commandbuffer_;
+    VkCommandBuffer vk_compute_commandbuffer_;
 
     // semaphores
     VkSemaphore vk_render_semaphore_;
