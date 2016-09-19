@@ -32,7 +32,7 @@ Context::Context() {
   this->UpdateComputeDescriptorSets();
 
   this->InitializeVkGraphicsCommandBuffers();
-  //this->InitializeVkComputeCommandBuffers(); // TODO:COMPUTESHADER
+  this->InitializeVkComputeCommandBuffers(); // TODO:COMPUTESHADER
 
   auto t1 = std::chrono::high_resolution_clock::now();
   int N = 100000;
@@ -1391,24 +1391,39 @@ void Context::UpdateComputeDescriptorSets() {
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
   };
 
-  std::vector<VkDescriptorImageInfo> infos = {
-    image_in_info,
+  std::vector<VkDescriptorImageInfo> in_infos = {
+    image_in_info
+  };
+
+  std::vector<VkDescriptorImageInfo> out_infos = {
     image_out_info
   };
 
-  VkWriteDescriptorSet compute_descriptor = {};
-  compute_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  compute_descriptor.dstSet = this->vk_compute_descriptor_set_;
-  compute_descriptor.dstBinding = 0;
-  compute_descriptor.dstArrayElement = 0;
-  compute_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // TODO: COMPUTESHADERTODO - Change to bufferinfo
-  compute_descriptor.descriptorCount = infos.size();
-  compute_descriptor.pBufferInfo = nullptr;
-  compute_descriptor.pImageInfo = infos.data();
-  compute_descriptor.pTexelBufferView = nullptr;
+  VkWriteDescriptorSet compute_in_descriptor_write = {};
+  compute_in_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  compute_in_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
+  compute_in_descriptor_write.dstBinding = 0;
+  compute_in_descriptor_write.dstArrayElement = 0;
+  compute_in_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // TODO: COMPUTESHADERTODO - Change to bufferinfo
+  compute_in_descriptor_write.descriptorCount = in_infos.size();
+  compute_in_descriptor_write.pBufferInfo = nullptr;
+  compute_in_descriptor_write.pImageInfo = in_infos.data();
+  compute_in_descriptor_write.pTexelBufferView = nullptr;
+
+  VkWriteDescriptorSet compute_out_descriptor_write = {};
+  compute_out_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  compute_out_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
+  compute_out_descriptor_write.dstBinding = 1;
+  compute_out_descriptor_write.dstArrayElement = 0;
+  compute_out_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // TODO: COMPUTESHADERTODO - Change to bufferinfo
+  compute_out_descriptor_write.descriptorCount = out_infos.size();
+  compute_out_descriptor_write.pBufferInfo = nullptr;
+  compute_out_descriptor_write.pImageInfo = out_infos.data();
+  compute_out_descriptor_write.pTexelBufferView = nullptr;
 
   std::vector<VkWriteDescriptorSet> writedescriptor_sets = {
-    compute_descriptor
+    compute_in_descriptor_write,
+    compute_out_descriptor_write
   };
 
   vkUpdateDescriptorSets(this->vk_logical_device_, writedescriptor_sets.size(), writedescriptor_sets.data(), 0, nullptr);
