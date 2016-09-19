@@ -96,6 +96,7 @@ namespace quavis {
     void InitializeVkImageLayouts();
     void InitializeVkImageSampler();
     void VkDraw();
+    void VkCompute();
 
     void CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory);
     void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);

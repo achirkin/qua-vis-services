@@ -7,7 +7,7 @@
 namespace quavis {
   namespace debug {
     extern bool handleVkResult(VkResult vkResult) {
-      if (vkResult < 0) {
+      if (vkResult != 0) {
         std::cout << vkResult << std::endl;
         throw "An error occurred in the gpu initialization:";
       }
