@@ -101,7 +101,8 @@ namespace quavis {
     void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
     void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview);
     void CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
-    void CreateAndUpdateComputeDescriptorSets();
+    void CreateComputeDescriptorSets();
+    void UpdateComputeDescriptorSets();
     void CreateFrameBuffer();
     void CreateCommandPool(VkCommandPool* pool);
     void CreateCommandBuffer(VkCommandPool pool, VkCommandBuffer* buffer);
@@ -149,8 +150,7 @@ namespace quavis {
     VkDescriptorSetLayout vk_graphics_descriptor_set_layout_;
     VkDescriptorSetLayout vk_compute_descriptor_set_layout_;
     VkDescriptorSet vk_graphics_descriptor_set_;
-    VkDescriptorSet vk_compute_in_descriptor_set_;
-    VkDescriptorSet vk_compute_out_descriptor_set_;
+    VkDescriptorSet vk_compute_descriptor_set_;
 
     // vertex data
     VkBuffer vk_vertex_staging_buffer_;

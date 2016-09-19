@@ -58,7 +58,7 @@ if (VULKANSDK_FOUND)
 endif()
 
 add_library(quavis SHARED "${CMAKE_SOURCE_DIR}/src/context.cc")
-target_link_libraries(quavis vulkan)
+target_link_libraries(quavis ${VULKAN_LIBRARY})
 
 add_executable (testvulkan "${CMAKE_SOURCE_DIR}/test/vulkan.cc")
 target_link_libraries (testvulkan quavis)
