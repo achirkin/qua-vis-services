@@ -16,6 +16,8 @@ Context::Context() {
   this->InitializeVkGraphicsPipeline();
   this->InitializeVkComputePipeline();
   this->InitializeVkMemory();
+  this->InitializeVkImageLayouts();
+  this->InitializeVkImageSampler();
 
   this->SubmitVertexData();
   this->SubmitIndexData();
@@ -24,15 +26,12 @@ Context::Context() {
   // initialize graphics descriptor set
   VkDescriptorSetLayout layouts[] = {this->vk_graphics_descriptor_set_layout_};
   this->CreateAndUpdateDescriptorSet(layouts, sizeof(UniformBufferObject), this->vk_uniform_buffer_, &this->vk_graphics_descriptor_set_);
+  this->CreateAndUpdateComputeDescriptorSets();
 
   // initialize compute descriptor set
-  //VkDescriptorSetLayout layouts[] = {this->vk_compute_descriptor_set_layout_};
-  //this->CreateAndUpdateDescriptorSet(layouts, sizeof(UniformBufferObject), this->vk_compute_image_memory_, &this->vk_compute_descriptor_set_); // TODO: COMPUTESHADER
-
 
   this->InitializeVkGraphicsCommandBuffers();
   //this->InitializeVkComputeCommandBuffers(); // TODO:COMPUTESHADER
-  this->InitializeVkImageLayouts();
 
   auto t1 = std::chrono::high_resolution_clock::now();
   int N = 100000;
@@ -554,7 +553,7 @@ void Context::InitializeVkDescriptorSetLayout() {
   computeLayoutBindingIn.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
   VkDescriptorSetLayoutBinding computeLayoutBindingOut = {};
-  computeLayoutBindingOut.binding = 0;
+  computeLayoutBindingOut.binding = 1;
   computeLayoutBindingOut.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // TODO: COMPUTESHADERTODO
   computeLayoutBindingOut.descriptorCount = 1;
   computeLayoutBindingOut.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -948,9 +947,8 @@ void Context::InitializeVkMemory() {
 
   // image views
   this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_);
-
-  VkImageAspectFlags flags = VK_IMAGE_ASPECT_DEPTH_BIT;
-  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, flags, &this->vk_depth_stencil_imageview_);
+  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_);
+  this->CreateImageView(this->vk_compute_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_compute_imageview_); // TODO: COMPUTESHADERTODO
 
   // framebuffer
   this->CreateFrameBuffer();
@@ -1073,13 +1071,18 @@ void Context::InitializeVkComputeCommandBuffers() {
     this->vk_compute_pipeline_
   );
 
+  std::vector<VkDescriptorSet> descriptor_sets = {
+    this->vk_compute_in_descriptor_set_,
+    this->vk_compute_out_descriptor_set_
+  };
+
   vkCmdBindDescriptorSets(
     this->vk_compute_commandbuffer_,
     VK_PIPELINE_BIND_POINT_COMPUTE,
     this->vk_compute_pipeline_layout_,
     0,
-    1,
-    &this->vk_compute_descriptor_set_,
+    descriptor_sets.size(),
+    descriptor_sets.data(),
     0,
     0
   );
@@ -1101,6 +1104,28 @@ void Context::InitializeVkComputeCommandBuffers() {
 void Context::InitializeVkImageLayouts() {
     this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
     this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+}
+
+void Context::InitializeVkImageSampler() {
+  VkSamplerCreateInfo sampler_info = {};
+  sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+  sampler_info.pNext = NULL;
+  sampler_info.magFilter = VK_FILTER_LINEAR;
+	sampler_info.minFilter = VK_FILTER_LINEAR;
+	sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+	sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+	sampler_info.addressModeV = sampler_info.addressModeU;
+	sampler_info.addressModeW = sampler_info.addressModeU;
+	sampler_info.mipLodBias = 0.0f;
+	sampler_info.maxAnisotropy = 0;
+	sampler_info.compareOp = VK_COMPARE_OP_NEVER;
+	sampler_info.minLod = 0.0f;
+	sampler_info.maxLod = 0.0f;
+	sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
+  debug::handleVkResult(
+    vkCreateSampler(this->vk_logical_device_, &sampler_info, nullptr, &this->vk_sampler_)
+  );
 }
 
 void Context::VkDraw() {
@@ -1333,6 +1358,66 @@ void Context::CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint
   descriptorWrite.pTexelBufferView = nullptr; // Optional
 
   vkUpdateDescriptorSets(this->vk_logical_device_, 1, &descriptorWrite, 0, nullptr);
+}
+
+void Context::CreateAndUpdateComputeDescriptorSets() {
+  std::vector<VkDescriptorSet> descriptor_sets = {
+    this->vk_compute_in_descriptor_set_,
+    this->vk_compute_out_descriptor_set_
+  };
+
+  VkDescriptorSetAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.descriptorPool = this->vk_descriptor_pool_;
+  allocInfo.descriptorSetCount = descriptor_sets.size();
+  allocInfo.pSetLayouts = &this->vk_compute_descriptor_set_layout_;
+
+  debug::handleVkResult(
+    vkAllocateDescriptorSets(this->vk_logical_device_, &allocInfo, descriptor_sets.data())
+  );
+
+  // Input: Image
+  VkDescriptorImageInfo image_in_info = {
+    this->vk_sampler_,
+    this->vk_color_imageview_,
+    VK_IMAGE_LAYOUT_GENERAL
+  };
+
+  VkWriteDescriptorSet compute_in_descriptor = {};
+  compute_in_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  compute_in_descriptor.dstSet = this->vk_compute_in_descriptor_set_;
+  compute_in_descriptor.dstBinding = 0;
+  compute_in_descriptor.dstArrayElement = 0;
+  compute_in_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+  compute_in_descriptor.descriptorCount = 1;
+  compute_in_descriptor.pBufferInfo = nullptr;
+  compute_in_descriptor.pImageInfo = &image_in_info;
+  compute_in_descriptor.pTexelBufferView = nullptr;
+
+  // Output: Image
+  VkDescriptorImageInfo image_out_info = { // TODO: COMPUTESHADERTODO - Change to bufferinfo
+    this->vk_sampler_,
+    this->vk_compute_imageview_,
+    VK_IMAGE_LAYOUT_GENERAL
+  };
+
+  VkWriteDescriptorSet compute_out_descriptor = {};
+  compute_out_descriptor.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  compute_out_descriptor.dstSet = this->vk_compute_out_descriptor_set_;
+  compute_out_descriptor.dstBinding = 1;
+  compute_out_descriptor.dstArrayElement = 0;
+  compute_out_descriptor.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // TODO: COMPUTESHADERTODO - Change to bufferinfo
+  compute_out_descriptor.descriptorCount = 1;
+  compute_out_descriptor.pBufferInfo = nullptr;
+  compute_out_descriptor.pImageInfo = &image_out_info;
+  compute_out_descriptor.pTexelBufferView = nullptr;
+
+  std::vector<VkWriteDescriptorSet> writedescriptor_sets = {
+    compute_in_descriptor,
+    compute_out_descriptor
+  };
+
+  vkUpdateDescriptorSets(this->vk_logical_device_, writedescriptor_sets.size(), writedescriptor_sets.data(), 0, nullptr);
 }
 
 void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {

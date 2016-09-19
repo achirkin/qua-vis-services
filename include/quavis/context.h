@@ -94,12 +94,14 @@ namespace quavis {
     void InitializeVkGraphicsCommandBuffers();
     void InitializeVkComputeCommandBuffers();
     void InitializeVkImageLayouts();
+    void InitializeVkImageSampler();
     void VkDraw();
 
     void CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory);
     void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
     void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview);
     void CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
+    void CreateAndUpdateComputeDescriptorSets();
     void CreateFrameBuffer();
     void CreateCommandPool(VkCommandPool* pool);
     void CreateCommandBuffer(VkCommandPool pool, VkCommandBuffer* buffer);
@@ -147,7 +149,8 @@ namespace quavis {
     VkDescriptorSetLayout vk_graphics_descriptor_set_layout_;
     VkDescriptorSetLayout vk_compute_descriptor_set_layout_;
     VkDescriptorSet vk_graphics_descriptor_set_;
-    VkDescriptorSet vk_compute_descriptor_set_;
+    VkDescriptorSet vk_compute_in_descriptor_set_;
+    VkDescriptorSet vk_compute_out_descriptor_set_;
 
     // vertex data
     VkBuffer vk_vertex_staging_buffer_;
@@ -166,6 +169,7 @@ namespace quavis {
     // images
     VkImageView vk_color_imageview_;
     VkImageView vk_depth_stencil_imageview_;
+    VkImageView vk_compute_imageview_;
     VkImage vk_color_image_;
     VkImage vk_depth_stencil_image_;
     VkImage vk_host_visible_image_;
@@ -174,6 +178,9 @@ namespace quavis {
     VkDeviceMemory vk_depth_stencil_image_memory_;
     VkDeviceMemory vk_host_visible_image_memory_;
     VkDeviceMemory vk_compute_image_memory_;
+
+    // sampler
+    VkSampler vk_sampler_;
 
     // framebuffers
     VkFramebuffer vk_graphics_framebuffer_;
