@@ -17,7 +17,6 @@ Context::Context() {
   this->InitializeVkComputePipeline();
   this->InitializeVkMemory();
   this->InitializeVkImageLayouts();
-  this->InitializeVkImageSampler();
 
   this->SubmitVertexData();
   this->SubmitIndexData();
@@ -29,15 +28,24 @@ Context::Context() {
   this->InitializeVkGraphicsCommandBuffers();
 
   // initialize compute
+  VkFenceCreateInfo fenceCreateInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0x00000001};
+  debug::handleVkResult(
+    vkCreateFence(
+      this->vk_logical_device_,
+      &fenceCreateInfo,
+      nullptr,
+      &this->vk_compute_fence_
+    )
+  );
   this->CreateComputeDescriptorSets();
   this->InitializeVkComputeCommandBuffers(); // TODO:COMPUTESHADER
 
   auto t1 = std::chrono::high_resolution_clock::now();
-  int N = 100;
+  int N = 1000;
   for (int i = 0; i < N; i++) {
     this->VkDraw();
-    this->UpdateComputeDescriptorSets();
-    this->VkCompute();
+    //this->UpdateComputeDescriptorSets();
+    //this->VkCompute();
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
@@ -52,6 +60,7 @@ Context::~Context() {
   vkFreeMemory(this->vk_logical_device_, this->vk_color_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_depth_stencil_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_compute_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_vertex_buffer_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_vertex_staging_buffer_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_index_buffer_memory_, nullptr);
@@ -69,36 +78,47 @@ Context::~Context() {
 
   // destroy images
   vkDestroyImage(this->vk_logical_device_, this->vk_color_image_, nullptr);
+  vkDestroyImage(this->vk_logical_device_, this->vk_compute_image_, nullptr);
   vkDestroyImage(this->vk_logical_device_, this->vk_depth_stencil_image_, nullptr);
   vkDestroyImage(this->vk_logical_device_, this->vk_host_visible_image_, nullptr);
 
   // destroy image views
   vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_, nullptr);
   vkDestroyImageView(this->vk_logical_device_, this->vk_depth_stencil_imageview_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_compute_imageview_, nullptr);
+
+  // destroy fences
+  vkDestroyFence(this->vk_logical_device_, this->vk_compute_fence_, nullptr);
 
   // destroy framebuffer
   vkDestroyFramebuffer(this->vk_logical_device_, this->vk_graphics_framebuffer_, nullptr);
 
   // free command buffer
   vkFreeCommandBuffers(this->vk_logical_device_, this->vk_graphics_command_pool_, 1, &this->vk_graphics_commandbuffer_);
+  vkFreeCommandBuffers(this->vk_logical_device_, this->vk_compute_command_pool_, 1, &this->vk_compute_commandbuffer_);
 
   // destroy command pool
   vkDestroyCommandPool(this->vk_logical_device_, this->vk_graphics_command_pool_, nullptr);
+  vkDestroyCommandPool(this->vk_logical_device_, this->vk_compute_command_pool_, nullptr);
 
   // destroy render pass
   vkDestroyRenderPass(this->vk_logical_device_, this->vk_render_pass_, nullptr);
 
   // destroy descriptor set layout
   vkDestroyDescriptorSetLayout(this->vk_logical_device_, this->vk_graphics_descriptor_set_layout_, nullptr);
+  vkDestroyDescriptorSetLayout(this->vk_logical_device_, this->vk_compute_descriptor_set_layout_, nullptr);
   vkDestroyDescriptorPool(this->vk_logical_device_, this->vk_descriptor_pool_, nullptr);
 
   // destroy pipeline
   vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_graphics_pipeline_layout_, nullptr);
   vkDestroyPipeline(this->vk_logical_device_, this->vk_graphics_pipeline_, nullptr);
+  vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_compute_pipeline_layout_, nullptr);
+  vkDestroyPipeline(this->vk_logical_device_, this->vk_compute_pipeline_, nullptr);
 
   // destroy shaders
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_vertex_shader_, nullptr);
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_fragment_shader_, nullptr);
+  vkDestroyShaderModule(this->vk_logical_device_, this->vk_compute_shader_, nullptr);
 
   // destroy logical device
   vkDeviceWaitIdle(this->vk_logical_device_);
@@ -1107,28 +1127,6 @@ void Context::InitializeVkImageLayouts() {
     this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-void Context::InitializeVkImageSampler() {
-  VkSamplerCreateInfo sampler_info = {};
-  sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-  sampler_info.pNext = NULL;
-  sampler_info.magFilter = VK_FILTER_LINEAR;
-	sampler_info.minFilter = VK_FILTER_LINEAR;
-	sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-	sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-	sampler_info.addressModeV = sampler_info.addressModeU;
-	sampler_info.addressModeW = sampler_info.addressModeU;
-	sampler_info.mipLodBias = 0.0f;
-	sampler_info.maxAnisotropy = 0;
-	sampler_info.compareOp = VK_COMPARE_OP_NEVER;
-	sampler_info.minLod = 0.0f;
-	sampler_info.maxLod = 0.0f;
-	sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-  debug::handleVkResult(
-    vkCreateSampler(this->vk_logical_device_, &sampler_info, nullptr, &this->vk_sampler_)
-  );
-}
-
 void Context::VkDraw() {
   // submit the graphics command buffer
   VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -1158,7 +1156,8 @@ void Context::VkDraw() {
 }
 
 void Context::VkCompute() {
-  vkQueueWaitIdle(this->vk_queue_graphics_);
+  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
 
   VkSubmitInfo submit_info = {
     VK_STRUCTURE_TYPE_SUBMIT_INFO, // sType,
@@ -1174,14 +1173,12 @@ void Context::VkCompute() {
 
   debug::handleVkResult(
     vkQueueSubmit(
-      this->vk_queue_graphics_, // queue
+      this->vk_queue_compute_, // queue
       1, // num infos
       &submit_info, // info
-      VK_NULL_HANDLE // fence (we don't need it)
+      this->vk_compute_fence_// fence (we don't need it)
     )
   );
-
-  vkQueueWaitIdle(this->vk_queue_graphics_);
 }
 
 /// TRANSFER ROUTINES
@@ -1269,6 +1266,7 @@ void Context::SubmitUniformData() {
 
 void Context::RetrieveImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
+  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
   this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);

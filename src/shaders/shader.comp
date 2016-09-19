@@ -37,11 +37,11 @@ void main()
 	}
 
 	float[9] kernel;
-	kernel[0] = -1.0/8.0; kernel[1] = -1.0/8.0; kernel[2] = -1.0/8.0;
-	kernel[3] = -1.0/8.0; kernel[4] =  1.0;     kernel[5] = -1.0/8.0;
-	kernel[6] = -1.0/8.0; kernel[7] = -1.0/8.0; kernel[8] = -1.0/8.0;
+	kernel[0] = -1.0; kernel[1] =  0.0; kernel[2] =  0.0;
+	kernel[3] = 0.0; kernel[4] = -1.0; kernel[5] =  0.0;
+	kernel[6] = 0.0; kernel[7] =  0.0; kernel[8] = 2.0;
 
-	vec4 res = vec4(vec3(conv(kernel, imageData.avg, 0.1, 0.0)), 1.0);
+	vec4 res = vec4(vec3(conv(kernel, imageData.avg, 1.0, 0.50)), 1.0);
 
 	imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), res);
 }

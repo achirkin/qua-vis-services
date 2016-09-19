@@ -94,7 +94,6 @@ namespace quavis {
     void InitializeVkGraphicsCommandBuffers();
     void InitializeVkComputeCommandBuffers();
     void InitializeVkImageLayouts();
-    void InitializeVkImageSampler();
     void VkDraw();
     void VkCompute();
 
@@ -124,6 +123,9 @@ namespace quavis {
     VkPhysicalDevice vk_physical_device_;
     VkDevice vk_logical_device_;
     uint32_t queue_family_index_;
+
+    // FENCES
+    VkFence vk_compute_fence_;
 
     // command pool
     VkCommandPool vk_graphics_command_pool_;
