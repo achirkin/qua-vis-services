@@ -117,6 +117,7 @@ namespace quavis {
     void SubmitIndexData();
     void SubmitUniformData();
     void RetrieveRenderImage();
+    void RetrieveDepthImage();
     void RetrieveComputeImage();
 
     // instance data
@@ -176,12 +177,14 @@ namespace quavis {
     VkImageView vk_compute_imageview_;
     VkImage vk_color_image_;
     VkImage vk_depth_stencil_image_;
-    VkImage vk_host_visible_image_;
     VkImage vk_compute_image_;
+    VkImage vk_color_staging_image_;
+    VkImage vk_depth_stencil_staging_image_;
     VkDeviceMemory vk_color_image_memory_;
     VkDeviceMemory vk_depth_stencil_image_memory_;
-    VkDeviceMemory vk_host_visible_image_memory_;
     VkDeviceMemory vk_compute_image_memory_;
+    VkDeviceMemory vk_color_staging_image_memory_;
+    VkDeviceMemory vk_depth_stencil_staging_image_memory_;
 
     // sampler
     VkSampler vk_sampler_;

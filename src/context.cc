@@ -38,7 +38,6 @@ Context::Context() {
     )
   );
   this->CreateComputeDescriptorSets();
-  this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
   this->UpdateComputeDescriptorSets();
   this->InitializeVkComputeCommandBuffers(); // TODO:COMPUTESHADER
 
@@ -52,6 +51,7 @@ Context::Context() {
   std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
 
   this->RetrieveRenderImage();
+  this->RetrieveDepthImage();
   this->RetrieveComputeImage();
 }
 
@@ -61,7 +61,8 @@ Context::~Context() {
   // free all allocated memory
   vkFreeMemory(this->vk_logical_device_, this->vk_color_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_depth_stencil_image_memory_, nullptr);
-  vkFreeMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_, nullptr);
+  vkFreeMemory(this->vk_logical_device_, this->vk_depth_stencil_staging_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_compute_image_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_vertex_buffer_memory_, nullptr);
   vkFreeMemory(this->vk_logical_device_, this->vk_vertex_staging_buffer_memory_, nullptr);
@@ -82,7 +83,8 @@ Context::~Context() {
   vkDestroyImage(this->vk_logical_device_, this->vk_color_image_, nullptr);
   vkDestroyImage(this->vk_logical_device_, this->vk_compute_image_, nullptr);
   vkDestroyImage(this->vk_logical_device_, this->vk_depth_stencil_image_, nullptr);
-  vkDestroyImage(this->vk_logical_device_, this->vk_host_visible_image_, nullptr);
+  vkDestroyImage(this->vk_logical_device_, this->vk_color_staging_image_, nullptr);
+  vkDestroyImage(this->vk_logical_device_, this->vk_depth_stencil_staging_image_, nullptr);
 
   // destroy image views
   vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_, nullptr);
@@ -953,13 +955,6 @@ void Context::InitializeVkMemory() {
     &this->vk_depth_stencil_image_,
     &this->vk_depth_stencil_image_memory_);
 
-  this->CreateImage(this->color_format_,
-    VK_IMAGE_LAYOUT_PREINITIALIZED,
-    VK_IMAGE_TILING_LINEAR,
-    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    &this->vk_host_visible_image_,
-    &this->vk_host_visible_image_memory_);
 
   this->CreateImage(this->color_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
@@ -968,6 +963,22 @@ void Context::InitializeVkMemory() {
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     &this->vk_compute_image_,
     &this->vk_compute_image_memory_);
+
+  this->CreateImage(this->color_format_,
+    VK_IMAGE_LAYOUT_PREINITIALIZED,
+    VK_IMAGE_TILING_LINEAR,
+    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    &this->vk_color_staging_image_,
+    &this->vk_color_staging_image_memory_);
+
+  this->CreateImage(this->depth_stencil_format_,
+    VK_IMAGE_LAYOUT_PREINITIALIZED,
+    VK_IMAGE_TILING_LINEAR,
+    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    &this->vk_depth_stencil_staging_image_,
+    &this->vk_depth_stencil_staging_image_memory_);
 
   // image views
   this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_);
@@ -1112,8 +1123,8 @@ void Context::InitializeVkComputeCommandBuffers() {
 
   vkCmdDispatch(
     this->vk_compute_commandbuffer_,
-    this->render_width_ / 16,
-    this->render_height_ / 16,
+    this->render_width_ / 16, //TODO: best performance with 1 (!?)
+    this->render_height_ / 16, //TODO:   best performance with 1 (!?)
     1
   ); //TODO: COMPUTESHADERTODO
 
@@ -1127,6 +1138,7 @@ void Context::InitializeVkComputeCommandBuffers() {
 void Context::InitializeVkImageLayouts() {
     this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
     this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void Context::VkDraw() {
@@ -1271,26 +1283,26 @@ void Context::RetrieveRenderImage() {
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->CopyImage(this->vk_color_image_, this->vk_host_visible_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
-  vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_host_visible_image_, &subresource, &subresource_layout);
+  vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_color_staging_image_, &subresource, &subresource_layout);
 
   VkMemoryRequirements host_visible_memory_requirements;
   vkGetImageMemoryRequirements(
     this->vk_logical_device_,
-    this->vk_host_visible_image_,
+    this->vk_color_staging_image_,
     &host_visible_memory_requirements
   );
   size_t image_size = host_visible_memory_requirements.size;
   void *data;
   void *pixels = malloc(image_size);
-  vkMapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, 0, image_size, 0, (void **)&data);
+  vkMapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
-  vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
+  vkUnmapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_);
 /*
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
@@ -1304,31 +1316,69 @@ void Context::RetrieveRenderImage() {
   free(pixels);
 }
 
-void Context::RetrieveComputeImage() {
+void Context::RetrieveDepthImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
-  this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->CopyImage(this->vk_compute_image_, this->vk_host_visible_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+  this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT);
+  this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT);
 
-  VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
+  VkImageSubresource subresource = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
-  vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_host_visible_image_, &subresource, &subresource_layout);
+  vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_depth_stencil_staging_image_, &subresource, &subresource_layout);
 
   VkMemoryRequirements host_visible_memory_requirements;
   vkGetImageMemoryRequirements(
     this->vk_logical_device_,
-    this->vk_host_visible_image_,
+    this->vk_depth_stencil_staging_image_,
     &host_visible_memory_requirements
   );
   size_t image_size = host_visible_memory_requirements.size;
   void *data;
   void *pixels = malloc(image_size);
-  vkMapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, 0, image_size, 0, (void **)&data);
+  vkMapMemory(this->vk_logical_device_, this->vk_depth_stencil_staging_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
-  vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
+  vkUnmapMemory(this->vk_logical_device_, this->vk_depth_stencil_staging_image_memory_);
+
+  uint8_t image[this->render_width_ * this->render_height_];
+  for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
+    float px;
+    memcpy(&px, (uint8_t*)pixels + i, 4);
+    image[i/4] = floor(px*255);
+  }
+
+  //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
+  stbi_write_png("bin/depth.png", this->render_width_, this->render_height_, 1, (void*)image, 0);
+  free(pixels);
+}
+
+void Context::RetrieveComputeImage() {
+  vkQueueWaitIdle(this->vk_queue_graphics_);
+  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
+
+  this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->CopyImage(this->vk_compute_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+  VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
+  VkSubresourceLayout subresource_layout;
+  vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_color_staging_image_, &subresource, &subresource_layout);
+
+  VkMemoryRequirements host_visible_memory_requirements;
+  vkGetImageMemoryRequirements(
+    this->vk_logical_device_,
+    this->vk_color_staging_image_,
+    &host_visible_memory_requirements
+  );
+  size_t image_size = host_visible_memory_requirements.size;
+  void *data;
+  void *pixels = malloc(image_size);
+  vkMapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_, 0, image_size, 0, (void **)&data);
+  memcpy(pixels, data, image_size);
+  vkUnmapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_);
 /*
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
