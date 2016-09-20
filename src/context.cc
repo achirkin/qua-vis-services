@@ -38,19 +38,21 @@ Context::Context() {
     )
   );
   this->CreateComputeDescriptorSets();
+  this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->UpdateComputeDescriptorSets();
   this->InitializeVkComputeCommandBuffers(); // TODO:COMPUTESHADER
 
   auto t1 = std::chrono::high_resolution_clock::now();
   int N = 1000;
   for (int i = 0; i < N; i++) {
     this->VkDraw();
-    //this->UpdateComputeDescriptorSets();
-    //this->VkCompute();
+    this->VkCompute();
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
 
-  this->RetrieveImage();
+  this->RetrieveRenderImage();
+  this->RetrieveComputeImage();
 }
 
 Context::~Context() {
@@ -962,7 +964,7 @@ void Context::InitializeVkMemory() {
   this->CreateImage(this->color_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
     VK_IMAGE_TILING_OPTIMAL,
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
+    VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     &this->vk_compute_image_,
     &this->vk_compute_image_memory_);
@@ -1096,7 +1098,7 @@ void Context::InitializeVkComputeCommandBuffers() {
   std::vector<VkDescriptorSet> descriptor_sets = {
     this->vk_compute_descriptor_set_
   };
-/*
+
   vkCmdBindDescriptorSets(
     this->vk_compute_commandbuffer_,
     VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -1107,7 +1109,7 @@ void Context::InitializeVkComputeCommandBuffers() {
     0,
     0
   );
-*/
+
   vkCmdDispatch(
     this->vk_compute_commandbuffer_,
     this->render_width_ / 16,
@@ -1264,7 +1266,7 @@ void Context::SubmitUniformData() {
   this->EndSingleTimeBuffer(commandbuffer);
 }
 
-void Context::RetrieveImage() {
+void Context::RetrieveRenderImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
@@ -1298,9 +1300,48 @@ void Context::RetrieveImage() {
   }
 */
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  stbi_write_png("bin/test.png", this->render_width_, this->render_height_, 4, (void*)pixels, 0);
+  stbi_write_png("bin/rendered.png", this->render_width_, this->render_height_, 4, (void*)pixels, 0);
   free(pixels);
 }
+
+void Context::RetrieveComputeImage() {
+  vkQueueWaitIdle(this->vk_queue_graphics_);
+  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
+
+  this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->CopyImage(this->vk_compute_image_, this->vk_host_visible_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_host_visible_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
+  VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
+  VkSubresourceLayout subresource_layout;
+  vkGetImageSubresourceLayout(this->vk_logical_device_, this->vk_host_visible_image_, &subresource, &subresource_layout);
+
+  VkMemoryRequirements host_visible_memory_requirements;
+  vkGetImageMemoryRequirements(
+    this->vk_logical_device_,
+    this->vk_host_visible_image_,
+    &host_visible_memory_requirements
+  );
+  size_t image_size = host_visible_memory_requirements.size;
+  void *data;
+  void *pixels = malloc(image_size);
+  vkMapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_, 0, image_size, 0, (void **)&data);
+  memcpy(pixels, data, image_size);
+  vkUnmapMemory(this->vk_logical_device_, this->vk_host_visible_image_memory_);
+/*
+  uint8_t image[this->render_width_ * this->render_height_];
+  for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
+    float px;
+    memcpy(&px, (uint8_t*)pixels + i, 4);
+    image[i/4] = floor(px*255);
+  }
+*/
+  //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
+  stbi_write_png("bin/computed.png", this->render_width_, this->render_height_, 4, (void*)pixels, 0);
+  free(pixels);
+}
+
 
 /// CREATION ROUTINES
 
@@ -1412,8 +1453,8 @@ void Context::UpdateComputeDescriptorSets() {
   // Output: Image
   VkDescriptorImageInfo image_out_info = { // TODO: COMPUTESHADERTODO - Change to bufferinfo
     VK_NULL_HANDLE,
-    this->vk_color_imageview_,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    this->vk_compute_imageview_,
+    VK_IMAGE_LAYOUT_GENERAL
   };
 
   std::vector<VkDescriptorImageInfo> in_infos = {

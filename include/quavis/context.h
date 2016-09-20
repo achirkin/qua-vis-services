@@ -116,7 +116,8 @@ namespace quavis {
     void SubmitVertexData();
     void SubmitIndexData();
     void SubmitUniformData();
-    void RetrieveImage();
+    void RetrieveRenderImage();
+    void RetrieveComputeImage();
 
     // instance data
     VkInstance vk_instance_;
