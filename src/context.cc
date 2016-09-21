@@ -4,6 +4,31 @@
 using namespace quavis;
 
 Context::Context() {
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string err;
+  std::string path = "/home/mfranzen/Downloads/desert_city.obj";
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
+    throw std::runtime_error(err);
+  }
+  for (const auto& shape : shapes) {
+    for (const auto& index : shape.mesh.indices) {
+      Vertex vertex = {};
+      vertex.pos = {
+          attrib.vertices[3 * index.vertex_index + 0],
+          attrib.vertices[3 * index.vertex_index + 1],
+          attrib.vertices[3 * index.vertex_index + 2]
+      };
+      vertex.color = {
+          0.0f,
+          0.0f,
+          attrib.vertices[3 * index.vertex_index + 2]
+      };
+      vertices_.push_back(vertex);
+      indices_.push_back(indices_.size());
+    }
+  }
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -764,8 +789,8 @@ void Context::InitializeVkGraphicsPipeline() {
     VK_FALSE, // depth clamping
     VK_FALSE, // discard primitives before rendering?
     VK_POLYGON_MODE_FILL, // fill polygons (alternatively: draw only edges / vertices)
-    VK_CULL_MODE_BACK_BIT, // discard one of the two faces of a polygon
-    VK_FRONT_FACE_COUNTER_CLOCKWISE, // clockwise = front
+    VK_CULL_MODE_NONE, // discard one of the two faces of a polygon
+    VK_FRONT_FACE_COUNTER_CLOCKWISE, // counter clockwise = front
     VK_FALSE, // depth bias // TODO: Find out whether we need depth bias
     0.0f, // depth bias constant
     0.0f, // depth bias clamp
@@ -1346,7 +1371,7 @@ void Context::RetrieveDepthImage() {
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
-    image[i/4] = floor(px*255);
+    image[i/4] = floor((log(1.0+px*(exp(1) - 1)))*255);
   }
 
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);

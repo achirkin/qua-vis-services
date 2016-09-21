@@ -8,6 +8,9 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tinyobjloader.h"
+
 #include <vulkan/vulkan.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,9 +31,8 @@ namespace quavis {
   } mat4;
 
   struct UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
+    vec3 observation_point;
+    float r_max;
   };
 
   struct Vertex {
@@ -221,36 +223,14 @@ namespace quavis {
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
 
     std::vector<Vertex> vertices_ = {
-      {{-0.5f, -0.5f, 0.5f}, {1.0f, 0.0f, 0.0f}},
-      {{0.5f, -0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-      {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
-      {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}
-
     };
 
     std::vector<uint32_t> indices_ = {
-      0,3,2,2,1,0
     };
 
     const UniformBufferObject uniform_ = {
-      mat4 { // model
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,0,1
-      },
-      mat4 { // view
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,0,1
-      },
-      mat4 { // proj
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,0,1
-      },
+      vec3 {0, 0, 1},
+      100.0
     };
   };
 }
