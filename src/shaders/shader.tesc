@@ -2,6 +2,11 @@
 #extension GL_ARB_tessellation_shader : enable
 #define M_PI 3.1415926535897932384626433832795
 
+layout(binding = 0) uniform UniformBufferObject {
+    vec3 observation_point;
+    float r_max;
+} ubo;
+
 layout(location = 0) in vec4 vPosition[];
 layout(location = 1) in vec3 vColor[];
 
@@ -17,10 +22,11 @@ void main()
   tcColor[ID] = vColor[ID];
 
   if (ID == 0) {
+    float gamma = ubo.r_max / M_PI;
     float dt[3];
-    dt[0] = abs(vPosition[0][0] - vPosition[1][0]);
-    dt[1] = abs(vPosition[1][0] - vPosition[2][0]);
-    dt[2] = abs(vPosition[2][0] - vPosition[0][0]);
+    dt[0] = abs(vPosition[0][0] - vPosition[1][0]) / gamma;
+    dt[1] = abs(vPosition[1][0] - vPosition[2][0]) / gamma;
+    dt[2] = abs(vPosition[2][0] - vPosition[0][0]) / gamma;
 
     gl_TessLevelInner[0] = 1;
 

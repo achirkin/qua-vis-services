@@ -621,7 +621,7 @@ void Context::InitializeVkDescriptorSetLayout() {
   graphicsLayoutBinding.binding = 0;
   graphicsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   graphicsLayoutBinding.descriptorCount = 1;
-  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
 
   VkDescriptorSetLayoutCreateInfo graphicsLayoutInfo = {};
   graphicsLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
