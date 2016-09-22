@@ -39,39 +39,17 @@ vec4 interpolate() {
   if (gl_TessCoord == vec3(0,0,1)) {
     return tcPosition[2];
   }
-
-  // Check on which edge the vertex lies // TODO: This somehow doesn't work yet.
-  int id[2];
-  if (gl_TessCoord.x == 0) {
-    id[0] = 1;
-    id[1] = 2;
+  else {
+    // TODO
+    vec4 p0 = gl_TessCoord.x * tcPosition[0];
+    vec4 p1 = gl_TessCoord.y * tcPosition[1];
+    vec4 p2 = gl_TessCoord.z * tcPosition[2];
+    return p0 + p1 + p2;
   }
-  else if (gl_TessCoord.y == 0) {
-    id[0] = 2;
-    id[1] = 0;
-  }
-  else if (gl_TessCoord.z == 0) {
-    id[0] = 0;
-    id[1] = 1;
-  }
-
-  // Interpolate original vertices
-  vec3 r[2];
-  r[0] = tcoPosition[id[0]] - ubo.observation_point;
-  r[1] = tcoPosition[id[1]] - ubo.observation_point;
-  float t = r[1].z * (r[1].z - r[0].z);
-  vec3 r_new = t*r[0] + (1.0-t)*r[1];
-
-  return project(r_new);
 }
 
 void main()
 {
-  // position
-  // vec4 p0 = gl_TessCoord.x * tcPosition[0];
-  // vec4 p1 = gl_TessCoord.y * tcPosition[1];
-  // vec4 p2 = gl_TessCoord.z * tcPosition[2];
-  // gl_Position = p0 + p1 + p2;
   gl_Position = interpolate();
 
   // color
