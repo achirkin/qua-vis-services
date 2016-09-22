@@ -1,5 +1,6 @@
 #version 450
 #extension GL_ARB_tessellation_shader : enable
+#define ID gl_InvocationID
 #define M_PI 3.1415926535897932384626433832795
 
 layout(binding = 0) uniform UniformBufferObject {
@@ -7,17 +8,18 @@ layout(binding = 0) uniform UniformBufferObject {
     float r_max;
 } ubo;
 
-layout(location = 0) in vec4 vPosition[];
-layout(location = 1) in vec3 vColor[];
+layout(location = 0) in vec3 voPosition[];
+layout(location = 1) in vec4 vPosition[];
+layout(location = 2) in vec3 vColor[];
 
 layout (vertices = 3) out;
-layout(location = 0) out vec4 tcPosition[];
-layout(location = 1) out vec3 tcColor[];
-
-#define ID gl_InvocationID
+layout(location = 0) out vec3 tcoPosition[];
+layout(location = 1) out vec4 tcPosition[];
+layout(location = 2) out vec3 tcColor[];
 
 void main()
 {
+  tcoPosition[ID] = voPosition[ID];
   tcPosition[ID] = vPosition[ID];
   tcColor[ID] = vColor[ID];
 

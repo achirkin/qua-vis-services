@@ -3,7 +3,6 @@
 
 layout(location = 0) in vec4 tePosition;
 layout(location = 1) in vec3 teColor;
-layout(location = 2) in vec3 tePatchDistance;
 
 layout(location = 0) out vec4 outColor;
 

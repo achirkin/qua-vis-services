@@ -71,7 +71,7 @@ Context::Context() {
   int N = 1000;
   for (int i = 0; i < N; i++) {
     this->VkDraw();
-    //this->VkCompute();
+    this->VkCompute();
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
@@ -621,7 +621,7 @@ void Context::InitializeVkDescriptorSetLayout() {
   graphicsLayoutBinding.binding = 0;
   graphicsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   graphicsLayoutBinding.descriptorCount = 1;
-  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT  | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
 
   VkDescriptorSetLayoutCreateInfo graphicsLayoutInfo = {};
   graphicsLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
