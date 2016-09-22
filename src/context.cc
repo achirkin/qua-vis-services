@@ -71,7 +71,7 @@ Context::Context() {
   int N = 1000;
   for (int i = 0; i < N; i++) {
     this->VkDraw();
-    this->VkCompute();
+    //this->VkCompute();
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
@@ -442,8 +442,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_vert_spv_len, // vertex shader size
-    (uint32_t*)src_shaders_vert_spv // vertex shader code
+    src_shaders_shader_vert_spv_len, // vertex shader size
+    (uint32_t*)src_shaders_shader_vert_spv // vertex shader code
   };
 
   debug::handleVkResult(
@@ -460,8 +460,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_tesc_spv_len, // vertex shader size
-    (uint32_t*)src_shaders_tesc_spv // vertex shader code
+    src_shaders_shader_tesc_spv_len, // vertex shader size
+    (uint32_t*)src_shaders_shader_tesc_spv // vertex shader code
   };
 
   debug::handleVkResult(
@@ -478,8 +478,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_tese_spv_len, // vertex shader size
-    (uint32_t*)src_shaders_tese_spv // vertex shader code
+    src_shaders_shader_tese_spv_len, // vertex shader size
+    (uint32_t*)src_shaders_shader_tese_spv // vertex shader code
   };
 
   debug::handleVkResult(
@@ -496,8 +496,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_frag_spv_len, // fragment shader size
-    (uint32_t*)src_shaders_frag_spv // fragment shader code
+    src_shaders_shader_frag_spv_len, // fragment shader size
+    (uint32_t*)src_shaders_shader_frag_spv // fragment shader code
   };
 
   debug::handleVkResult(
@@ -514,8 +514,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_comp_spv_len, // fragment shader size
-    (uint32_t*)src_shaders_comp_spv // fragment shader code
+    src_shaders_shader_comp_spv_len, // fragment shader size
+    (uint32_t*)src_shaders_shader_comp_spv // fragment shader code
   };
 
   debug::handleVkResult(

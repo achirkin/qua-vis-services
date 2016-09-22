@@ -52,18 +52,28 @@ configure_file(
   "${CMAKE_SOURCE_DIR}/include/quavis/version.h"
 )
 
-# Build
-add_library(quavis SHARED "${CMAKE_SOURCE_DIR}/src/context.cc")
-target_link_libraries(quavis ${VULKAN_LIBRARY})
-add_executable (testvulkan "${CMAKE_SOURCE_DIR}/test/vulkan.cc")
-target_link_libraries (testvulkan quavis)
-
-# Compile shaders
+# Shaders
+add_custom_target(shaders)
 if (WIN32)
   # TODO: Compile shaders in CMake under windows
 else (WIN32)
   file(GLOB files "${CMAKE_SOURCE_DIR}/src/shaders/shader.*")
+  add_custom_command(TARGET shaders PRE_BUILD COMMAND echo "" > include/quavis/shaders.h)
   foreach(file ${files})
-    add_custom_command(TARGET quavis PRE_BUILD COMMAND glslangValidator -V ${file} -o ${file}.spv)
+    string(REGEX REPLACE "^[^\\/]*[\\|/]" "" filename ${file})
+    set(filepath "src/shaders/${filename}")
+    add_custom_command(TARGET shaders PRE_BUILD COMMAND glslangValidator -V ${filepath} -o ${filepath}.spv)
+    add_custom_command(TARGET shaders PRE_BUILD COMMAND xxd -i ${filepath}.spv >> include/quavis/shaders.h)
+    add_custom_command(TARGET shaders POST_BUILD COMMAND rm ${filepath}.spv)
   endforeach()
 endif ()
+
+# Quavis
+add_library(quavis SHARED "${CMAKE_SOURCE_DIR}/src/context.cc")
+target_link_libraries(quavis ${VULKAN_LIBRARY})
+add_dependencies(quavis shaders)
+
+# Tests
+add_executable (testvulkan "${CMAKE_SOURCE_DIR}/test/vulkan.cc")
+target_link_libraries (testvulkan quavis)
+add_dependencies(testvulkan quavis)

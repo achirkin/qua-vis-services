@@ -219,7 +219,7 @@ namespace quavis {
 
 
     // rendering attributes
-    const uint32_t render_width_ = 1024;
+    const uint32_t render_width_ = 2048;
     const uint32_t render_height_ = 1024;
     const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;

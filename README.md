@@ -1,13 +1,7 @@
 # qua-vis-services
 
 * libvulkan-dev
-
-# Shader compilation
-For shader compilation, install the [GLSL Reference Compiler](https://www.khronos.org/opengles/sdk/tools/Reference-Compiler/) and run:
-
-```
-sh src/shaders/compile.sh
-```
+* [GLSL Reference Compiler](https://www.khronos.org/opengles/sdk/tools/Reference-Compiler/)
 
 # Using validation layers
 
