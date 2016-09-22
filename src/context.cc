@@ -4,6 +4,7 @@
 using namespace quavis;
 
 Context::Context() {
+  /*
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -28,7 +29,7 @@ Context::Context() {
       vertices_.push_back(vertex);
       indices_.push_back(indices_.size());
     }
-  }
+  }*/
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -382,6 +383,7 @@ void Context::InitializeVkLogicalDevice() {
   // TODO: Specify device features
   VkPhysicalDeviceFeatures device_features = {};
   device_features.tessellationShader = VK_TRUE;
+  device_features.fillModeNonSolid = VK_TRUE;
 
   // Create lgocial device metadata
   VkDeviceCreateInfo device_create_info = {
@@ -852,7 +854,7 @@ void Context::InitializeVkGraphicsPipeline() {
     0, // flags (see documentation, must be 0)
     VK_FALSE, // depth clamping
     VK_FALSE, // discard primitives before rendering?
-    VK_POLYGON_MODE_FILL, // fill polygons (alternatively: draw only edges / vertices)
+    VK_POLYGON_MODE_LINE, // fill polygons (alternatively: draw only edges / vertices)
     VK_CULL_MODE_NONE, // discard one of the two faces of a polygon
     VK_FRONT_FACE_COUNTER_CLOCKWISE, // counter clockwise = front
     VK_FALSE, // depth bias // TODO: Find out whether we need depth bias

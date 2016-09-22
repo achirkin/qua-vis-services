@@ -11,7 +11,7 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 
 layout(location = 0) out vec4 vPosition;
-layout(location = 1) out vec3 vFragColor;
+layout(location = 1) out vec3 vColor;
 
 void main() {
   // Position
@@ -23,12 +23,9 @@ void main() {
   phi = r == 0 ?  0 : acos(inPosition.z / r);
 
   float gamma = ubo.r_max / M_PI;
-  gl_Position = vec4(theta * gamma, (2*phi - M_PI)*gamma, r, ubo.r_max);
+  vPosition = vec4(theta * gamma, (2*phi - M_PI)*gamma, r, ubo.r_max);
   float rc = r/ubo.r_max;
 
   // Color
-  vFragColor = vec3(rc, rc, rc);
-
-  //DEBUG
-  vPosition = vec4(inPosition, 1.0);
+  vColor = vec3(rc, rc, rc);
 }
