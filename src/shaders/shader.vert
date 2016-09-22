@@ -10,13 +10,11 @@ layout(binding = 0) uniform UniformBufferObject {
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 
-layout(location = 0) out vec3 fragColor;
-
-out gl_PerVertex {
-  vec4 gl_Position;
-};
+layout(location = 0) out vec4 vPosition;
+layout(location = 1) out vec3 vFragColor;
 
 void main() {
+  // Position
   float r, phi, theta;
   vec3 d = inPosition - ubo.observation_point;
 
@@ -27,5 +25,10 @@ void main() {
   float gamma = ubo.r_max / M_PI;
   gl_Position = vec4(theta * gamma, (2*phi - M_PI)*gamma, r, ubo.r_max);
   float rc = r/ubo.r_max;
-  fragColor = vec3(rc, rc, rc);
+
+  // Color
+  vFragColor = vec3(rc, rc, rc);
+
+  //DEBUG
+  vPosition = vec4(inPosition, 1.0);
 }
