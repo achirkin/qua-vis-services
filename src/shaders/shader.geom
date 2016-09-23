@@ -18,10 +18,15 @@ layout(location = 2) out vec3 gColor;
 vec4 project(vec3 position) {
   float r, phi, theta;
 
+  // compute spherical coordinatess
   r = length(position);
   theta = atan(position.y, position.x);
   phi = (r == 0) ?  0 : acos(position.z / r);
 
+  // correct for viewport constraints such that
+  // - x,y in [-1, 1]
+  // - the distance to the observer (r) is capped at r_max
+  //   (0 <= r <= r_max (<=>) 0 <= z <= 1)
   float gamma = 1.0 / M_PI;
   return vec4(theta * gamma, (2*phi - M_PI)*gamma, r / ubo.r_max, 1);
 }
@@ -56,25 +61,36 @@ void main() {
   sphericalPosition[1] = project(teCartesianPosition[1]);
   sphericalPosition[2] = project(teCartesianPosition[2]);
 
+  // check for each edge whether its broken. An edge is broken
+  // if its endpoints lie in different halfs of the theta-axis
   bool xa, xb, xc;
   xa = abs(sphericalPosition[1][0] - sphericalPosition[0][0]) > 1;
   xb = abs(sphericalPosition[2][0] - sphericalPosition[1][0]) > 1;
   xc = abs(sphericalPosition[0][0] - sphericalPosition[2][0]) > 1;
 
-  // correct vertex positions with broken adjacent edges
-  bool multiplier[3];
-  multiplier[0] = (xa || xc) && (sphericalPosition[0][0] < 0);
-  multiplier[1] = (xa || xb) && (sphericalPosition[1][0] < 0);
-  multiplier[2] = (xb || xc) && (sphericalPosition[2][0] < 0);
+  // check for each vertex if it has an incident broken edge and whether
+  // it's on the left side
+  bool has_broken_edge[3];
+  has_broken_edge[0] = (xa || xc) && (sphericalPosition[0][0] < 0);
+  has_broken_edge[1] = (xa || xb) && (sphericalPosition[1][0] < 0);
+  has_broken_edge[2] = (xb || xc) && (sphericalPosition[2][0] < 0);
 
-  // shift to the right
-  sphericalPosition[0][0] += 2 * int(multiplier[0]);
-  sphericalPosition[1][0] += 2 * int(multiplier[1]);
-  sphericalPosition[2][0] += 2 * int(multiplier[2]);
+  // shift to the right:
+  // If a vertex is on the left side
+  // of the image and it has at least one adjacent edge that goes to the
+  // right side of the image, then push this vertex to the right (outside of the image)
+  // this creates the left side of the triangle on the right image border
+  sphericalPosition[0][0] += 2 * int(has_broken_edge[0]);
+  sphericalPosition[1][0] += 2 * int(has_broken_edge[1]);
+  sphericalPosition[2][0] += 2 * int(has_broken_edge[2]);
   EmitShiftedTriangle(sphericalPosition);
 
   // shift to the left
-  if (multiplier[0] || multiplier[1] || multiplier[2]) {
+  // If one vertex has been shifted, then the right side of the triangle
+  // is currently missing. Therefore, we're copying the whole triangle to the
+  // image's left side where the already emitted part of the triangle
+  // is not within the image
+  if (has_broken_edge[0] || has_broken_edge[1] || has_broken_edge[2]) {
     sphericalPosition[0][0] -= 2;
     sphericalPosition[1][0] -= 2;
     sphericalPosition[2][0] -= 2;
