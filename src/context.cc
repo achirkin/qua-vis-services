@@ -4,7 +4,6 @@
 using namespace quavis;
 
 Context::Context() {
-  /*
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -29,7 +28,7 @@ Context::Context() {
       vertices_.push_back(vertex);
       indices_.push_back(indices_.size());
     }
-  }*/
+  }
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -1475,7 +1474,7 @@ void Context::RetrieveDepthImage() {
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
-    image[i/4] = floor((log(1.0+px*(exp(1) - 1)))*255);
+    image[i/4] = floor(px*255);
   }
 
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
