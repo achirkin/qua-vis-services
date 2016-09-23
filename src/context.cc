@@ -384,7 +384,7 @@ void Context::InitializeVkLogicalDevice() {
   VkPhysicalDeviceFeatures device_features = {};
   device_features.tessellationShader = VK_TRUE;
   device_features.geometryShader = VK_TRUE;
-  device_features.fillModeNonSolid = VK_TRUE;
+  device_features.fillModeNonSolid = VK_FALSE;
 
   // Create lgocial device metadata
   VkDeviceCreateInfo device_create_info = {
@@ -640,7 +640,7 @@ void Context::InitializeVkDescriptorSetLayout() {
   graphicsLayoutBinding.binding = 0;
   graphicsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   graphicsLayoutBinding.descriptorCount = 1;
-  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_GEOMETRY_BIT;
 
   VkDescriptorSetLayoutCreateInfo graphicsLayoutInfo = {};
   graphicsLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -884,7 +884,7 @@ void Context::InitializeVkGraphicsPipeline() {
     0, // flags (see documentation, must be 0)
     VK_FALSE, // depth clamping
     VK_FALSE, // discard primitives before rendering?
-    VK_POLYGON_MODE_LINE, // fill polygons (alternatively: draw only edges / vertices)
+    VK_POLYGON_MODE_FILL, // fill polygons (alternatively: draw only edges / vertices)
     VK_CULL_MODE_NONE, // discard one of the two faces of a polygon
     VK_FRONT_FACE_COUNTER_CLOCKWISE, // counter clockwise = front
     VK_FALSE, // depth bias // TODO: Find out whether we need depth bias
@@ -1474,7 +1474,7 @@ void Context::RetrieveDepthImage() {
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
-    image[i/4] = floor(px*255);
+    image[i/4] = floor((1.0 - px)*255);
   }
 
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
