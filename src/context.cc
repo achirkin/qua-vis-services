@@ -149,6 +149,7 @@ Context::~Context() {
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_vertex_shader_, nullptr);
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_tessellation_control_shader_, nullptr);
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_tessellation_evaluation_shader_, nullptr);
+  vkDestroyShaderModule(this->vk_logical_device_, this->vk_geoemtry_shader_, nullptr);
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_fragment_shader_, nullptr);
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_compute_shader_, nullptr);
 
@@ -383,6 +384,7 @@ void Context::InitializeVkLogicalDevice() {
   // TODO: Specify device features
   VkPhysicalDeviceFeatures device_features = {};
   device_features.tessellationShader = VK_TRUE;
+  device_features.geometryShader = VK_TRUE;
   device_features.fillModeNonSolid = VK_TRUE;
 
   // Create lgocial device metadata
@@ -488,6 +490,24 @@ void Context::InitializeVkShaderModules() {
       &tessellation_evaluation_shader_info, // shader meta data
       nullptr, // allocation callback (see documentation)
       &this->vk_tessellation_evaluation_shader_ // the allocated memory for the logical device
+    )
+  );
+
+  // create geoemtry shader
+  VkShaderModuleCreateInfo geoemtry_shader_info = {
+    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    src_shaders_shader_geom_spv_len, // geoemtry shader size
+    (uint32_t*)src_shaders_shader_geom_spv // geoemtry shader code
+  };
+
+  debug::handleVkResult(
+    vkCreateShaderModule(
+      this->vk_logical_device_, // the logical device
+      &geoemtry_shader_info, // shader meta data
+      nullptr, // allocation callback (see documentation)
+      &this->vk_geoemtry_shader_ // the allocated memory for the logical device
     )
   );
 
@@ -621,7 +641,7 @@ void Context::InitializeVkDescriptorSetLayout() {
   graphicsLayoutBinding.binding = 0;
   graphicsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
   graphicsLayoutBinding.descriptorCount = 1;
-  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT  | VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+  graphicsLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
   VkDescriptorSetLayoutCreateInfo graphicsLayoutInfo = {};
   graphicsLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -781,6 +801,16 @@ void Context::InitializeVkGraphicsPipeline() {
     nullptr // VkSpecializationInfo (see documentation)
   };
 
+  VkPipelineShaderStageCreateInfo geoemtry_shader_stage_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, // sType (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_SHADER_STAGE_GEOMETRY_BIT, // stage flag
+    this->vk_geoemtry_shader_, // shader module
+    "main", // the pipeline's name
+    nullptr // VkSpecializationInfo (see documentation)
+  };
+
   VkPipelineShaderStageCreateInfo fragment_shader_stage_info = {
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, // sType (see documentation)
     nullptr, // next (see documentation, must be null)
@@ -795,6 +825,7 @@ void Context::InitializeVkGraphicsPipeline() {
     vertex_shader_stage_info,
     tessellation_control_shader_stage_info,
     tessellation_evaluation_shader_stage_info,
+    geoemtry_shader_stage_info,
     fragment_shader_stage_info
   };
 

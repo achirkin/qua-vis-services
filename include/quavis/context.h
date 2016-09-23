@@ -144,6 +144,7 @@ namespace quavis {
     VkShaderModule vk_vertex_shader_;
     VkShaderModule vk_tessellation_control_shader_;
     VkShaderModule vk_tessellation_evaluation_shader_;
+    VkShaderModule vk_geoemtry_shader_;
     VkShaderModule vk_fragment_shader_;
     VkShaderModule vk_compute_shader_;
 

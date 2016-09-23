@@ -10,8 +10,8 @@ layout(binding = 0) uniform UniformBufferObject {
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inColor;
 
-layout(location = 0) out vec3 oPosition; // origin al position
-layout(location = 1) out vec4 vPosition;
+layout(location = 0) out vec3 vCartesianPosition; // origin al position
+layout(location = 1) out vec4 vSphericalPosition;
 layout(location = 2) out vec3 vColor;
 
 vec4 project(vec3 position) {
@@ -22,18 +22,18 @@ vec4 project(vec3 position) {
   theta = atan(position.y, position.x);
   phi = (r == 0) ?  0 : acos(position.z / r);
 
-  float gamma = ubo.r_max / M_PI;
-  return vec4(theta * gamma, (2*phi - M_PI)*gamma, r, ubo.r_max);
+  float gamma = 1.0 / M_PI;
+  return vec4(theta * gamma, (2*phi - M_PI)*gamma, r / ubo.r_max, 1);
 }
 
 void main() {
   // Position
-  vPosition = project(inPosition);
+  vSphericalPosition = project(inPosition);
+  gl_Position = vSphericalPosition;
 
   // Color
-  float rc = vPosition[2]/ubo.r_max;
-  vColor = vec3(rc, rc, rc);
+  vColor = vec3(vSphericalPosition[2], vSphericalPosition[2], vSphericalPosition[2]);
 
   // Original position
-  oPosition = inPosition;
+  vCartesianPosition = inPosition;
 }
