@@ -1,6 +1,5 @@
 #version 450
 #extension GL_ARB_tessellation_shader : enable
-#define ID gl_InvocationID
 
 layout(triangles) in;
 layout(location = 0) in vec3 tcCartesianPosition[];

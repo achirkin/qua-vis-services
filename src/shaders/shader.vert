@@ -1,9 +1,8 @@
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
 
 layout(binding = 0) uniform UniformBufferObject {
-    vec3 observation_point;
-    float r_max;
+  vec3 observation_point;
+  float r_max;
 } ubo;
 
 layout(location = 0) in vec3 inPosition;
