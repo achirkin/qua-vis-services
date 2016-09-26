@@ -1,4 +1,4 @@
-#include "quavis/context.h"
+#include "quavis/quavis.h"
 
 #include <vulkan/vulkan.h>
 

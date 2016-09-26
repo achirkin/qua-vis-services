@@ -1,4 +1,4 @@
-#include "quavis/context.h"
+#include "quavis/quavis.h"
 #include <chrono>
 
 using namespace quavis;
