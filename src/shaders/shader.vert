@@ -3,6 +3,7 @@
 layout(binding = 0) uniform UniformBufferObject {
   vec3 observation_point;
   float r_max;
+  float alpha_max;
 } ubo;
 
 layout(location = 0) in vec3 inPosition;
