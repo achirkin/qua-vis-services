@@ -226,7 +226,7 @@ namespace quavis {
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
 
     std::vector<Vertex> vertices_ = {
-      /*{{5,5,4},{0,0,0}},
+      {{5,5,4},{0,0,0}},
       {{5,5,5},{0,0,0}},
       {{5,0,5},{0,0,0}},
 
@@ -244,16 +244,16 @@ namespace quavis {
 
       {{-10,0,-5},{0,0,0}},
       {{-10,-1,-7},{0,0,0}},
-      {{-10,-2,-6},{0,0,0}*/
+      {{-10,-2,-6},{0,0,0}}
     };
 
     std::vector<uint32_t> indices_ = {
-      //0,1,2,3,4,5,6,7,8,9,10,11,12,13,14
+      0,1,2,3,4,5,6,7,8,9,10,11,12,13,14
     };
 
     const UniformBufferObject uniform_ = {
       vec3 {0, 0, 0},
-      1.0
+      20.0
     };
   };
 }

@@ -4,6 +4,7 @@
 using namespace quavis;
 
 Context::Context() {
+  /*
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -28,7 +29,7 @@ Context::Context() {
       vertices_.push_back(vertex);
       indices_.push_back(indices_.size());
     }
-  }
+  }*/
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -384,7 +385,7 @@ void Context::InitializeVkLogicalDevice() {
   VkPhysicalDeviceFeatures device_features = {};
   device_features.tessellationShader = VK_TRUE;
   device_features.geometryShader = VK_TRUE;
-  device_features.fillModeNonSolid = VK_FALSE;
+  device_features.fillModeNonSolid = VK_TRUE;
 
   // Create lgocial device metadata
   VkDeviceCreateInfo device_create_info = {
@@ -959,7 +960,7 @@ void Context::InitializeVkGraphicsPipeline() {
     VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, // sType
     nullptr, // next (see documentation, must be null)
     0, // pipeline create flags (have no child pipelines, so don't care)
-    4, // number of stages (we have 2 shaders for now)
+    5, // number of stages (we have 2 shaders for now)
     shader_stages, // shader stage create infos
     &vertex_input_info, // vertex input info
     &input_assembly_info, // inpt assembly info
