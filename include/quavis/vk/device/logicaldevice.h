@@ -6,7 +6,8 @@
 namespace quavis {
   /**
   * The LogicalDevice class is a wrapper around the VkDevice struct. It
-  * provides methods for easy queue initialization and management.
+  * provides methods for easy queue initialization and management as well as
+  * command pool initialization.
   */
   class LogicalDevice {
   public:
@@ -28,6 +29,11 @@ namespace quavis {
     * dependant on the logical device need to be destroyed beforehand.
     */
     ~LogicalDevice();
+
+    /**
+    * Returns the command pool of the given queue
+    */
+    CommandPool GetCommandPool(VkQueue queue);
 
     /**
     * The vulkan handler to the logical device.
@@ -57,6 +63,7 @@ namespace quavis {
   private:
     uint32_t GetQueueFamily(VkQueueFlags required_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
     uint32_t GetQueue(uint32_t queue_family_index, uint32_t queue_index);
+    void CreateCommandPool(uint32_t queue_family_index);
 
 
     // Default features used for a logical device
