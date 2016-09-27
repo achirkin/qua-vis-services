@@ -2,6 +2,11 @@
 #define QUAVIS_PHYSICALDEVICE_H
 
 namespace quavis {
+  /**
+  * The PhysicalDevice class is a wrapper around the VkPhysicalDevice struct.
+  * It provides convencience methods that ease instantiation of a vulkan
+  * instance and, in this case, automatically chooses a physical device.
+  */
   class PhysicalDevice {
   public:
     /**

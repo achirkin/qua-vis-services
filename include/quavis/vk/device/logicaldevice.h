@@ -4,6 +4,10 @@
 #include <vector>
 
 namespace quavis {
+  /**
+  * The LogicalDevice class is a wrapper around the VkDevice struct. It
+  * provides methods for easy queue initialization and management.
+  */
   class LogicalDevice {
   public:
     /**

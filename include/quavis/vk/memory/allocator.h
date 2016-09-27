@@ -2,6 +2,9 @@
 #define QUAVIS_MEMORY_H
 
 namespace quavis {
+  /**
+  * The allocator class is used to manage the memory of a given physical device.
+  */
   class Allocator {
   public:
     /**
