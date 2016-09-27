@@ -48,7 +48,7 @@ namespace quavis {
     VkBuffer buffer;
 
   private:
-    bool staging = false;
+    bool staging_ = false;
 
     VkMemory memory;
     VkMemory staging_memory;
