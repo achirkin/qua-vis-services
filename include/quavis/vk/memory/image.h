@@ -55,23 +55,21 @@ namespace quavis {
     void* GetData(VkQueue queue = VK_NULL_HANDLE);
 
     /**
-    * The VkBuffer object to be used in Vulkan methods
+    * The VkImage object to be used in Vulkan methods
     */
-    VkBuffer buffer;
+    VkImage image;
 
   private:
-    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    std::vector<VkQueue> queues_();
     bool staging_ = false;
 
-    LogicalDevice device_;
+    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+    std::vector<VkQueue> queues_();
 
     VkMemory memory;
     VkMemory staging_memory;
-
-    VkBuffer buffer;
     VkBuffer staging_buffer;
 
+    LogicalDevice device_;
   };
 }
 

@@ -52,8 +52,6 @@ namespace quavis {
 
     VkMemory memory;
     VkMemory staging_memory;
-
-    VkBuffer buffer;
     VkBuffer staging_buffer;
 
     LogicalDevice device_;
