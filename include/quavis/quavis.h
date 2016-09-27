@@ -1,5 +1,5 @@
-#ifndef QUAVIS_CONTEXT_H
-#define QUAVIS_CONTEXT_H
+#ifndef QUAVIS_QUAVIS_H
+#define QUAVIS_QUAVIS_H
 
 #include "quavis/version.h"
 #include "quavis/shaders.h"
