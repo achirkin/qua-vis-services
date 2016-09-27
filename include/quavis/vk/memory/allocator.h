@@ -1,5 +1,5 @@
-#ifndef QUAVIS_MEMORY_H
-#define QUAVIS_MEMORY_H
+#ifndef QUAVIS_ALLOCATOR_H
+#define QUAVIS_ALLOCATOR_H
 
 namespace quavis {
   /**
@@ -10,8 +10,10 @@ namespace quavis {
     /**
     * Creates a new allocator object for the given physical device. The
     * allocator is responsible for selecting a given memory heap and allocating
-    * the given memory. Note that all memory created by this allocator
-    * is destroyed upon it's destructor call.
+    * the given memory.
+    *
+    * The class furthermore provides methods for sending to and retreiving from
+    * buffers.
     */
     Allocator(VkPhysicalDevice physical_device);
 
@@ -28,6 +30,16 @@ namespace quavis {
     * flag. Otherwise it will often occur that memory is allocated on host-side
     */
     VkMemory Allocate(VkMemoryPropertyFlags flags, uint32_t size);
+
+    /*
+    * Writes data to a given memory object.
+    */
+    static void SetData(VkMemory destination_memory, void* data, size_t len);
+
+    /*
+    * Retreives data from a given memory object.
+    */
+    static void* GetData(VkMemory source_memory, size_t len);
 
   private:
     uint32_t GetHeap(VkMemoryPropertyFlags flags);
