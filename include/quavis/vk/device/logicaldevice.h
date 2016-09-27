@@ -49,12 +49,15 @@ namespace quavis {
     */
     std::vector<VkQueue> compute_queues();
 
+    /**
+    * The corresponding physical device
+    */
+    VkPhysicalDevice physical_device_;
+
   private:
     uint32_t GetQueueFamily(VkQueueFlags required_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
     uint32_t GetQueue(uint32_t queue_family_index, uint32_t queue_index);
 
-    // physical device (set in constructor)
-    VkPhysicalDevice vk_physical_device_;
 
     // Default features used for a logical device
     VkPhysicalDeviceFeatures vk_features_;

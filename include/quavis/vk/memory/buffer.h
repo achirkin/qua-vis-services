@@ -21,7 +21,7 @@ namespace quavis {
     *  * VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
     *  * VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     */
-    Buffer(uint32_t size, VkBufferUsageFlags usage_flags, bool staging = true);
+    Buffer(LogicalDevice device, uint32_t size, VkBufferUsageFlags usage_flags, bool staging = true);
 
     /**
     * Destroys the buffer and all it's associated memory regions.
@@ -29,17 +29,18 @@ namespace quavis {
     ~Buffer();
 
     /**
-    * Writes data to the buffer. If staging is enabled, a transfer queue has to
-    * be provided to which the staging commands are submitted.
+    * Writes data to the buffer. If staging is enabled, the transfer will be done
+    * by choosing the first transfer queue of the logical device if no
+    * other queue is specified.
     */
-    SetData(void* data, VkQueue = VK_NULL_HANDLE);
+    void SetData(void* data, VkQueue queue = VK_NULL_HANDLE);
 
     /**
-    * Retreives data from the buffer. If staging is enabled,
-    * a transfer queue has to be provided to which the staging commands are
-    * submitted.
+    * Retreives data from the buffer. If staging is enabled, the transfer will be done
+    * by choosing the first transfer queue of the logical device if no
+    * other queue is specified.
     */
-    void* GetData(VkQueue = VK_NULL_HANDLE);
+    void* GetData(VkQueue queue = VK_NULL_HANDLE);
 
     /**
     * The VkBuffer object to be used in Vulkan methods
@@ -54,6 +55,8 @@ namespace quavis {
 
     VkBuffer buffer;
     VkBuffer staging_buffer;
+
+    LogicalDevice device_;
   };
 }
 

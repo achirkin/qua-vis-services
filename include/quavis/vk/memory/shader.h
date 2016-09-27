@@ -2,7 +2,7 @@
 #define QUAVIS_SHADER_H
 
 namespace quavis {
-
+  // TODO: Add shader class
 }
 
 #endif

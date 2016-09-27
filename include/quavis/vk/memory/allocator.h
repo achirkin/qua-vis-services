@@ -15,7 +15,7 @@ namespace quavis {
     * The class furthermore provides methods for sending to and retreiving from
     * buffers.
     */
-    Allocator(VkPhysicalDevice physical_device);
+    Allocator(LogicalDevice physical_device);
 
     /**
     * Destroys the allocator object and all memory that has been allocated by
@@ -43,7 +43,8 @@ namespace quavis {
 
   private:
     uint32_t GetHeap(VkMemoryPropertyFlags flags);
-    VkPhysicalDevice physical_device;
+    
+    LogicalDevice physical_device;
   };
 }
 
