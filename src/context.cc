@@ -1,4 +1,4 @@
-#include "quavis/quavis.h"
+#include "quavis/context.h"
 #include <chrono>
 
 using namespace quavis;
@@ -25,8 +25,10 @@ Context::Context() {
           0.0f,
           attrib.vertices[3 * index.vertex_index + 2]
       };
-      vertices_.push_back(vertex);
-      indices_.push_back(indices_.size());
+      if (vertices_.size() < 10000) {
+        vertices_.push_back(vertex);
+        indices_.push_back(indices_.size());
+      }
     }
   }
   this->InitializeVkInstance();

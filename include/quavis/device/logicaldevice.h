@@ -1,6 +1,0 @@
-#ifndef QUAVIS_LOGICALDEVICE_H
-#define QUAVIS_LOGICALDEVICE_H
-
-
-
-#endif
