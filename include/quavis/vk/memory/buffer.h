@@ -45,7 +45,7 @@ namespace quavis {
     /**
     * The VkBuffer object to be used in Vulkan methods
     */
-    VkBuffer buffer;
+    VkBuffer vk_handle;
 
   private:
     bool staging_ = false;

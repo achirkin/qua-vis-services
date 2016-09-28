@@ -15,11 +15,6 @@ namespace quavis {
     */
     PhysicalDevice(VkInstance instance);
 
-    /*
-    * The vulkan object of the physical device
-    */
-    VkPhysicalDevice vk_handle;
-
     /**
     * Checks for a physical device whether it supports a given extension
     */
@@ -34,6 +29,11 @@ namespace quavis {
     * Checks for a physical device whether it supports a given queue type
     */
     static bool hasQueueType(VkPhysicalDevice device, VkQueueFlags queue_flags);
+    
+    /*
+    * The vulkan object of the physical device
+    */
+    VkPhysicalDevice vk_handle;
 
   private:
     const std::vector<const char*> extensions_ = {

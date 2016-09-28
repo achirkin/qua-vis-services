@@ -8,6 +8,13 @@ namespace quavis {
   * The LogicalDevice class is a wrapper around the VkDevice struct. It
   * provides methods for easy queue initialization and management as well as
   * command pool initialization.
+  *
+  * The class is furthermore used to execute commands on the device. The general
+  * workflow is:
+  * 1. Choose queue from graphics_queues, compute_queues, transfer_queues
+  * 2. buffer = LogicalDevice.BeginCommandBuffer
+  * 3. <do something with commandbuffer>
+  * 4. LogicalDevice.EndAndSubmitCommandBuffer
   */
   class LogicalDevice {
   public:
@@ -16,7 +23,7 @@ namespace quavis {
     * Optionally, the number of graphics- and compute queues can be
     * specfified.
     *
-    * The method selects 2 (not necessarily different) queue families
+    * The method selects 3 (not necessarily different) queue families
     * from the specified device.
     * The graphics queues are guaranteed to be usable for graphics while
     * the compute queues are usable for compute shaders and
@@ -30,10 +37,27 @@ namespace quavis {
     */
     ~LogicalDevice();
 
+    // TODO: Change tcommand buffer creation such that it's only dependent on queue_family_index_ / CommandPool
     /**
-    * Returns the command pool of the given queue
+    * Begins a new command buffer. This function chooses the right command pool
+    * for a given queue and delegates the command buffer creation
+    * to the command pool object.
     */
-    CommandPool GetCommandPool(VkQueue queue);
+    VkCommandBuffer BeginCommandBuffer(VkQueue queue, VkCommandBufferUsageFlags flags);
+
+    /**
+    * Ends and submits a command buffer. This function chooses the right command pool
+    * for a given queue and delegates the command buffer ending
+    * to the command pool object.
+    */
+    void EndCommandBuffer(VkCommandBuffer command_buffer);
+
+    /**
+    * Ends and submits a command buffer. This function chooses the right command pool
+    * for a given queue and delegates the command buffer ending
+    * to the command pool object.
+    */
+    void SubmitCommandBuffer(VkQueue queue, VkCommandBuffer command_buffer);
 
     /**
     * The vulkan handler to the logical device.
@@ -53,7 +77,7 @@ namespace quavis {
     /**
     * The transfer queues (used for memory transfer)
     */
-    std::vector<VkQueue> compute_queues();
+    std::vector<VkQueue> transfer_queues();
 
     /**
     * The corresponding physical device
@@ -64,7 +88,7 @@ namespace quavis {
     uint32_t GetQueueFamily(VkQueueFlags required_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
     uint32_t GetQueue(uint32_t queue_family_index, uint32_t queue_index);
     void CreateCommandPool(uint32_t queue_family_index);
-
+    CommandPool GetCommandPool(uint32_t queue_family_index);
 
     // Default features used for a logical device
     VkPhysicalDeviceFeatures vk_features_;

@@ -19,8 +19,9 @@ namespace quavis {
     */
     ~CommandPool();
 
+    // TODO: Maybe add num_command_buffers argument
     /**
-    * Begins a new command buffer.
+    * Begins a new command buffer for the given command pool.
     */
     VkCommandBuffer BeginCommandBuffer(VkCommandBufferUsageFlags flags);
 
@@ -30,9 +31,14 @@ namespace quavis {
     */
     void EndCommandBuffer(VkCommandBuffer command_buffer);
 
+    /**
+    * The command pool object used in vulkan methods.
+    */
+    VkCommandPool vk_handle;
+
   private:
     LogicalDevice device_;
-    VkCommandPool pool_;
+    uint32_t queue_family_index_;
   }
 }
 

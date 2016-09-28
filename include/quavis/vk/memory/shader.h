@@ -15,8 +15,8 @@ namespace quavis {
     /**
     * The handler to object to be used by Vulkan methods.
     */
-    VkShaderModule shader;
-  
+    VkShaderModule vk_handle;
+
   private:
     LogicalDevice device_;
   };

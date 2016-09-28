@@ -57,7 +57,7 @@ namespace quavis {
     /**
     * The VkImage object to be used in Vulkan methods
     */
-    VkImage image;
+    VkImage vk_handle;
 
   private:
     bool staging_ = false;
