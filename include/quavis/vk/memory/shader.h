@@ -10,7 +10,7 @@ namespace quavis {
     /**
     * Creates a new shader using the given SPIR-V code.
     */
-    Shader(LogicalDevice device, const char* shader_code, uint32_t len);
+    Shader(LogicalDevice device, VkShaderStageFlags shader_stage, const char* shader_code, uint32_t len);
 
     /**
     * The handler to object to be used by Vulkan methods.

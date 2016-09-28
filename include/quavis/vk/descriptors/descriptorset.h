@@ -57,7 +57,18 @@ namespace quavis {
     */
     void Update(uint32_t index);
 
+    /**
+    * The vulkan object associated with this descriptor set. VK_NULL_HANDLE
+    * until Create() is called.
+    */
     VkDescriptorSet vk_handle;
+
+    /**
+    * The vulkan layout associated with this descriptor set. VK_NULL_HANDLE
+    * until Create() is called.
+    */
+    VkDescriptorSetLayout vk_layout;
+  
   private:
     LogicalDevice device_;
   };

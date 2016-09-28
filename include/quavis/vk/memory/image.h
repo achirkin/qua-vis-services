@@ -8,9 +8,9 @@ namespace quavis {
   class Image {
   public:
     /**
-    * Creates a new image on the device. If staging is enabled, a staging image
-    * will be created that is used for transfer between the host and the image
-    * memory.
+    * Creates a new image including image viewon the device.
+    * If staging is enabled, a staging image will be created that is used for
+    * transfer between the host and the image memory.
     *
     * Upon initialization, the image will be transformed using the provided
     * format and layout and is made usable to the given queues.
