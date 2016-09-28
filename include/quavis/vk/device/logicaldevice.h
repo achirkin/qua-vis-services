@@ -33,7 +33,10 @@ namespace quavis {
     * the compute queues are usable for compute shaders and
     * the transfer queues are usable for memory transfer.
     */
-    LogicalDevice(PhysicalDevice physical_device, uint32_t graphics_queues = 1, uint32_t compute_queues = 1, uint32_t transfer_queues = 1);
+    LogicalDevice(PhysicalDevice physical_device,
+      uint32_t graphics_queues = 1,
+      uint32_t compute_queues = 1,
+      uint32_t transfer_queues = 1);
 
     /**
     * Destroys the logical device safely. Note that all objects that are
@@ -47,7 +50,8 @@ namespace quavis {
     * for a given queue and delegates the command buffer creation
     * to the command pool object.
     */
-    VkCommandBuffer BeginCommandBuffer(VkQueue queue, VkCommandBufferUsageFlags flags);
+    VkCommandBuffer BeginCommandBuffer(VkQueue queue,
+      VkCommandBufferUsageFlags flags);
 
     /**
     * Ends and submits a command buffer. This function chooses the right command pool
@@ -86,11 +90,11 @@ namespace quavis {
     /**
     * The corresponding physical device
     */
-    VkPhysicalDevice physical_device_;
+    PhysicalDevice* physical_device_;
 
   private:
     uint32_t GetQueueFamily(VkQueueFlags required_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
-    uint32_t GetQueue(uint32_t queue_family_index, uint32_t queue_index);
+    VkQueue GetQueue(uint32_t queue_family_index, uint32_t queue_index);
     void CreateCommandPool(uint32_t queue_family_index);
     CommandPool GetCommandPool(uint32_t queue_family_index);
 
