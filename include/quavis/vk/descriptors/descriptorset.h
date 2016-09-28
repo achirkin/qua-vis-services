@@ -1,6 +1,14 @@
 #ifndef QUAVIS_DESCRIPTORSET_H
 #define QUAVIS_DESCRIPTORSET_H
 
+#include "quavis/vk/descriptors/descriptorpool.h"
+#include "quavis/vk/device/logicaldevice.h"
+#include "quavis/vk/memory/buffer.h"
+#include "quavis/vk/memory/image.h"
+#include "quavis/vk/debug.h"
+
+#include <vulkan/vulkan.h>
+
 namespace quavis {
 
   /**
@@ -68,7 +76,7 @@ namespace quavis {
     * until Create() is called.
     */
     VkDescriptorSetLayout vk_layout;
-  
+
   private:
     LogicalDevice device_;
   };

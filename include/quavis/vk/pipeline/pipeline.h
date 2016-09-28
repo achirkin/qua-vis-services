@@ -1,6 +1,14 @@
 #ifndef QUAVIS_PIPELINE_H
 #define QUAVIS_PIPELINE_H
 
+#include "quavis/vk/device/logicaldevice.h"
+#include "quavis/vk/descriptors/descriptorset.h"
+#include "quavis/vk/memory/shader.h"
+#include "quavis/vk/debug.h"
+
+#include <vulkan/vulkan.h>
+#include <vector>
+
 namespace quavis {
   /**
   * An abstract class wrapper for VkPipelines objects.

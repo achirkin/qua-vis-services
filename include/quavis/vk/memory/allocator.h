@@ -1,6 +1,11 @@
 #ifndef QUAVIS_ALLOCATOR_H
 #define QUAVIS_ALLOCATOR_H
 
+#include "quavis/vk/device/physicaldevice.h"
+#include "quavis/vk/debug.h"
+
+#include <vulkan/vulkan.h>
+
 namespace quavis {
   /**
   * The allocator class is used to manage the memory of a given physical device.
@@ -15,7 +20,7 @@ namespace quavis {
     * The class furthermore provides methods for sending to and retreiving from
     * buffers.
     */
-    Allocator(LogicalDevice physical_device);
+    Allocator(PhysicalDevice physical_device);
 
     /**
     * Destroys the allocator object and all memory that has been allocated by
@@ -43,8 +48,8 @@ namespace quavis {
 
   private:
     uint32_t GetHeap(VkMemoryPropertyFlags flags);
-    
-    LogicalDevice physical_device;
+
+    PhysicalDevice physical_device;
   };
 }
 

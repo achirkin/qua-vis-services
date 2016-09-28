@@ -1,6 +1,11 @@
 #ifndef QUAVIS_SHADER_H
 #define QUAVIS_SHADER_H
 
+#include "quavis/vk/device/logicaldevice.h"
+#include "quavis/vk/debug.h"
+
+#include <vulkan/vulkan.h>
+
 namespace quavis {
   /**
   * A wrapper around the vulkan shader modules.

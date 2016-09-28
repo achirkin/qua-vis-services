@@ -6,6 +6,7 @@
 
 namespace quavis {
   namespace debug {
+    // TODO: Add better debug handling
     extern bool handleVkResult(VkResult vkResult) {
       if (vkResult != 0) {
         std::cout << vkResult << std::endl;

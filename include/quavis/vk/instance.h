@@ -1,6 +1,10 @@
 #ifndef QUAVIS_INSTANCE_H
 #define QUAVIS_INSTANCE_H
 
+#include "quavis/vk/debug.h"
+
+#include <vulkan/vulkan.h>
+
 namespace Quavis {
   /**
   * A wrapper around the VkInstance structure.
@@ -22,26 +26,6 @@ namespace Quavis {
     * The handle to the given instance.
     */
     VkInstance vk_handle;
-
-    /**
-    * The instance's physical device
-    */
-    PhysicalDevice physical_device;
-
-    /**
-    * The instance's logical device
-    */
-    LogicalDevice logical_device;
-
-    /**
-    * The instance's graphics pipeline
-    */
-    GraphicsPipeline graphics_pipeline;
-
-    /**
-    * The instance's compute pipeline
-    */
-    ComputePipeline compute_pipeline;
   };
 }
 

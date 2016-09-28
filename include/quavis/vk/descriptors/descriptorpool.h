@@ -1,6 +1,11 @@
 #ifndef QUAVIS_DESCRIPTORPOOL_H
 #define QUAVIS_DESCRIPTORPOOL_H
 
+#include "quavis/vk/device/logicaldevice.h"
+#include "quavis/vk/debug.h"
+
+#include <vulkan/vulkan.h>
+
 namespace quavis {
   /**
   * A wrapper around the VkDescriptorPool object. It is currently limited on three types

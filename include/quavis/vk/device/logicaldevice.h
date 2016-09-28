@@ -1,7 +1,10 @@
 #ifndef QUAVIS_LOGICALDEVICE_H
 #define QUAVIS_LOGICALDEVICE_H
 
-#include <vector>
+#include "quavis/vk/device/physicaldevice.h"
+#include "quavis/vk/debug.h"
+
+#include <vulkan/vulkan.h>
 
 namespace quavis {
   /**
@@ -12,9 +15,10 @@ namespace quavis {
   * The class is furthermore used to execute commands on the device. The general
   * workflow is:
   * 1. Choose queue from graphics_queues, compute_queues, transfer_queues
-  * 2. buffer = LogicalDevice.BeginCommandBuffer
+  * 2. buffer = device.BeginCommandBuffer(queue, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
   * 3. <do something with commandbuffer>
-  * 4. LogicalDevice.EndAndSubmitCommandBuffer
+  * 4. device.EndCommandBuffer(buffer)
+  * 5. device.SubmitCommandBuffer(queue, buffer)
   */
   class LogicalDevice {
   public:
@@ -29,7 +33,7 @@ namespace quavis {
     * the compute queues are usable for compute shaders and
     * the transfer queues are usable for memory transfer.
     */
-    LogicalDevice(VkPhysicalDevice physical_device, uint32_t graphics_queues = 1, uint32_t compute_queues = 1, uint32_t transfer_queues = 1);
+    LogicalDevice(PhysicalDevice physical_device, uint32_t graphics_queues = 1, uint32_t compute_queues = 1, uint32_t transfer_queues = 1);
 
     /**
     * Destroys the logical device safely. Note that all objects that are

@@ -1,4 +1,4 @@
-#include "quavis/quavis.h"
+#include "quavis/vk/instance.h"
 
 namespace quavis {
 
