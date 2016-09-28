@@ -28,7 +28,7 @@ namespace quavis {
     *  * VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
     *  * VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     */
-    Image(LogicalDevice device, uint32_t width, uint32_t height, VkImageUsageFlags usage_flags, std::vector<VkQueue> queues, VkFormat format, VkImageLayout layout, bool staging = true);
+    Image(LogicalDevice device, uint32_t width, uint32_t height, VkImageUsageFlags usage_flags, std::vector<VkQueue> queues, VkFormat format, VkImageLayout layout, VkImageAspectFlags aspect, bool staging = true);
 
     /**
     * Destroys the buffer and all it's associated memory regions.
@@ -36,28 +36,42 @@ namespace quavis {
     ~Image();
 
     /**
-    * Transforms the image layout. If staging is enabled, the transfer will be done
-    * by choosing the first queue on which the image is available is used.
-    */
-    void SetLayout(VkImageLayout layout, VkImageAspectFlags aspect_flags);
-
-    /**
-    * Writes data to the buffer. If staging is enabled, the transfer will be done
-    * by choosing the first queue on which the image is available is used.
+    * Writes data to the buffer. If staging is enabled and not otherwise
+    * specified, the transfer will be done by choosing the first queue on which
+    * the image is available.
     */
     void SetData(void* data, VkQueue queue = VK_NULL_HANDLE);
 
     /**
-    * Retreives data from the buffer. If staging is enabled, the transfer will be done
-    * by choosing the first transfer queue of the logical device if no
-    * other queue is specified.
+    * Retreives data from the buffer.  If staging is enabled and not otherwise
+    * specified, the transfer will be done by choosing the first queue on which
+    * the image is available.
     */
     void* GetData(VkQueue queue = VK_NULL_HANDLE);
+
+    /**
+    * Copies the image to the specified image. If staging is enabled and not
+    * otherwise specified, the transfer will be done by choosing the first queue
+    * on which the image is available.
+    */
+    void Copy(Image destination, VkQueue queue = VK_NULL_HANDLE);
+
+    /**
+    * Transforms the image layout. If staging is enabled and not otherwise
+    * specified, the transfer will be done by choosing the first queue on which
+    * the image is available.
+    */
+    void SetLayout(VkImageLayout layout, VkImageAspectFlags aspect_flags, VkQueue queue = VK_NULL_HANDLE);
 
     /**
     * The VkImage object to be used in Vulkan methods
     */
     VkImage vk_handle;
+
+    /**
+    * The VkImageView object to be used in Vulkan methods
+    */
+    VkImageView vk_view;
 
   private:
     bool staging_ = false;

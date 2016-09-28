@@ -29,18 +29,25 @@ namespace quavis {
     ~Buffer();
 
     /**
-    * Writes data to the buffer. If staging is enabled, the transfer will be done
-    * by choosing the first transfer queue of the logical device if no
-    * other queue is specified.
+    * Writes data to the buffer. If staging is enabled and not otherwise
+    * specified, the transfer will be done by choosing the first queue on which
+    * the buffer is available.
     */
     void SetData(void* data, VkQueue queue = VK_NULL_HANDLE);
 
     /**
-    * Retreives data from the buffer. If staging is enabled, the transfer will be done
-    * by choosing the first transfer queue of the logical device if no
-    * other queue is specified.
+    * Retreives data from the buffer. If staging is enabled and not otherwise
+    * specified, the transfer will be done by choosing the first queue on which
+    * the buffer is available.
     */
     void* GetData(VkQueue queue = VK_NULL_HANDLE);
+
+    /**
+    * Copies the buffer to the specified buffer. If staging is enabled and not
+    * otherwise specified, the transfer will be done by choosing the first queue
+    * on which the buffer is available.
+    */
+    void Copy(Buffer destination, VkQueue queue = VK_NULL_HANDLE);
 
     /**
     * The VkBuffer object to be used in Vulkan methods
