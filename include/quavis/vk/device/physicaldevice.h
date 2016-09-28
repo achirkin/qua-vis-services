@@ -19,35 +19,11 @@ namespace quavis {
     * specified queue types, extensions and layers.
     */
     PhysicalDevice(Instance instance);
-
-    /**
-    * Checks for a physical device whether it supports a given extension
-    */
-    static bool hasExtension(VkPhysicalDevice device, const char* extension_name);
-
-    /**
-    * Checks for a physical device whether it supports a given layer
-    */
-    static bool hasLayer(VkPhysicalDevice device, const char* layer_name);
-
-    /**
-    * Checks for a physical device whether it supports a given queue type
-    */
-    static bool hasQueueType(VkPhysicalDevice device, VkQueueFlags queue_flags);
-
+    
     /*
     * The vulkan object of the physical device
     */
     VkPhysicalDevice vk_handle;
-
-  private:
-    const std::vector<const char*> extensions_ = {
-      "VK_EXT_debug_report"
-    };
-
-    const std::vector<const char*> layers_ = {
-      "VK_LAYER_LUNARG_standard_validation"
-    };
   };
 }
 
