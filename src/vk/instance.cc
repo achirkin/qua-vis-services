@@ -27,16 +27,14 @@ Instance::Instance() {
   };
 
   // create the instance object
-  debug::handleVkResult(
-    vkCreateInstance(
+  vkCreateInstance(
       &vkInstanceCreateInfo, // creation info (see above)
       nullptr, // allocation handler (gives specific info on memory locations)
       &this->vk_handle // pointer where to store the instance
-    )
   );
 }
 
-Instance::~Instance {
+Instance::~Instance() {
   vkDestroyInstance(this->vk_handle, nullptr);
 }
 

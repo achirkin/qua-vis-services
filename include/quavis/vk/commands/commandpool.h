@@ -7,6 +7,9 @@
 #include <vulkan/vulkan.h>
 
 namespace quavis {
+  // forward declaration of logical device
+  class LogicalDevice;
+
   /**
   * A wrapper around VkCommandPool providing convenience methods for beginning
   * and ending a command buffer.
@@ -16,7 +19,7 @@ namespace quavis {
     /**
     * Creates a new command pool for the given queue family
     */
-    CommandPool(LogicalDevice device, uint32_t queue_family_index);
+    CommandPool(LogicalDevice* device, uint32_t queue_family_index);
 
     /**
     * Safely destroys the VkCommandPool object. All dependents need to be
@@ -42,9 +45,9 @@ namespace quavis {
     VkCommandPool vk_handle;
 
   private:
-    LogicalDevice device_;
+    LogicalDevice* device_;
     uint32_t queue_family_index_;
-  }
+  };
 }
 
 #endif

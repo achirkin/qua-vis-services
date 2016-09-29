@@ -69,11 +69,17 @@ else (WIN32)
 endif ()
 
 # Quavis
-add_library(quavis SHARED "${CMAKE_SOURCE_DIR}/src/context.cc")
+add_library(quavis SHARED
+  "${CMAKE_SOURCE_DIR}/src/vk/instance.cc"
+  "${CMAKE_SOURCE_DIR}/src/vk/device/physicaldevice.cc"
+  "${CMAKE_SOURCE_DIR}/src/vk/device/logicaldevice.cc"
+)
 target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
 
 # Tests
-add_executable (testvulkan "${CMAKE_SOURCE_DIR}/test/vulkan.cc")
+add_executable (testvulkan
+  "${CMAKE_SOURCE_DIR}/test/vulkan2.cc"
+)
 target_link_libraries (testvulkan quavis)
 add_dependencies(testvulkan quavis)

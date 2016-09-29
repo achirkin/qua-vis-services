@@ -5,6 +5,7 @@
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
+#include <set>
 
 namespace quavis {
   /**
@@ -18,8 +19,8 @@ namespace quavis {
     * Finds and picks an appropriate physical device that supports the
     * specified queue types, extensions and layers.
     */
-    PhysicalDevice(Instance instance);
-    
+    PhysicalDevice(Instance* instance);
+
     /*
     * The vulkan object of the physical device
     */

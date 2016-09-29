@@ -2,9 +2,12 @@
 #define QUAVIS_LOGICALDEVICE_H
 
 #include "quavis/vk/device/physicaldevice.h"
+#include "quavis/vk/commands/commandpool.h"
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
+#include <vector>
+#include <algorithm>
 
 namespace quavis {
   /**
@@ -33,10 +36,7 @@ namespace quavis {
     * the compute queues are usable for compute shaders and
     * the transfer queues are usable for memory transfer.
     */
-    LogicalDevice(PhysicalDevice physical_device,
-      uint32_t num_graphics_queues = 1,
-      uint32_t num_compute_queues = 1,
-      uint32_t num_transfer_queues = 1);
+    LogicalDevice(PhysicalDevice* physical_device, uint32_t num_queues = 1);
 
     /**
     * Destroys the logical device safely. Note that all objects that are
@@ -75,17 +75,7 @@ namespace quavis {
     /**
     * The graphics queues (used for render pass)
     */
-    std::vector<VkQueue> graphics_queues();
-
-    /**
-    * The compute queues (used for compute shader)
-    */
-    std::vector<VkQueue> compute_queues();
-
-    /**
-    * The transfer queues (used for memory transfer)
-    */
-    std::vector<VkQueue> transfer_queues();
+    std::vector<VkQueue> queues;
 
   private:
     VkDeviceQueueCreateInfo GetQueueCreateInfos(uint32_t queue_family_index, uint32_t num);
@@ -99,12 +89,9 @@ namespace quavis {
 
     // Default features used for a logical device
     VkPhysicalDeviceFeatures features_;
-    vk_features.tessellationShader = VK_TRUE;
-    vk_features.geometryShader = VK_TRUE;
-    vk_features.fillModeNonSolid = VK_TRUE;
 
     // Default extensions
-    const std::vector<const char*> extensions_();
+    const std::vector<const char*> extensions_;
   };
 }
 

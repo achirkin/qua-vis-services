@@ -5,6 +5,7 @@
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
+#include <vector>
 
 namespace quavis {
   /**
