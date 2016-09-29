@@ -1,14 +1,18 @@
 #ifndef QUAVIS_ALLOCATOR_H
 #define QUAVIS_ALLOCATOR_H
 
-#include "quavis/vk/device/physicaldevice.h"
+#include "quavis/vk/device/logicaldevice.h"
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
+#include <vector>
+
+#include <string.h>
 
 namespace quavis {
   /**
   * The allocator class is used to manage the memory of a given physical device.
+  * It furthermore frees all allocated memory upon destruction.
   */
   class Allocator {
   public:
@@ -20,7 +24,7 @@ namespace quavis {
     * The class furthermore provides methods for sending to and retreiving from
     * buffers.
     */
-    Allocator(PhysicalDevice physical_device);
+    Allocator(LogicalDevice* logical_device);
 
     /**
     * Destroys the allocator object and all memory that has been allocated by
@@ -34,22 +38,24 @@ namespace quavis {
     * want to make sure that memory is allocated on the device, set the appropriate
     * flag. Otherwise it will often occur that memory is allocated on host-side
     */
-    VkMemory Allocate(VkMemoryPropertyFlags flags, uint32_t size);
+    VkDeviceMemory Allocate(VkMemoryRequirements memory_requirements, VkMemoryPropertyFlags flags);
 
     /*
     * Writes data to a given memory object.
     */
-    static void SetData(VkMemory destination_memory, void* data, size_t len);
+    void SetData(VkDeviceMemory destination_memory, void* data, uint32_t size);
 
     /*
     * Retreives data from a given memory object.
     */
-    static void* GetData(VkMemory source_memory, size_t len);
+    void* GetData(VkDeviceMemory source_memory, uint32_t size);
 
   private:
     uint32_t GetHeap(VkMemoryPropertyFlags flags);
 
-    PhysicalDevice physical_device;
+    LogicalDevice* logical_device_;
+
+    std::vector<VkDeviceMemory> allocated_memory_;
   };
 }
 

@@ -1,6 +1,7 @@
 #include "quavis/vk/instance.h"
 #include "quavis/vk/device/physicaldevice.h"
 #include "quavis/vk/device/logicaldevice.h"
+#include "quavis/vk/memory/allocator.h"
 
 int main(int argc, char** argv) {
   quavis::Instance* instance = new quavis::Instance();

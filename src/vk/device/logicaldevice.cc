@@ -6,7 +6,7 @@ namespace quavis {
 
   LogicalDevice::LogicalDevice(PhysicalDevice* physical_device, uint32_t num_queues)
   {
-    this->physical_device_ = physical_device;
+    this->physical_device = physical_device;
 
     // set default features
     this->vk_features_.tessellationShader = VK_TRUE;
@@ -36,7 +36,7 @@ namespace quavis {
 
     // create logical device
     vkCreateDevice(
-      this->physical_device_->vk_handle, // the physical device
+      this->physical_device->vk_handle, // the physical device
       &device_create_info, // logical device metadata
       nullptr, // allocation callback (see documentation)
       &this->vk_handle // the allocated memory for the logical device
@@ -126,7 +126,7 @@ namespace quavis {
   uint32_t LogicalDevice::GetQueueFamily(VkQueueFlags required_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT) {
     uint32_t num_queue_families = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(
-      this->physical_device_->vk_handle, // the vk device
+      this->physical_device->vk_handle, // the vk device
       &num_queue_families, // the allocated memory for the number of families
       nullptr // the allocated memory for the queue family properties
     );
@@ -134,7 +134,7 @@ namespace quavis {
     // get queues
     std::vector<VkQueueFamilyProperties> queue_families(num_queue_families);
     vkGetPhysicalDeviceQueueFamilyProperties(
-      this->physical_device_->vk_handle, // the vk device
+      this->physical_device->vk_handle, // the vk device
       &num_queue_families, // the allocated memory for the number of families
       queue_families.data() // the allocated memory for the queue family properties
     );

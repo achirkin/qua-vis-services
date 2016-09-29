@@ -73,6 +73,7 @@ add_library(quavis SHARED
   "${CMAKE_SOURCE_DIR}/src/vk/instance.cc"
   "${CMAKE_SOURCE_DIR}/src/vk/device/physicaldevice.cc"
   "${CMAKE_SOURCE_DIR}/src/vk/device/logicaldevice.cc"
+  "${CMAKE_SOURCE_DIR}/src/vk/memory/allocator.cc"
 )
 target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
