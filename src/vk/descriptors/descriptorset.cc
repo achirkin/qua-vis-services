@@ -6,6 +6,10 @@ namespace quavis {
     this->descriptor_pool_ = pool;
   }
 
+  DescriptorSet::~DescriptorSet() {
+    vkDestroyDescriptorSetLayout(this->logical_device_->vk_handle, this->vk_layout, nullptr);
+  }
+
   uint32_t DescriptorSet::AddStorageImage(Image* image, VkShaderStageFlags shader_stages) {
     VkDescriptorSetLayoutBinding layout_binding;
     layout_binding.binding = this->layout_bindings_.size();
