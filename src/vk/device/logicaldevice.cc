@@ -9,9 +9,9 @@ namespace quavis {
     this->physical_device_ = physical_device;
 
     // set default features
-    this->features_.tessellationShader = VK_TRUE;
-    this->features_.geometryShader = VK_TRUE;
-    this->features_.fillModeNonSolid = VK_TRUE;
+    this->vk_features_.tessellationShader = VK_TRUE;
+    this->vk_features_.geometryShader = VK_TRUE;
+    this->vk_features_.fillModeNonSolid = VK_TRUE;
 
     // get queue families
     uint32_t queue_family = this->GetQueueFamily(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
@@ -31,7 +31,7 @@ namespace quavis {
       nullptr, // depcrecated & ignored
       (uint32_t)this->extensions_.size(), // enabled extensions
       this->extensions_.data(), // extension names
-      &this->features_ // enabled device features
+      &this->vk_features_ // enabled device features
     };
 
     // create logical device
@@ -47,33 +47,65 @@ namespace quavis {
       this->queues.push_back(this->GetQueue(queue_family, i));
     }
 
-    // TODO: Create command pools
+    // create command pool for the queues
+    this->vk_command_pool_ = this->CreateCommandPool(queue_family);
   }
 
   LogicalDevice::~LogicalDevice() {
     vkDeviceWaitIdle(this->vk_handle);
+    vkDestroyCommandPool(this->vk_handle, this->vk_command_pool_, nullptr);
     vkDestroyDevice(this->vk_handle, nullptr);
   }
 
-  VkCommandBuffer LogicalDevice::BeginCommandBuffer(VkQueue queue,
-    VkCommandBufferUsageFlags flags) {
-    // TODO
+  VkCommandBuffer LogicalDevice::BeginCommandBuffer(VkCommandBufferUsageFlags flags) {
+
+    VkCommandBufferAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = this->vk_command_pool_;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(this->vk_handle, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = flags;
+
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
   }
 
   void LogicalDevice::EndCommandBuffer(VkCommandBuffer command_buffer) {
-    // TODO
+    vkEndCommandBuffer(command_buffer);
   }
 
   void LogicalDevice::SubmitCommandBuffer(VkQueue queue, VkCommandBuffer command_buffer) {
-    // TODO
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &command_buffer;
+
+    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
   }
 
-  void LogicalDevice::CreateCommandPool(uint32_t queue_family_index) {
-    // TODO
-  }
+  VkCommandPool LogicalDevice::CreateCommandPool(uint32_t queue_family_index) {
+    VkCommandPoolCreateInfo command_pool_info = {
+      VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
+      nullptr,// pNext (see documentation, must be null)
+      0, // flags (see documentation, must be 0)
+      queue_family_index // the queue family
+    };
 
-  CommandPool LogicalDevice::GetCommandPool(uint32_t queue_family_index) {
-    // TODO
+    VkCommandPool command_pool;
+
+    vkCreateCommandPool(
+      this->vk_handle, // the logical device
+      &command_pool_info, // info
+      nullptr, // allocation callback
+      &command_pool // the allocated memory
+    );
+
+    return command_pool;
   }
 
   VkDeviceQueueCreateInfo LogicalDevice::GetQueueCreateInfos(uint32_t queue_family_index, uint32_t num) {

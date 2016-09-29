@@ -2,7 +2,6 @@
 #define QUAVIS_LOGICALDEVICE_H
 
 #include "quavis/vk/device/physicaldevice.h"
-#include "quavis/vk/commands/commandpool.h"
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
@@ -30,11 +29,8 @@ namespace quavis {
     * Optionally, the number of graphics- and compute queues can be
     * specfified.
     *
-    * The method selects 3 (not necessarily different) queue families
-    * from the specified device.
-    * The graphics queues are guaranteed to be usable for graphics while
-    * the compute queues are usable for compute shaders and
-    * the transfer queues are usable for memory transfer.
+    * The method selects a queue family which is suitible for graphics, compute
+    * and transfer!
     */
     LogicalDevice(PhysicalDevice* physical_device, uint32_t num_queues = 1);
 
@@ -44,14 +40,12 @@ namespace quavis {
     */
     ~LogicalDevice();
 
-    // TODO: Change tcommand buffer creation such that it's only dependent on queue_family_index_ / CommandPool
     /**
     * Begins a new command buffer. This function chooses the right command pool
     * for a given queue and delegates the command buffer creation
     * to the command pool object.
     */
-    VkCommandBuffer BeginCommandBuffer(VkQueue queue,
-      VkCommandBufferUsageFlags flags);
+    VkCommandBuffer BeginCommandBuffer(VkCommandBufferUsageFlags flags);
 
     /**
     * Ends and submits a command buffer. This function chooses the right command pool
@@ -81,14 +75,16 @@ namespace quavis {
     VkDeviceQueueCreateInfo GetQueueCreateInfos(uint32_t queue_family_index, uint32_t num);
     uint32_t GetQueueFamily(VkQueueFlags required_flags);
     VkQueue GetQueue(uint32_t queue_family_index, uint32_t queue_index);
+    VkCommandPool CreateCommandPool(uint32_t queue_family_index);
 
-    void CreateCommandPool(uint32_t queue_family_index);
-    CommandPool GetCommandPool(uint32_t queue_family_index);
+    // command pool for all queues
+    VkCommandPool vk_command_pool_;
 
+    // physical device
     PhysicalDevice* physical_device_;
 
     // Default features used for a logical device
-    VkPhysicalDeviceFeatures features_;
+    VkPhysicalDeviceFeatures vk_features_;
 
     // Default extensions
     const std::vector<const char*> extensions_;
