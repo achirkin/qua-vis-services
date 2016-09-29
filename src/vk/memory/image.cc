@@ -99,7 +99,7 @@ namespace quavis {
     }
 
     this->SetLayout(this->vk_handle, VK_IMAGE_LAYOUT_UNDEFINED, layout, aspect_flags, queue);
-    this->layout_ = layout;
+    this->vk_layout = layout;
     this->SetLayout(this->vk_staging_image_, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, aspect_flags, queue);
 
     this->vk_view = this->CreateImageView(this->vk_handle, format, aspect_flags);
@@ -137,7 +137,7 @@ namespace quavis {
 
       // generate command buffer
       VkCommandBuffer command_buffer = this->logical_device_->BeginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-      vkCmdCopyImage(command_buffer, this->vk_staging_image_, VK_IMAGE_LAYOUT_GENERAL, this->vk_handle, this->layout_, 1, &copyRegion);
+      vkCmdCopyImage(command_buffer, this->vk_staging_image_, VK_IMAGE_LAYOUT_GENERAL, this->vk_handle, this->vk_layout, 1, &copyRegion);
       this->logical_device_->EndCommandBuffer(command_buffer);
 
       // submit command buffer
@@ -168,7 +168,7 @@ namespace quavis {
 
       // generate command buffer
       VkCommandBuffer command_buffer = this->logical_device_->BeginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-      vkCmdCopyImage(command_buffer, this->vk_handle, this->layout_, this->vk_staging_image_, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+      vkCmdCopyImage(command_buffer, this->vk_handle, this->vk_layout, this->vk_staging_image_, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
       this->logical_device_->EndCommandBuffer(command_buffer);
 
       // submit command buffer

@@ -70,6 +70,11 @@ namespace quavis {
     */
     VkImageView vk_view;
 
+    /**
+    * The image's layout
+    */
+    VkImageLayout vk_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
   private:
     VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
 
@@ -80,7 +85,6 @@ namespace quavis {
     VkFormat format_;
     VkImageAspectFlags aspect_flags_;
 
-    VkImageLayout layout_ = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VkDeviceMemory vk_memory_;
     VkDeviceMemory vk_staging_memory_;

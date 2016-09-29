@@ -11,7 +11,7 @@ namespace quavis {
 
     this->logical_device_ = logical_device;
     this->allocator_ = allocator;
-    this->size_ = size;
+    this->size = size;
 
     // Create buffer
     VkBufferCreateInfo buffer_info;
@@ -73,14 +73,14 @@ namespace quavis {
 
   void Buffer::SetData(void* data, VkQueue queue) {
     if (!this->staging_) {
-      this->allocator_->SetData(this->vk_memory_, data, this->size_);
+      this->allocator_->SetData(this->vk_memory_, data, this->size);
     }
     else {
-      this->allocator_->SetData(this->vk_staging_memory_, data, this->size_);
+      this->allocator_->SetData(this->vk_staging_memory_, data, this->size);
 
       // define copy region
       VkBufferCopy copyRegion;
-      copyRegion.size = this->size_;
+      copyRegion.size = this->size;
 
       // generate command buffer
       VkCommandBuffer command_buffer = this->logical_device_->BeginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -94,11 +94,11 @@ namespace quavis {
 
   void* Buffer::GetData(VkQueue queue) {
     if (!this->staging_) {
-      return this->allocator_->GetData(this->vk_memory_, this->size_);
+      return this->allocator_->GetData(this->vk_memory_, this->size);
     }
     else {
       VkBufferCopy copyRegion;
-      copyRegion.size = this->size_;
+      copyRegion.size = this->size;
 
       // generate command buffer
       VkCommandBuffer command_buffer = this->logical_device_->BeginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
@@ -108,7 +108,7 @@ namespace quavis {
       // submit command buffer
       this->logical_device_->SubmitCommandBuffer(queue, command_buffer);
 
-      return this->allocator_->GetData(this->vk_staging_memory_, this->size_);
+      return this->allocator_->GetData(this->vk_staging_memory_, this->size);
     }
   }
 }

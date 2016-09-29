@@ -57,9 +57,13 @@ namespace quavis {
     */
     VkBuffer vk_handle;
 
+    /**
+    * The buffer size
+    */
+    uint32_t size;
+
   private:
     bool staging_ = false;
-    uint32_t size_;
 
     VkDeviceMemory vk_memory_;
     VkDeviceMemory vk_staging_memory_;

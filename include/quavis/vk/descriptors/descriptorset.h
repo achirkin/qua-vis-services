@@ -8,6 +8,7 @@
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
+#include <vector>
 
 namespace quavis {
 
@@ -25,7 +26,7 @@ namespace quavis {
     /**
     * Creates a new DescriptorSet object for the given descriptor pool.
     */
-    DescriptorSet(LogicalDevice device, DescriptorPool pool);
+    DescriptorSet(LogicalDevice* device, DescriptorPool* pool);
 
     /**
     * Destroys the descriptor set. Note that all other dependent objects need
@@ -38,21 +39,21 @@ namespace quavis {
     * The method should *never* be called after the Create() method has been
     * invoked.
     */
-    uint32_t AddStorageImage(Image image);
+    uint32_t AddStorageImage(Image* image, VkShaderStageFlags shader_stages);
 
     /**
     * Adds a storage buffer and returns its binding index.
     * The method should *never* be called after the Create() method has been
     * invoked.
     */
-    uint32_t AddStorageBuffer(Buffer buffer);
+    uint32_t AddStorageBuffer(Buffer* buffer, VkShaderStageFlags shader_stages);
 
     /**
     * Adds a uniform buffer and returns its binding index.
     * The method should *never* be called after the Create() method has been
     * invoked.
     */
-    uint32_t AddUniformBuffer(Buffer buffer);
+    uint32_t AddUniformBuffer(Buffer* buffer, VkShaderStageFlags shader_stages);
 
     /**
     * Creates the Vulkan object for this descriptor set
@@ -78,7 +79,11 @@ namespace quavis {
     VkDescriptorSetLayout vk_layout;
 
   private:
-    LogicalDevice device_;
+    LogicalDevice* logical_device_;
+    DescriptorPool* descriptor_pool_;
+
+    std::vector<VkDescriptorSetLayoutBinding> layout_bindings_;
+    std::vector<VkWriteDescriptorSet> write_sets_;
   };
 }
 
