@@ -2,6 +2,7 @@
 #define QUAVIS_IMAGE_H
 
 #include "quavis/vk/device/logicaldevice.h"
+#include "quavis/vk/memory/allocator.h"
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
@@ -34,7 +35,7 @@ namespace quavis {
     *  * VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
     *  * VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     */
-    Image(LogicalDevice device, uint32_t width, uint32_t height, VkImageUsageFlags usage_flags, std::vector<VkQueue> queues, VkFormat format, VkImageLayout layout, VkImageAspectFlags aspect, bool staging = true);
+    Image(LogicalDevice* logical_device, Allocator* allocator, VkQueue queue, uint32_t width, uint32_t height, VkImageUsageFlags usage_flags, VkFormat format, VkImageLayout layout, VkImageAspectFlags aspect, bool staging = true);
 
     /**
     * Destroys the buffer and all it's associated memory regions.
@@ -54,16 +55,10 @@ namespace quavis {
     void* GetData(VkQueue queue);
 
     /**
-    * Copies the image to the specified image.
-    * Synchronization is responsibility of the caller.
-    */
-    void Copy(Image destination, VkQueue queue);
-
-    /**
     * Transforms the image layout.
     * Synchronization is responsibility of the caller.
     */
-    void SetLayout(VkImageLayout layout, VkImageAspectFlags aspect_flags, VkQueue queue);
+    void SetLayout(VkImage image, VkImageLayout old_layout, VkImageLayout layout, VkImageAspectFlags aspect_flags, VkQueue queue);
 
     /**
     * The VkImage object to be used in Vulkan methods
@@ -76,16 +71,27 @@ namespace quavis {
     VkImageView vk_view;
 
   private:
+    VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
+
     bool staging_ = false;
+    uint32_t width_;
+    uint32_t height_;
+    uint32_t memory_size_;
+    VkFormat format_;
+    VkImageAspectFlags aspect_flags_;
 
-    VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    std::vector<VkQueue> queues_;
+    VkImageLayout layout_ = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    VkMemory vk_memory;
-    VkMemory vk_staging_memory;
-    VkBuffer vk_staging_buffer;
+    VkDeviceMemory vk_memory_;
+    VkDeviceMemory vk_staging_memory_;
+    VkImage vk_staging_image_;
 
-    LogicalDevice logical_device_;
+    LogicalDevice* logical_device_;
+    Allocator* allocator_;
+
+    const VkMemoryPropertyFlags staging_property_flags_ =
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   };
 }
 

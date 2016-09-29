@@ -42,12 +42,25 @@ namespace quavis {
     VkMemoryRequirements buffer_req;
     vkGetBufferMemoryRequirements(this->logical_device_->vk_handle, this->vk_handle, &buffer_req);
     this->vk_memory_ = this->allocator_->Allocate(buffer_req, buffer_property_flags);
+    vkBindBufferMemory(
+      this->logical_device_->vk_handle, // the logical device
+      this->vk_handle, // the buffer
+      this->vk_memory_, // the buffer memory
+      0 // the offset in the memory
+    );
+
     if (staging) {
       VkMemoryPropertyFlags staging_buffer_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
       staging_buffer_property_flags |= this->staging_property_flags_;
       VkMemoryRequirements staging_buffer_req;
       vkGetBufferMemoryRequirements(this->logical_device_->vk_handle, this->vk_staging_buffer_, &staging_buffer_req);
-      this->vk_staging_memory_ = this->allocator_->Allocate(buffer_req, staging_buffer_property_flags);
+      this->vk_staging_memory_ = this->allocator_->Allocate(staging_buffer_req, staging_buffer_property_flags);
+      vkBindBufferMemory(
+        this->logical_device_->vk_handle, // the logical device
+        this->vk_staging_buffer_, // the buffer
+        this->vk_staging_memory_, // the buffer memory
+        0 // the offset in the memory
+      );
     }
   }
 

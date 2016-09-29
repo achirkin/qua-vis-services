@@ -73,8 +73,15 @@ namespace quavis {
     */
     std::vector<VkQueue> queues;
 
-    // physical device
+    /**
+    * The physical device on which the logical device resides
+    */
     PhysicalDevice* physical_device;
+
+    /**
+    * The queue family index of all queues
+    */
+    uint32_t queue_family;
 
   private:
     VkDeviceQueueCreateInfo GetQueueCreateInfos(uint32_t queue_family_index, uint32_t num);

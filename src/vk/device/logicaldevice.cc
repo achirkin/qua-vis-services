@@ -14,11 +14,11 @@ namespace quavis {
     this->vk_features_.fillModeNonSolid = VK_TRUE;
 
     // get queue families
-    uint32_t queue_family = this->GetQueueFamily(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
+    this->queue_family = this->GetQueueFamily(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT);
 
     // create queue generation info
     std::vector<VkDeviceQueueCreateInfo> queue_create_infos;
-    queue_create_infos.push_back(this->GetQueueCreateInfos(queue_family, num_queues));
+    queue_create_infos.push_back(this->GetQueueCreateInfos(this->queue_family, num_queues));
 
     // create logical device info
     VkDeviceCreateInfo device_create_info = {
@@ -44,11 +44,11 @@ namespace quavis {
 
     // create queues
     for (uint32_t i = 0; i < num_queues; i++) {
-      this->queues.push_back(this->GetQueue(queue_family, i));
+      this->queues.push_back(this->GetQueue(this->queue_family, i));
     }
 
     // create command pool for the queues
-    this->vk_command_pool_ = this->CreateCommandPool(queue_family);
+    this->vk_command_pool_ = this->CreateCommandPool(this->queue_family);
   }
 
   LogicalDevice::~LogicalDevice() {
