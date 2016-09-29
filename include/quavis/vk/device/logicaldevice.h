@@ -58,6 +58,8 @@ namespace quavis {
     * Ends and submits a command buffer. This function chooses the right command pool
     * for a given queue and delegates the command buffer ending
     * to the command pool object.
+    *
+    * Note That synchronization (vkQueueWaitIdle) has to be performed manually
     */
     void SubmitCommandBuffer(VkQueue queue, VkCommandBuffer command_buffer);
 

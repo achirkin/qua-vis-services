@@ -2,6 +2,7 @@
 #define QUAVIS_BUFFER_H
 
 #include "quavis/vk/device/logicaldevice.h"
+#include "quavis/vk/memory/allocator.h"
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
@@ -26,7 +27,13 @@ namespace quavis {
     *  * VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
     *  * VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     */
-    Buffer(LogicalDevice device, uint32_t size, VkBufferUsageFlags usage_flags, bool staging = true);
+    Buffer(
+      LogicalDevice* logical_device,
+      Allocator* allocator,
+      uint32_t size,
+      VkBufferUsageFlags usage_flags,
+      bool staging = true
+    );
 
     /**
     * Destroys the buffer and all it's associated memory regions.
@@ -34,25 +41,16 @@ namespace quavis {
     ~Buffer();
 
     /**
-    * Writes data to the buffer. If staging is enabled and not otherwise
-    * specified, the transfer will be done by choosing the first queue on which
-    * the buffer is available.
+    * Writes data to the buffer.
+    * Synchronization is responsibility of the caller.
     */
-    void SetData(void* data, VkQueue queue = VK_NULL_HANDLE);
+    void SetData(void* data, VkQueue queue);
 
     /**
-    * Retreives data from the buffer. If staging is enabled and not otherwise
-    * specified, the transfer will be done by choosing the first queue on which
-    * the buffer is available.
+    * Retreives data from the buffer.
+    * Synchronization is responsibility of the caller.
     */
-    void* GetData(VkQueue queue = VK_NULL_HANDLE);
-
-    /**
-    * Copies the buffer to the specified buffer. If staging is enabled and not
-    * otherwise specified, the transfer will be done by choosing the first queue
-    * on which the buffer is available.
-    */
-    void Copy(Buffer destination, VkQueue queue = VK_NULL_HANDLE);
+    void* GetData(VkQueue queue);
 
     /**
     * The VkBuffer object to be used in Vulkan methods
@@ -61,12 +59,18 @@ namespace quavis {
 
   private:
     bool staging_ = false;
+    uint32_t size_;
 
-    VkMemory memory;
-    VkMemory staging_memory;
-    VkBuffer staging_buffer;
+    VkDeviceMemory vk_memory_;
+    VkDeviceMemory vk_staging_memory_;
+    VkBuffer vk_staging_buffer_;
 
-    LogicalDevice device_;
+    LogicalDevice* logical_device_;
+    Allocator* allocator_;
+
+    const VkMemoryPropertyFlags staging_property_flags_ =
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   };
 }
 

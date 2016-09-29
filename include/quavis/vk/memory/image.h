@@ -42,32 +42,28 @@ namespace quavis {
     ~Image();
 
     /**
-    * Writes data to the buffer. If staging is enabled and not otherwise
-    * specified, the transfer will be done by choosing the first queue on which
-    * the image is available.
+    * Writes data to the buffer.
+    * Synchronization is responsibility of the caller.
     */
-    void SetData(void* data, VkQueue queue = VK_NULL_HANDLE);
+    void SetData(void* data, VkQueue queue);
 
     /**
-    * Retreives data from the buffer.  If staging is enabled and not otherwise
-    * specified, the transfer will be done by choosing the first queue on which
-    * the image is available.
+    * Retreives data from the buffer.
+    * Synchronization is responsibility of the caller.
     */
-    void* GetData(VkQueue queue = VK_NULL_HANDLE);
+    void* GetData(VkQueue queue);
 
     /**
-    * Copies the image to the specified image. If staging is enabled and not
-    * otherwise specified, the transfer will be done by choosing the first queue
-    * on which the image is available.
+    * Copies the image to the specified image.
+    * Synchronization is responsibility of the caller.
     */
-    void Copy(Image destination, VkQueue queue = VK_NULL_HANDLE);
+    void Copy(Image destination, VkQueue queue);
 
     /**
-    * Transforms the image layout. If staging is enabled and not otherwise
-    * specified, the transfer will be done by choosing the first queue on which
-    * the image is available.
+    * Transforms the image layout.
+    * Synchronization is responsibility of the caller.
     */
-    void SetLayout(VkImageLayout layout, VkImageAspectFlags aspect_flags, VkQueue queue = VK_NULL_HANDLE);
+    void SetLayout(VkImageLayout layout, VkImageAspectFlags aspect_flags, VkQueue queue);
 
     /**
     * The VkImage object to be used in Vulkan methods
@@ -83,13 +79,13 @@ namespace quavis {
     bool staging_ = false;
 
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    std::vector<VkQueue> queues_();
+    std::vector<VkQueue> queues_;
 
-    VkMemory memory;
-    VkMemory staging_memory;
-    VkBuffer staging_buffer;
+    VkMemory vk_memory;
+    VkMemory vk_staging_memory;
+    VkBuffer vk_staging_buffer;
 
-    LogicalDevice device_;
+    LogicalDevice logical_device_;
   };
 }
 

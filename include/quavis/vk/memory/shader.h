@@ -23,7 +23,7 @@ namespace quavis {
     VkShaderModule vk_handle;
 
   private:
-    LogicalDevice device_;
+    LogicalDevice logical_device_;
   };
 }
 
