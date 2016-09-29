@@ -66,7 +66,9 @@ namespace quavis {
 
   Buffer::~Buffer() {
     vkDestroyBuffer(this->logical_device_->vk_handle, this->vk_handle, nullptr);
-    vkDestroyBuffer(this->logical_device_->vk_handle, this->vk_staging_buffer_, nullptr);
+    if (this->staging_) {
+        vkDestroyBuffer(this->logical_device_->vk_handle, this->vk_staging_buffer_, nullptr);
+      }
   }
 
   void Buffer::SetData(void* data, VkQueue queue) {

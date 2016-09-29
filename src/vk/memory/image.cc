@@ -107,6 +107,9 @@ namespace quavis {
 
   Image::~Image() {
     vkDestroyImage(this->logical_device_->vk_handle, this->vk_handle, nullptr);
+    if (this->staging_) {
+      vkDestroyImage(this->logical_device_->vk_handle, this->vk_staging_image_, nullptr);
+    }
   }
 
   void Image::SetData(void* data, VkQueue queue) {

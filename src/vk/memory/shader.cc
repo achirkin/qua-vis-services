@@ -21,4 +21,8 @@ namespace quavis {
       &this->vk_handle // the allocated memory for the logical device
     );
   }
+
+  Shader::~Shader() {
+    vkDestroyShaderModule(this->logical_device_->vk_handle, this->vk_handle, nullptr);
+  }
 }

@@ -18,6 +18,11 @@ namespace quavis {
     Shader(LogicalDevice* device, VkShaderStageFlags shader_stage, const char* shader_code, uint32_t size);
 
     /**
+    * Destroys the shader module.
+    */
+    ~Shader();
+
+    /**
     * The handler to object to be used by Vulkan methods.
     */
     VkShaderModule vk_handle;
