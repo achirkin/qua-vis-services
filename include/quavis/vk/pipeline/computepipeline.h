@@ -20,14 +20,17 @@ namespace quavis {
     /**
     * Calls the super class constructor.
     */
-    ComputePipeline(LogicalDevice device,
-      std::vector<DescriptorSet> descriptor_sets,
-      std::vector<Shader> shaders) : Pipeline(device, descriptor_sets, shaders);
+    ComputePipeline(LogicalDevice* device,
+      std::vector<DescriptorSet*> descriptor_sets,
+      std::vector<Shader*> shaders,
+      uint32_t workgroup_size_1 = 1,
+      uint32_t workgroup_size_2 = 1,
+      uint32_t workgroup_size_3 = 1);
 
     /**
     * Destroys the pipeline.
     */
-    ~ComputePipeline() : ~Pipeline();
+    ~ComputePipeline();
 
     /**
     * Creates a command buffer for this pipeline.
@@ -35,11 +38,11 @@ namespace quavis {
     VkCommandBuffer CreateCommandBuffer();
 
   protected:
-    /**
-    * Creates the graphics pipeline object using the specified shaders
-    * and sets the vk_handle object.
-    */
-    void Initialize();
+    VkPipeline InitializePipeline();
+
+  private:
+    std::vector<VkPipelineShaderStageCreateInfo> InitializeShaderInfos();
+    std::vector<uint32_t> workgroup_sizes_;
   };
 }
 

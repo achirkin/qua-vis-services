@@ -6,6 +6,8 @@
 #include "quavis/vk/descriptors/descriptorset.h"
 #include "quavis/vk/memory/shader.h"
 #include "quavis/vk/memory/buffer.h"
+#include "quavis/vk/memory/image.h"
+#include "quavis/vk/geometry/geoemtry.h"
 #include "quavis/vk/debug.h"
 
 #include <vulkan/vulkan.h>
@@ -21,16 +23,18 @@ namespace quavis {
     /**
     * Calls the superclass constructor and stores the necessary buffers.
     */
-    GraphicsPipeline(LogicalDevice device,
-      std::vector<DescriptorSet> descriptor_sets,
-      std::vector<Shader> shaders,
-      Buffer vertex_buffer,
-      Buffer index_buffer) : Pipeline(device, descriptor_sets, shaders);
+    GraphicsPipeline(LogicalDevice* device,
+      std::vector<DescriptorSet*> descriptor_sets,
+      std::vector<Shader*> shaders,
+      Buffer* vertex_buffer,
+      Buffer* index_buffer,
+      Image* color_image,
+      Image* depth_image);
 
     /**
-    * Destroys the pipeline object.
-    */
-    ~GraphicsPipeline() : ~Pipeline();
+     * Destroys the pipeline.
+     */
+    ~GraphicsPipeline();
 
     /**
     * Creates the command buffer to run a drawing command in this pipeline.
@@ -38,15 +42,21 @@ namespace quavis {
     VkCommandBuffer CreateCommandBuffer();
 
   protected:
-    /**
-    * Creates the graphics pipeline object using the specified shaders
-    * and sets the vk_handle object.
-    */
-    void Initialize();
+    VkPipeline InitializePipeline();
 
   private:
-    Buffer vertex_buffer_;
-    Buffer index_buffer_;
+    std::vector<VkPipelineShaderStageCreateInfo> InitializeShaderInfos();
+    std::vector<VkAttachmentDescription> InitializeAttachments();
+    VkRenderPass InitializeRenderPass();
+    VkFramebuffer InitializeFramebuffer();
+
+    Buffer* vertex_buffer_;
+    Buffer* index_buffer_;
+    Image* color_image_;
+    Image* depth_image_;
+
+    VkRenderPass vk_render_pass_;
+    VkFramebuffer vk_framebuffer_;
   };
 }
 

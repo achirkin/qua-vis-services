@@ -43,7 +43,7 @@ if (WIN32)
 else (WIN32)
     add_definitions (-std=c++14)
     add_definitions (-pipe)
-    add_definitions ("-Wall -O3")
+    add_definitions ("-Wall")
 endif (WIN32)
 
 # Configure
@@ -80,8 +80,10 @@ add_library(quavis SHARED
   "${CMAKE_SOURCE_DIR}/src/vk/descriptors/descriptorpool.cc"
   "${CMAKE_SOURCE_DIR}/src/vk/descriptors/descriptorset.cc"
   "${CMAKE_SOURCE_DIR}/src/vk/pipeline/pipeline.cc"
-
+  "${CMAKE_SOURCE_DIR}/src/vk/pipeline/graphicspipeline.cc"
+  "${CMAKE_SOURCE_DIR}/src/vk/pipeline/computepipeline.cc"
 )
+add_definitions('-g')
 target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
 

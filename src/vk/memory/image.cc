@@ -1,4 +1,5 @@
 #include "quavis/vk/memory/image.h"
+#include <iostream>
 
 namespace quavis {
   Image::Image(
@@ -15,9 +16,9 @@ namespace quavis {
 
     this->logical_device_ = logical_device;
     this->allocator_ = allocator;
-    this->width_ = width;
-    this->height_ = height;
-    this->format_ = format;
+    this->width = width;
+    this->height = height;
+    this->format = format;
     this->aspect_flags_ = aspect_flags;
 
     // Create image
@@ -41,13 +42,13 @@ namespace quavis {
 
     // if staging is enabled, the buffer needs to be usable for transfer
     if (staging) {
-      image_info.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+      image_info.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     vkCreateImage(this->logical_device_->vk_handle, &image_info, nullptr, &this->vk_handle);
 
     if (staging) {
-      VkImageCreateInfo image_info = {
+      VkImageCreateInfo staging_image_info = {
         VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
         nullptr, // pNext (see documentation, must be null)
         0, // image flags
@@ -57,19 +58,21 @@ namespace quavis {
         1, // level of detail = 1
         1, // layers = 1
         VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
-        VK_IMAGE_TILING_OPTIMAL, // tiling
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, // used for transfer
+        VK_IMAGE_TILING_LINEAR, // tiling
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, // used for transfer
         VK_SHARING_MODE_EXCLUSIVE, // sharing between queue families
         1, // number queue families
         &logical_device->queue_family, // queue family index
         VK_IMAGE_LAYOUT_UNDEFINED // initial layout
       };
-      vkCreateImage(this->logical_device_->vk_handle, &image_info, nullptr, &this->vk_staging_image_);
+      vkCreateImage(this->logical_device_->vk_handle, &staging_image_info, nullptr, &this->vk_staging_image_);
     }
 
     // Allocate memory
     VkMemoryPropertyFlags image_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    image_property_flags |= staging && this->staging_property_flags_;
+    if (!staging) {
+      image_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    }
     VkMemoryRequirements image_req;
     vkGetImageMemoryRequirements(this->logical_device_->vk_handle, this->vk_handle, &image_req);
     this->vk_memory_ = this->allocator_->Allocate(image_req, image_property_flags);
@@ -83,8 +86,7 @@ namespace quavis {
     );
 
     if (staging) {
-      VkMemoryPropertyFlags staging_image_property_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-      staging_image_property_flags |= this->staging_property_flags_;
+      VkMemoryPropertyFlags staging_image_property_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
       VkMemoryRequirements staging_image_req;
       vkGetImageMemoryRequirements(this->logical_device_->vk_handle, this->vk_staging_image_, &staging_image_req);
       this->vk_staging_memory_ = this->allocator_->Allocate(staging_image_req, staging_image_property_flags);
@@ -131,8 +133,8 @@ namespace quavis {
       copyRegion.dstSubresource = subResource;
       copyRegion.srcOffset = {0, 0, 0};
       copyRegion.dstOffset = {0, 0, 0};
-      copyRegion.extent.width = this->width_;
-      copyRegion.extent.height = this->height_;
+      copyRegion.extent.width = this->width;
+      copyRegion.extent.height = this->height;
       copyRegion.extent.depth = 1;
 
       // generate command buffer
@@ -162,8 +164,8 @@ namespace quavis {
       copyRegion.dstSubresource = subResource;
       copyRegion.srcOffset = {0, 0, 0};
       copyRegion.dstOffset = {0, 0, 0};
-      copyRegion.extent.width = this->width_;
-      copyRegion.extent.height = this->height_;
+      copyRegion.extent.width = this->width;
+      copyRegion.extent.height = this->height;
       copyRegion.extent.depth = 1;
 
       // generate command buffer

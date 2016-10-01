@@ -45,19 +45,11 @@ namespace quavis {
     VkPipelineLayout vk_layout;
 
   protected:
-    /**
-    * Creates the pipeline layout and sets the vk_layout attribute.
-    */
-    void CreatePipelineLayout();
-
-    /**
-    * Create the pipeline and sets the vk_handle attribute.
-    */
-    virtual void Initialize() = 0;
-
     LogicalDevice* logical_device_;
     std::vector<DescriptorSet*> descriptor_sets_;
     std::vector<Shader*> shaders_;
+
+    virtual VkPipeline InitializePipeline() = 0;
   };
 }
 

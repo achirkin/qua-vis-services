@@ -118,6 +118,7 @@ namespace quavis {
 
     VkDeviceQueueCreateInfo queue_create_info;
     queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+    queue_create_info.flags = 0;
     queue_create_info.queueFamilyIndex = queue_family_index;
     queue_create_info.queueCount = num;
     queue_create_info.pQueuePriorities = priorities;

@@ -75,14 +75,26 @@ namespace quavis {
     */
     VkImageLayout vk_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+    /**
+     * The image's width
+     */
+    uint32_t width;
+
+    /**
+     * The image's height
+     */
+    uint32_t height;
+
+    /**
+     * THe image's format
+     */
+     VkFormat format;
+
   private:
     VkImageView CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags aspect_flags);
 
     bool staging_ = false;
-    uint32_t width_;
-    uint32_t height_;
     uint32_t memory_size_;
-    VkFormat format_;
     VkImageAspectFlags aspect_flags_;
 
 

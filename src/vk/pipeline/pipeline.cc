@@ -6,11 +6,6 @@ namespace quavis {
     this->descriptor_sets_ = descriptor_sets;
     this->shaders_ = shaders;
 
-    this->CreatePipelineLayout();
-    this->Initialize();
-  }
-
-  void Pipeline::CreatePipelineLayout() {
     std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
     for (uint32_t i = 0; i < this->descriptor_sets_.size(); i++) {
       descriptor_set_layouts.push_back(this->descriptor_sets_[i]->vk_layout);
@@ -34,5 +29,9 @@ namespace quavis {
       nullptr,
       &this->vk_layout
     );
+  }
+
+  Pipeline::~Pipeline() {
+    vkDestroyPipelineLayout(this->logical_device_->vk_handle, this->vk_layout, nullptr);
   }
 }
