@@ -2,4 +2,20 @@
 
 namespace quavis {
 
+  GraphicsPipeline::GraphicsPipeline() {
+
+  }
+
+  GraphicsPipeline::~GraphicsPipeline() {
+
+  }
+
+  void GraphicsPipeline::Initialize() {
+
+  }
+
+  VkCommandBuffer GraphicsPipeline::CreateCommandBuffer() {
+
+  }
+
 }

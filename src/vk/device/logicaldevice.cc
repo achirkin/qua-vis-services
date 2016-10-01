@@ -65,14 +65,16 @@ namespace quavis {
     allocInfo.commandPool = this->vk_command_pool_;
     allocInfo.commandBufferCount = 1;
 
-    VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(this->vk_handle, &allocInfo, &commandBuffer);
+    VkCommandBuffer command_buffer;
+    vkAllocateCommandBuffers(this->vk_handle, &allocInfo, &command_buffer);
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = flags;
 
-    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+    vkBeginCommandBuffer(command_buffer, &beginInfo);
+
+    return command_buffer;
   }
 
   void LogicalDevice::EndCommandBuffer(VkCommandBuffer command_buffer) {
@@ -110,7 +112,7 @@ namespace quavis {
 
   VkDeviceQueueCreateInfo LogicalDevice::GetQueueCreateInfos(uint32_t queue_family_index, uint32_t num) {
     float priorities[num];
-    for (int i = 0; i < num; i++) priorities[i] = 1.0f;
+    for (uint32_t i = 0; i < num; i++) priorities[i] = 1.0f;
 
     std::cout << priorities[0] << std::endl;
 

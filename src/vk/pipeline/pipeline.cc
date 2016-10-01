@@ -8,13 +8,12 @@ namespace quavis {
 
     this->CreatePipelineLayout();
     this->Initialize();
-    this->CreateCommandBuffer();
   }
 
   void Pipeline::CreatePipelineLayout() {
-    std::vector<VkDescriptorSetlayout> descriptor_set_layouts;
-    for (int i = 0; i < descriptor_sets.size(); i++) {
-      descriptor_set_layouts.push_back(descriptor_sets[i]->vk_layout);
+    std::vector<VkDescriptorSetLayout> descriptor_set_layouts;
+    for (uint32_t i = 0; i < this->descriptor_sets_.size(); i++) {
+      descriptor_set_layouts.push_back(this->descriptor_sets_[i]->vk_layout);
     }
 
     // Define Pipeline layout
@@ -22,7 +21,7 @@ namespace quavis {
       VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // sType
       nullptr, // next (see documentation, must be null)
       0, // flags (see documentation, must be 0)
-      descriptor_set_layouts.size(), // layout count
+      (uint32_t)descriptor_set_layouts.size(), // layout count
       descriptor_set_layouts.data(), // layouts
       0, // push constant range count
       nullptr // push constant ranges

@@ -2,4 +2,20 @@
 
 namespace quavis {
 
+  ComputePipeline::ComputePipeline() {
+
+  }
+
+  ComputePipeline::~ComputePipeline() {
+
+  }
+
+  void ComputePipeline::Initialize() {
+
+  }
+
+  VkCommandBuffer ComputePipeline::CreateCommandBuffer() {
+
+  }
+
 }

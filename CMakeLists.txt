@@ -79,6 +79,7 @@ add_library(quavis SHARED
   "${CMAKE_SOURCE_DIR}/src/vk/memory/shader.cc"
   "${CMAKE_SOURCE_DIR}/src/vk/descriptors/descriptorpool.cc"
   "${CMAKE_SOURCE_DIR}/src/vk/descriptors/descriptorset.cc"
+  "${CMAKE_SOURCE_DIR}/src/vk/pipeline/pipeline.cc"
 
 )
 target_link_libraries(quavis ${VULKAN_LIBRARY})

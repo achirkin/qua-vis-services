@@ -27,7 +27,7 @@ namespace quavis {
     /**
     * Destroys the pipeline.
     */
-    ~ComputePipeline();
+    ~ComputePipeline() : ~Pipeline();
 
     /**
     * Creates a command buffer for this pipeline.

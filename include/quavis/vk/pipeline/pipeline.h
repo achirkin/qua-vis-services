@@ -22,7 +22,7 @@ namespace quavis {
     * shaders as protected attributes for command buffer creations in a
     * subclass.
     */
-    Pipeline(LogicalDevice logical_device, std::vector<DescriptorSet> descriptor_sets, std::vector<Shader*> shaders);
+    Pipeline(LogicalDevice* logical_device, std::vector<DescriptorSet*> descriptor_sets, std::vector<Shader*> shaders);
 
     /**
     * Destroys the pipeline object.

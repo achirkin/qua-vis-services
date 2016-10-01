@@ -30,7 +30,7 @@ namespace quavis {
     /**
     * Destroys the pipeline object.
     */
-    ~GraphicsPipeline();
+    ~GraphicsPipeline() : ~Pipeline();
 
     /**
     * Creates the command buffer to run a drawing command in this pipeline.
