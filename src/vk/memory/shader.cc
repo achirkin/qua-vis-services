@@ -1,7 +1,7 @@
 #include "quavis/vk/memory/shader.h"
 
 namespace quavis {
-  Shader::Shader(LogicalDevice* device, VkShaderStageFlagBits shader_stage, const char* shader_code, uint32_t size) {
+  Shader::Shader(LogicalDevice* device, VkShaderStageFlagBits shader_stage, unsigned char* shader_code, uint32_t size) {
     this->logical_device_ = device;
     this->vk_shader_stage = shader_stage;
 

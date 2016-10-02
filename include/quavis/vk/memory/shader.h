@@ -15,7 +15,7 @@ namespace quavis {
     /**
     * Creates a new shader using the given SPIR-V code.
     */
-    Shader(LogicalDevice* device, VkShaderStageFlagBits shader_stage, const char* shader_code, uint32_t size);
+    Shader(LogicalDevice* device, VkShaderStageFlagBits shader_stage, unsigned char* shader_code, uint32_t size);
 
     /**
     * Destroys the shader module.
