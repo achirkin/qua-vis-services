@@ -35,7 +35,7 @@ namespace quavis {
     *  * VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT
     *  * VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     */
-    Image(LogicalDevice* logical_device, Allocator* allocator, VkQueue queue, uint32_t width, uint32_t height, VkImageUsageFlags usage_flags, VkFormat format, VkImageLayout layout, VkImageAspectFlags aspect, bool staging = true);
+    Image(std::shared_ptr<LogicalDevice> logical_device, std::shared_ptr<Allocator> allocator, VkQueue queue, uint32_t width, uint32_t height, VkImageUsageFlags usage_flags, VkFormat format, VkImageLayout layout, VkImageAspectFlags aspect, bool staging = true);
 
     /**
     * Destroys the buffer and all it's associated memory regions.
@@ -102,8 +102,8 @@ namespace quavis {
     VkDeviceMemory vk_staging_memory_;
     VkImage vk_staging_image_;
 
-    LogicalDevice* logical_device_;
-    Allocator* allocator_;
+    std::shared_ptr<LogicalDevice> logical_device_;
+    std::shared_ptr<Allocator> allocator_;
 
     const VkMemoryPropertyFlags staging_property_flags_ =
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |

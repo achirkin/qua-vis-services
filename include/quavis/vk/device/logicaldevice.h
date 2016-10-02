@@ -32,7 +32,7 @@ namespace quavis {
     * The method selects a queue family which is suitible for graphics, compute
     * and transfer!
     */
-    LogicalDevice(PhysicalDevice* physical_device, uint32_t num_queues = 1);
+    LogicalDevice(std::shared_ptr<PhysicalDevice> physical_device, uint32_t num_queues = 1);
 
     /**
     * Destroys the logical device safely. Note that all objects that are
@@ -76,7 +76,7 @@ namespace quavis {
     /**
     * The physical device on which the logical device resides
     */
-    PhysicalDevice* physical_device;
+    std::shared_ptr<PhysicalDevice> physical_device;
 
     /**
     * The queue family index of all queues
@@ -98,7 +98,7 @@ namespace quavis {
     VkPhysicalDeviceFeatures vk_features_;
 
     // Default extensions
-    const std::vector<const char*> extensions_;
+    const std::vector<const char*> extensions_ = {};
   };
 }
 

@@ -3,8 +3,8 @@
 
 namespace quavis {
   Image::Image(
-    LogicalDevice* logical_device,
-    Allocator* allocator,
+    std::shared_ptr<LogicalDevice> logical_device,
+    std::shared_ptr<Allocator> allocator,
     VkQueue queue,
     uint32_t width,
     uint32_t height,
@@ -238,5 +238,6 @@ namespace quavis {
 
     this->logical_device_->EndCommandBuffer(command_buffer_1);
     this->logical_device_->SubmitCommandBuffer(queue, command_buffer_1);
+    this->vk_layout = layout;
   }
 }

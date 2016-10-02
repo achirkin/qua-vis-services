@@ -1,7 +1,7 @@
 #include "quavis/vk/memory/allocator.h"
 
 namespace quavis {
-  Allocator::Allocator(LogicalDevice* logical_device) {
+  Allocator::Allocator(std::shared_ptr<LogicalDevice> logical_device) {
     this->logical_device_ = logical_device;
   }
 
@@ -21,7 +21,7 @@ namespace quavis {
     // find correct memory type
     uint32_t memory_type = 0;
     uint32_t memory_type_bits = memory_requirements.memoryTypeBits;
-    for (int i = 0; i < physical_device_memory_properties.memoryTypeCount; i++) {
+    for (uint32_t i = 0; i < physical_device_memory_properties.memoryTypeCount; i++) {
       if ((memory_type_bits & (1 << i)) && ((physical_device_memory_properties.memoryTypes[i].propertyFlags & flags) == flags)) {
         memory_type = i;
         break;

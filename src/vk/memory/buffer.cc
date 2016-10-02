@@ -3,8 +3,8 @@
 
 namespace quavis {
   Buffer::Buffer(
-    LogicalDevice* logical_device,
-    Allocator* allocator,
+    std::shared_ptr<LogicalDevice> logical_device,
+    std::shared_ptr<Allocator> allocator,
     uint32_t size,
     VkBufferUsageFlags usage_flags,
     bool staging
@@ -24,7 +24,7 @@ namespace quavis {
 
     // if staging is enabled, the buffer needs to be usable for transfer
     if (staging) {
-      buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+      buffer_info.usage = usage_flags | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }
 
     vkCreateBuffer(this->logical_device_->vk_handle, &buffer_info, nullptr, &this->vk_handle);

@@ -28,8 +28,8 @@ namespace quavis {
     *  * VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
     */
     Buffer(
-      LogicalDevice* logical_device,
-      Allocator* allocator,
+      std::shared_ptr<LogicalDevice> logical_device,
+      std::shared_ptr<Allocator> allocator,
       uint32_t size,
       VkBufferUsageFlags usage_flags,
       bool staging = true
@@ -69,8 +69,8 @@ namespace quavis {
     VkDeviceMemory vk_staging_memory_;
     VkBuffer vk_staging_buffer_;
 
-    LogicalDevice* logical_device_;
-    Allocator* allocator_;
+    std::shared_ptr<LogicalDevice> logical_device_;
+    std::shared_ptr<Allocator> allocator_;
 
     const VkMemoryPropertyFlags staging_property_flags_ =
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |

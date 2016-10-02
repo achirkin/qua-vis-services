@@ -6,6 +6,7 @@
 
 #include <vulkan/vulkan.h>
 #include <set>
+#include <memory>
 
 namespace quavis {
   /**

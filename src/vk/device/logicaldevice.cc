@@ -4,11 +4,12 @@
 
 namespace quavis {
 
-  LogicalDevice::LogicalDevice(PhysicalDevice* physical_device, uint32_t num_queues)
+  LogicalDevice::LogicalDevice(std::shared_ptr<PhysicalDevice> physical_device, uint32_t num_queues)
   {
     this->physical_device = physical_device;
-
+    
     // set default features
+    this->vk_features_ = {};
     this->vk_features_.tessellationShader = VK_TRUE;
     this->vk_features_.geometryShader = VK_TRUE;
     this->vk_features_.fillModeNonSolid = VK_TRUE;
