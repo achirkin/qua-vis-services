@@ -6,6 +6,6 @@ layout (binding = 1, rgba8) uniform image2D resultImage;
 
 void main()
 {
-  vec4 res = vec4(imageLoad(inputImage, ivec2(gl_GlobalInvocationID.xy)).rgb, 0.5);
+  vec4 res = vec4(0,0,0,1);
   imageStore(resultImage, ivec2(gl_GlobalInvocationID.xy), res);
 }

@@ -1,7 +1,8 @@
 #include "quavis/vk/pipeline/graphicspipeline.h"
 
 namespace quavis {
-  GraphicsPipeline::GraphicsPipeline(std::shared_ptr<LogicalDevice> device,
+  GraphicsPipeline::GraphicsPipeline(
+    std::shared_ptr<LogicalDevice> device,
     std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets,
     std::vector<std::shared_ptr<Shader>> shaders,
     std::shared_ptr<Buffer> vertex_buffer,
@@ -339,7 +340,7 @@ namespace quavis {
 
     VkClearValue clear_values[] = {
       {0.0f, 0.0f, 0.0f, 1.0f},
-      {1.0f, 0.0f}
+      {1.0f, 1.0f}
     };
 
     VkRenderPassBeginInfo render_pass_info = {
@@ -403,6 +404,8 @@ namespace quavis {
       0, // vertex index offset
       0 // first instance
     );
+
+    vkCmdEndRenderPass(command_buffer);
 
     this->logical_device_->EndCommandBuffer(command_buffer);
 

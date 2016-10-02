@@ -61,7 +61,7 @@ namespace quavis {
     *
     * Note That synchronization (vkQueueWaitIdle) has to be performed manually
     */
-    void SubmitCommandBuffer(VkQueue queue, VkCommandBuffer command_buffer);
+    void SubmitCommandBuffer(VkQueue queue, VkCommandBuffer command_buffer, VkPipelineStageFlags stage_mask = VK_NULL_HANDLE);
 
     /**
     * The vulkan handler to the logical device.

@@ -43,7 +43,7 @@ namespace quavis {
     /*
     * Writes data to a given memory object.
     */
-    void SetData(VkDeviceMemory destination_memory, void* data, uint32_t size);
+    void SetData(VkDeviceMemory destination_memory, void** data, uint32_t size);
 
     /*
     * Retreives data from a given memory object.

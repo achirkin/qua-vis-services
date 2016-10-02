@@ -1,4 +1,5 @@
 #include "quavis/vk/memory/allocator.h"
+#include "stb_image_write.h"
 
 namespace quavis {
   Allocator::Allocator(std::shared_ptr<LogicalDevice> logical_device) {
@@ -49,7 +50,7 @@ namespace quavis {
     return memory;
   }
 
-  void Allocator::SetData(VkDeviceMemory destination_memory, void* data, uint32_t size) {
+  void Allocator::SetData(VkDeviceMemory destination_memory, void** data, uint32_t size) {
     void* gpu_buffer;
 
     vkMapMemory(
@@ -60,7 +61,7 @@ namespace quavis {
       0,
       &gpu_buffer);
 
-    memcpy(gpu_buffer, data, (size_t)size);
+    memcpy(gpu_buffer, *data, (size_t)size);
 
     vkUnmapMemory(
       this->logical_device_->vk_handle,
@@ -80,7 +81,7 @@ namespace quavis {
       0,
       &gpu_buffer);
 
-    memcpy(gpu_buffer, data, (size_t)size);
+    memcpy(data, gpu_buffer, (size_t)size);
 
     vkUnmapMemory(
       this->logical_device_->vk_handle,

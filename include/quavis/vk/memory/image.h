@@ -46,7 +46,7 @@ namespace quavis {
     * Writes data to the buffer.
     * Synchronization is responsibility of the caller.
     */
-    void SetData(void* data, VkQueue queue);
+    void SetData(void** data, VkQueue queue);
 
     /**
     * Retreives data from the buffer.

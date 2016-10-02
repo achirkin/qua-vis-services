@@ -20,6 +20,7 @@ namespace quavis {
     this->height = height;
     this->format = format;
     this->aspect_flags_ = aspect_flags;
+    this->staging_ = staging;
 
     // Create image
     VkImageCreateInfo image_info = {
@@ -41,9 +42,7 @@ namespace quavis {
     };
 
     // if staging is enabled, the buffer needs to be usable for transfer
-    if (staging) {
-      image_info.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    }
+    image_info.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     vkCreateImage(this->logical_device_->vk_handle, &image_info, nullptr, &this->vk_handle);
 
@@ -114,7 +113,7 @@ namespace quavis {
     }
   }
 
-  void Image::SetData(void* data, VkQueue queue) {
+  void Image::SetData(void** data, VkQueue queue) {
     if (!this->staging_) {
       this->allocator_->SetData(this->vk_memory_, data, this->memory_size_);
     }
@@ -149,9 +148,14 @@ namespace quavis {
 
   void* Image::GetData(VkQueue queue) {
     if (!this->staging_) {
-      return this->allocator_->GetData(this->vk_memory_, this->memory_size_);
+      this->SetLayout(this->vk_handle, this->vk_layout, VK_IMAGE_LAYOUT_GENERAL, this->aspect_flags_, queue);
+      void* data = this->allocator_->GetData(this->vk_memory_, this->memory_size_);
+      this->SetLayout(this->vk_handle, VK_IMAGE_LAYOUT_GENERAL, this->vk_layout, this->aspect_flags_, queue);
+      return data;
     }
     else {
+      std::cout << "Here!" << std::endl;
+
       // define copy region
       VkImageSubresourceLayers subResource = {};
       subResource.aspectMask = this->aspect_flags_;
@@ -168,13 +172,20 @@ namespace quavis {
       copyRegion.extent.height = this->height;
       copyRegion.extent.depth = 1;
 
+      this->SetLayout(this->vk_handle, this->vk_layout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->aspect_flags_, queue);
+      this->SetLayout(this->vk_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, this->aspect_flags_, queue);
+      vkQueueWaitIdle(queue);
+
       // generate command buffer
       VkCommandBuffer command_buffer = this->logical_device_->BeginCommandBuffer(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-      vkCmdCopyImage(command_buffer, this->vk_handle, this->vk_layout, this->vk_staging_image_, VK_IMAGE_LAYOUT_GENERAL, 1, &copyRegion);
+      vkCmdCopyImage(command_buffer, this->vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->vk_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
       this->logical_device_->EndCommandBuffer(command_buffer);
-
-      // submit command buffer
       this->logical_device_->SubmitCommandBuffer(queue, command_buffer);
+      vkQueueWaitIdle(queue);
+
+      this->SetLayout(this->vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->vk_layout, this->aspect_flags_, queue);
+      this->SetLayout(this->vk_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, this->aspect_flags_, queue);
+      vkQueueWaitIdle(queue);
 
       return this->allocator_->GetData(this->vk_staging_memory_, this->memory_size_);
     }
@@ -238,6 +249,5 @@ namespace quavis {
 
     this->logical_device_->EndCommandBuffer(command_buffer_1);
     this->logical_device_->SubmitCommandBuffer(queue, command_buffer_1);
-    this->vk_layout = layout;
   }
 }

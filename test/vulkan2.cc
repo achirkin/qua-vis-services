@@ -7,13 +7,22 @@
 #include "quavis/vk/memory/shader.h"
 #include "quavis/vk/descriptors/descriptorpool.h"
 #include "quavis/vk/descriptors/descriptorset.h"
+#include "quavis/vk/pipeline/graphicspipeline.h"
+#include "quavis/vk/pipeline/computepipeline.h"
 #include "quavis/vk/geometry/geoemtry.h"
 #include "quavis/shaders.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tinyobjloader.h"
+
 #include <iostream>
+#include <chrono>
 
 std::vector<quavis::Vertex> vertices_ = {
-  //front
+  /*//front
   {{-1.0, -1.0,  1.0}, {255,255,255}},
   {{1.0, -1.0,  1.0}, {255,255,255}},
   {{1.0,  1.0,  1.0}, {255,255,255}},
@@ -22,11 +31,11 @@ std::vector<quavis::Vertex> vertices_ = {
   {{-1.0, -1.0, -1.0}, {255,255,255}},
   {{1.0, -1.0, -1.0}, {255,255,255}},
   {{1.0,  1.0, -1.0}, {255,255,255}},
-  {{-1.0,  1.0, -1.0}, {255,255,255}}
+  {{-1.0,  1.0, -1.0}, {255,255,255}}*/
 };
 
 std::vector<uint32_t> indices_ = {
-  // front
+  /*// front
   0, 1, 2,
   2, 3, 0,
   // top
@@ -43,7 +52,7 @@ std::vector<uint32_t> indices_ = {
   1, 0, 4,
   // right
   3, 2, 6,
-  6, 7, 3,
+  6, 7, 3,*/
 };
 
 uint32_t width = 2048;
@@ -62,6 +71,34 @@ UniformBufferObject uniform_ = {
 };
 
 int main(int argc, char** argv) {
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string err;
+  std::string path = "/home/mfranzen/Downloads/chalet.obj";
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
+    throw std::runtime_error(err);
+  }
+  for (const auto& shape : shapes) {
+    for (const auto& index : shape.mesh.indices) {
+      quavis::Vertex vertex = {};
+      vertex.pos = {
+          attrib.vertices[3 * index.vertex_index + 0],
+          attrib.vertices[3 * index.vertex_index + 1],
+          attrib.vertices[3 * index.vertex_index + 2]
+      };
+      vertex.color = {
+          0.0f,
+          0.0f,
+          attrib.vertices[3 * index.vertex_index + 2]
+      };
+      if (vertices_.size() < 10000) {
+        vertices_.push_back(vertex);
+        indices_.push_back(indices_.size());
+      }
+    }
+  }
+
   // create logical device with three queues
   quavis::Instance* instance = new quavis::Instance();
   std::shared_ptr<quavis::PhysicalDevice> physicaldevice = std::make_shared<quavis::PhysicalDevice>(instance);
@@ -73,8 +110,8 @@ int main(int argc, char** argv) {
   VkQueue transfer_queue = logicaldevice->queues[2];
 
   // Create buffers for vertices, indices and uniform buffer object
-  quavis::Buffer* vertex_buffer = new quavis::Buffer(logicaldevice, allocator, sizeof(vertices_[0])*vertices_.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-  quavis::Buffer* index_buffer = new quavis::Buffer(logicaldevice, allocator, sizeof(indices_[0])*indices_.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+  std::shared_ptr<quavis::Buffer> vertex_buffer = std::make_shared<quavis::Buffer>(logicaldevice, allocator, sizeof(vertices_[0])*vertices_.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+  std::shared_ptr<quavis::Buffer> index_buffer = std::make_shared<quavis::Buffer>(logicaldevice, allocator, sizeof(indices_[0])*indices_.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
   std::shared_ptr<quavis::Buffer> uniform_buffer = std::make_shared<quavis::Buffer>(logicaldevice, allocator, 32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
   // Create shaders
@@ -124,11 +161,13 @@ int main(int argc, char** argv) {
 
 
   // Upload data to Buffers
-  vertex_buffer->SetData(vertices_.data(), transfer_queue);
-  index_buffer->SetData(indices_.data(), transfer_queue);
-  uniform_buffer->SetData((void*)&uniform_, transfer_queue);
-
-  vkDeviceWaitIdle(logicaldevice->vk_handle);
+  void* vdata = vertices_.data();
+  void* idata = indices_.data();
+  void* udata = (void*)&uniform_;
+  vertex_buffer->SetData(&vdata, transfer_queue);
+  index_buffer->SetData(&idata, transfer_queue);
+  uniform_buffer->SetData(&udata, transfer_queue);
+  vkQueueWaitIdle(transfer_queue);
 
   // Create DescriptorSets
   std::shared_ptr<quavis::DescriptorPool> descriptorpool = std::make_shared<quavis::DescriptorPool>(logicaldevice, 2, 2, 0, 1);
@@ -141,6 +180,66 @@ int main(int argc, char** argv) {
 
   graphics_descriptorset->Create();
   compute_descriptorset->Create();
+
+
+  // Create GraphicsPipeline
+  std::vector<std::shared_ptr<quavis::DescriptorSet>> descriptorsets = {graphics_descriptorset};
+  std::vector<std::shared_ptr<quavis::Shader>> shaders = {vert_shader, tesc_shader, tese_shader, geom_shader, frag_shader};
+  std::shared_ptr<quavis::GraphicsPipeline> gpipe = std::make_shared<quavis::GraphicsPipeline>(
+    logicaldevice,
+    descriptorsets,
+    shaders,
+    vertex_buffer,
+    index_buffer,
+    color_image,
+    depth_image
+  );
+
+  // Create ComputePipeline
+  std::vector<std::shared_ptr<quavis::DescriptorSet>> comp_descriptorsets = {compute_descriptorset};
+  std::vector<std::shared_ptr<quavis::Shader>> comp_shaders = {comp_shader};
+  std::shared_ptr<quavis::ComputePipeline> cpipe = std::make_shared<quavis::ComputePipeline>(
+    logicaldevice,
+    comp_descriptorsets,
+    comp_shaders,
+    width/16,
+    height/16,
+    1
+  );
+
+  // Initialize command buffers
+  VkCommandBuffer drawcommand = gpipe->CreateCommandBuffer();
+  VkCommandBuffer computecommand = cpipe->CreateCommandBuffer();
+
+  auto t1 = std::chrono::high_resolution_clock::now();
+  int N = 1000;
+  for (int i = 0; i < N; i++) {
+    logicaldevice->SubmitCommandBuffer(graphics_queue, drawcommand);
+    vkQueueWaitIdle(graphics_queue);
+  }
+  auto t2 = std::chrono::high_resolution_clock::now();
+  std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
+
+  vkDeviceWaitIdle(logicaldevice->vk_handle);
+  depth_image->GetData(transfer_queue);
+
+/*
+  void* result = malloc(width*height*4);
+  result = depth_image->GetData(transfer_queue);
+  uint8_t image[width * height];
+  for (uint32_t i = 0; i < 4 * width * height; i += 4) {
+    float px;
+    memcpy(&px, (uint8_t*)result + i, 4);
+    image[i/4] = floor((1.0 - px)*255);
+  }
+  stbi_write_png("bin/depth.png", width, height, 1, (void*)image, 0);
+  free(result);
+*/
+/*
+  void* result = malloc(width*height*4);
+  result = compute_image->GetData(transfer_queue);
+  stbi_write_png("bin/rendered.png", width, height, 4, result, 0);
+  free(result);*/
 
   vkDeviceWaitIdle(logicaldevice->vk_handle);
 }

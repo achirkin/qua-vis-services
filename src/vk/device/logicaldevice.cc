@@ -7,7 +7,7 @@ namespace quavis {
   LogicalDevice::LogicalDevice(std::shared_ptr<PhysicalDevice> physical_device, uint32_t num_queues)
   {
     this->physical_device = physical_device;
-    
+
     // set default features
     this->vk_features_ = {};
     this->vk_features_.tessellationShader = VK_TRUE;
@@ -82,8 +82,9 @@ namespace quavis {
     vkEndCommandBuffer(command_buffer);
   }
 
-  void LogicalDevice::SubmitCommandBuffer(VkQueue queue, VkCommandBuffer command_buffer) {
+  void LogicalDevice::SubmitCommandBuffer(VkQueue queue, VkCommandBuffer command_buffer, VkPipelineStageFlags stage_mask) {
     VkSubmitInfo submitInfo = {};
+    submitInfo.pWaitDstStageMask = &stage_mask;
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &command_buffer;

@@ -7,5 +7,5 @@ layout(location = 2) in vec3 gColor;
 layout(location = 0) out vec4 fColor;
 
 void main() {
-  fColor = vec4(gColor, 1.0);
+  fColor = vec4(gSphericalPosition[2], gSphericalPosition[2], gSphericalPosition[2], 1.0);
 }

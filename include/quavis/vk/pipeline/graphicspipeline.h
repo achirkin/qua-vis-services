@@ -41,6 +41,11 @@ namespace quavis {
     */
     VkCommandBuffer CreateCommandBuffer();
 
+    /**
+    * The vulkan handler to the pipline object
+    */
+    VkPipeline vk_handle;
+
   protected:
     VkPipeline InitializePipeline();
 
