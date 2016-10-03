@@ -71,18 +71,13 @@ namespace quavis {
       this->vk_handle
     );
 
-    std::vector<VkDescriptorSet> descriptor_sets;
-    for (uint32_t i = 0; i < this->descriptor_sets_.size(); i++) {
-      descriptor_sets.push_back(this->descriptor_sets_[i]->vk_handle);
-    }
-
     vkCmdBindDescriptorSets(
       command_buffer,
       VK_PIPELINE_BIND_POINT_COMPUTE,
       this->vk_layout,
       0,
-      descriptor_sets.size(),
-      descriptor_sets.data(),
+      this->vk_descriptor_sets_.size(),
+      this->vk_descriptor_sets_.data(),
       0,
       0
     );

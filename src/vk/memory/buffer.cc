@@ -74,7 +74,7 @@ namespace quavis {
       }
   }
 
-  void Buffer::SetData(void** data, VkQueue queue) {
+  void Buffer::SetData(void* data, VkQueue queue) {
     if (!this->staging_) {
       this->allocator_->SetData(this->vk_memory_, data, this->size);
     }

@@ -4,6 +4,7 @@
 #include "quavis/version.h"
 #include "quavis/shaders.h"
 #include "quavis/vk/debug.h"
+#include "quavis/vk/geometry/triangulate.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"

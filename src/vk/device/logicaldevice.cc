@@ -59,7 +59,6 @@ namespace quavis {
   }
 
   VkCommandBuffer LogicalDevice::BeginCommandBuffer(VkCommandBufferUsageFlags flags) {
-
     VkCommandBufferAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -83,13 +82,20 @@ namespace quavis {
   }
 
   void LogicalDevice::SubmitCommandBuffer(VkQueue queue, VkCommandBuffer command_buffer, VkPipelineStageFlags stage_mask) {
-    VkSubmitInfo submitInfo = {};
-    submitInfo.pWaitDstStageMask = &stage_mask;
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &command_buffer;
+    VkPipelineStageFlags wait_stages[] = {stage_mask};
+    VkSubmitInfo submit_info = {
+      VK_STRUCTURE_TYPE_SUBMIT_INFO, // sType,
+      nullptr, // next (see documentaton, must be null)
+      0, // wait semaphore count
+      nullptr, // semaphore to wait for
+      wait_stages, // stage until next semaphore is triggered
+      1, //
+      &command_buffer,
+      0,
+      nullptr
+    };
 
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
   }
 
   VkCommandPool LogicalDevice::CreateCommandPool(uint32_t queue_family_index) {

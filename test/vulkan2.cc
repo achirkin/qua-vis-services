@@ -21,39 +21,9 @@
 #include <iostream>
 #include <chrono>
 
-std::vector<quavis::Vertex> vertices_ = {
-  /*//front
-  {{-1.0, -1.0,  1.0}, {255,255,255}},
-  {{1.0, -1.0,  1.0}, {255,255,255}},
-  {{1.0,  1.0,  1.0}, {255,255,255}},
-  {{-1.0,  1.0,  1.0}, {255,255,255}},
-  // back
-  {{-1.0, -1.0, -1.0}, {255,255,255}},
-  {{1.0, -1.0, -1.0}, {255,255,255}},
-  {{1.0,  1.0, -1.0}, {255,255,255}},
-  {{-1.0,  1.0, -1.0}, {255,255,255}}*/
-};
+std::vector<quavis::Vertex> vertices_ = {};
 
-std::vector<uint32_t> indices_ = {
-  /*// front
-  0, 1, 2,
-  2, 3, 0,
-  // top
-  1, 5, 6,
-  6, 2, 1,
-  // back
-  7, 6, 5,
-  5, 4, 7,
-  // bottom
-  4, 0, 3,
-  3, 7, 4,
-  // left
-  4, 5, 1,
-  1, 0, 4,
-  // right
-  3, 2, 6,
-  6, 7, 3,*/
-};
+std::vector<uint32_t> indices_ = {};
 
 uint32_t width = 2048;
 uint32_t height = 1024;
@@ -122,12 +92,11 @@ int main(int argc, char** argv) {
   std::shared_ptr<quavis::Shader> frag_shader = std::make_shared<quavis::Shader>(logicaldevice, VK_SHADER_STAGE_FRAGMENT_BIT, src_shaders_shader_frag_spv, src_shaders_shader_frag_spv_len);
   std::shared_ptr<quavis::Shader> comp_shader = std::make_shared<quavis::Shader>(logicaldevice, VK_SHADER_STAGE_COMPUTE_BIT, src_shaders_shader_comp_spv, src_shaders_shader_comp_spv_len);
 
-
   // create color image, depth image and compute shader image
   std::shared_ptr<quavis::Image> color_image = std::make_shared<quavis::Image>(
     logicaldevice,
     allocator,
-    transfer_queue,
+    graphics_queue,
     width,
     height,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
@@ -135,11 +104,10 @@ int main(int argc, char** argv) {
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_ASPECT_COLOR_BIT);
 
-
   std::shared_ptr<quavis::Image> compute_image = std::make_shared<quavis::Image>(
     logicaldevice,
     allocator,
-    transfer_queue,
+    graphics_queue,
     width,
     height,
     VK_IMAGE_USAGE_STORAGE_BIT,
@@ -147,11 +115,10 @@ int main(int argc, char** argv) {
     VK_IMAGE_LAYOUT_GENERAL,
     VK_IMAGE_ASPECT_COLOR_BIT);
 
-
   std::shared_ptr<quavis::Image> depth_image = std::make_shared<quavis::Image>(
     logicaldevice,
     allocator,
-    transfer_queue,
+    graphics_queue,
     width,
     height,
     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
@@ -159,14 +126,10 @@ int main(int argc, char** argv) {
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     VK_IMAGE_ASPECT_DEPTH_BIT);
 
-
   // Upload data to Buffers
-  void* vdata = vertices_.data();
-  void* idata = indices_.data();
-  void* udata = (void*)&uniform_;
-  vertex_buffer->SetData(&vdata, transfer_queue);
-  index_buffer->SetData(&idata, transfer_queue);
-  uniform_buffer->SetData(&udata, transfer_queue);
+  vertex_buffer->SetData((void*)vertices_.data(), transfer_queue);
+  index_buffer->SetData((void*)indices_.data(), transfer_queue);
+  uniform_buffer->SetData((void*)&uniform_, transfer_queue);
   vkQueueWaitIdle(transfer_queue);
 
   // Create DescriptorSets
@@ -180,7 +143,6 @@ int main(int argc, char** argv) {
 
   graphics_descriptorset->Create();
   compute_descriptorset->Create();
-
 
   // Create GraphicsPipeline
   std::vector<std::shared_ptr<quavis::DescriptorSet>> descriptorsets = {graphics_descriptorset};
@@ -208,38 +170,41 @@ int main(int argc, char** argv) {
   );
 
   // Initialize command buffers
+
   VkCommandBuffer drawcommand = gpipe->CreateCommandBuffer();
   VkCommandBuffer computecommand = cpipe->CreateCommandBuffer();
 
   auto t1 = std::chrono::high_resolution_clock::now();
   int N = 1000;
   for (int i = 0; i < N; i++) {
-    logicaldevice->SubmitCommandBuffer(graphics_queue, drawcommand);
+    logicaldevice->SubmitCommandBuffer(graphics_queue, drawcommand, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     vkQueueWaitIdle(graphics_queue);
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
 
   vkDeviceWaitIdle(logicaldevice->vk_handle);
-  depth_image->GetData(transfer_queue);
 
-/*
-  void* result = malloc(width*height*4);
-  result = depth_image->GetData(transfer_queue);
+  void* depth = malloc(width*height*4);
+  depth = depth_image->GetData(graphics_queue);
   uint8_t image[width * height];
   for (uint32_t i = 0; i < 4 * width * height; i += 4) {
     float px;
-    memcpy(&px, (uint8_t*)result + i, 4);
+    memcpy(&px, (uint8_t*)depth + i, 4);
     image[i/4] = floor((1.0 - px)*255);
   }
   stbi_write_png("bin/depth.png", width, height, 1, (void*)image, 0);
-  free(result);
-*/
-/*
-  void* result = malloc(width*height*4);
-  result = compute_image->GetData(transfer_queue);
-  stbi_write_png("bin/rendered.png", width, height, 4, result, 0);
-  free(result);*/
+  free(depth);
+
+  void* compute = malloc(width*height*4);
+  compute = compute_image->GetData(graphics_queue);
+  stbi_write_png("bin/computed.png", width, height, 4, compute, 0);
+  free(compute);
+
+  void* rendered = malloc(width*height*4);
+  rendered = color_image->GetData(graphics_queue);
+  stbi_write_png("bin/renderedd.png", width, height, 4, rendered, 0);
+  free(rendered);
 
   vkDeviceWaitIdle(logicaldevice->vk_handle);
 }

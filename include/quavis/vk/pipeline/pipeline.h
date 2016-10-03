@@ -48,6 +48,7 @@ namespace quavis {
     std::shared_ptr<LogicalDevice> logical_device_;
     std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets_;
     std::vector<std::shared_ptr<Shader>> shaders_;
+    std::vector<VkDescriptorSet> vk_descriptor_sets_;
 
     virtual VkPipeline InitializePipeline() = 0;
   };

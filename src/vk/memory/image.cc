@@ -113,7 +113,7 @@ namespace quavis {
     }
   }
 
-  void Image::SetData(void** data, VkQueue queue) {
+  void Image::SetData(void* data, VkQueue queue) {
     if (!this->staging_) {
       this->allocator_->SetData(this->vk_memory_, data, this->memory_size_);
     }
@@ -154,8 +154,6 @@ namespace quavis {
       return data;
     }
     else {
-      std::cout << "Here!" << std::endl;
-
       // define copy region
       VkImageSubresourceLayers subResource = {};
       subResource.aspectMask = this->aspect_flags_;

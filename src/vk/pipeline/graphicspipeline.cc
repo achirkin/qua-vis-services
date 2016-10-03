@@ -1,4 +1,5 @@
 #include "quavis/vk/pipeline/graphicspipeline.h"
+#include <iostream> // TODO: REMOVE
 
 namespace quavis {
   GraphicsPipeline::GraphicsPipeline(
@@ -23,7 +24,6 @@ namespace quavis {
     vkDestroyRenderPass(this->logical_device_->vk_handle, this->vk_render_pass_, nullptr);
     vkDestroyFramebuffer(this->logical_device_->vk_handle, this->vk_framebuffer_, nullptr);
     vkDestroyPipeline(this->logical_device_->vk_handle, this->vk_handle, nullptr);
-
   }
 
   std::vector<VkPipelineShaderStageCreateInfo> GraphicsPipeline::InitializeShaderInfos() {
@@ -340,7 +340,7 @@ namespace quavis {
 
     VkClearValue clear_values[] = {
       {0.0f, 0.0f, 0.0f, 1.0f},
-      {1.0f, 1.0f}
+      {1.0f, 0.0f}
     };
 
     VkRenderPassBeginInfo render_pass_info = {
@@ -376,19 +376,14 @@ namespace quavis {
       offsets // offsets
     );
 
-    std::vector<VkDescriptorSet> descriptor_sets;
-    for (uint32_t i = 0; i < this->descriptor_sets_.size(); i++) {
-      descriptor_sets.push_back(this->descriptor_sets_[i]->vk_handle);
-    }
-
     // uniform buffer object
     vkCmdBindDescriptorSets(
       command_buffer,
       VK_PIPELINE_BIND_POINT_GRAPHICS,
       this->vk_layout,
       0,
-      (uint32_t)descriptor_sets.size(),
-      descriptor_sets.data(),
+      (uint32_t)this->vk_descriptor_sets_.size(),
+      this->vk_descriptor_sets_.data(),
       0,
       nullptr
     );

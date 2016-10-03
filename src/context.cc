@@ -25,10 +25,8 @@ Context::Context() {
           0.0f,
           attrib.vertices[3 * index.vertex_index + 2]
       };
-      if (vertices_.size() < 10000) {
-        vertices_.push_back(vertex);
-        indices_.push_back(indices_.size());
-      }
+      vertices_.push_back(vertex);
+      indices_.push_back(indices_.size());
     }
   }
   this->InitializeVkInstance();

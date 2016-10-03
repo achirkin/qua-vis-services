@@ -59,7 +59,7 @@ namespace quavis {
     std::shared_ptr<Buffer> index_buffer_;
     std::shared_ptr<Image> color_image_;
     std::shared_ptr<Image> depth_image_;
-
+    
     VkRenderPass vk_render_pass_;
     VkFramebuffer vk_framebuffer_;
   };
