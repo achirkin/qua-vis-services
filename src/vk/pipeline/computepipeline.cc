@@ -1,9 +1,9 @@
 #include "quavis/vk/pipeline/computepipeline.h"
 
 namespace quavis {
-  ComputePipeline::ComputePipeline(std::shared_ptr<LogicalDevice> device,
-    std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets,
-    std::vector<std::shared_ptr<Shader>> shaders,
+  ComputePipeline::ComputePipeline(LogicalDevice* device,
+    std::vector<DescriptorSet*> descriptor_sets,
+    std::vector<Shader*> shaders,
     uint32_t workgroup_size_1,
     uint32_t workgroup_size_2,
     uint32_t workgroup_size_3) : Pipeline(device, descriptor_sets, shaders) {

@@ -3,8 +3,8 @@
 
 namespace quavis {
   Buffer::Buffer(
-    std::shared_ptr<LogicalDevice> logical_device,
-    std::shared_ptr<Allocator> allocator,
+    LogicalDevice* logical_device,
+    Allocator* allocator,
     uint32_t size,
     VkBufferUsageFlags usage_flags,
     bool staging

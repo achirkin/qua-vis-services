@@ -18,7 +18,7 @@ namespace quavis {
     * consisting all together of the specified number of images, buffers and
     * uniforms.
     */
-    DescriptorPool(std::shared_ptr<LogicalDevice> logical_device, uint32_t num_sets, uint32_t num_storage_images, uint32_t num_storage_buffers, uint32_t num_uniform_buffers);
+    DescriptorPool(LogicalDevice* logical_device, uint32_t num_sets, uint32_t num_storage_images, uint32_t num_storage_buffers, uint32_t num_uniform_buffers);
 
     /**
     * Destroys the command pool safely. Note that all dependent objects need to
@@ -32,7 +32,7 @@ namespace quavis {
     VkDescriptorPool vk_handle;
 
   private:
-    std::shared_ptr<LogicalDevice> logical_device_;
+    LogicalDevice* logical_device_;
   };
 }
 

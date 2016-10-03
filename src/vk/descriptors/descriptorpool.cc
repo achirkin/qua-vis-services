@@ -1,7 +1,7 @@
 #include "quavis/vk/descriptors/descriptorpool.h"
 
 namespace quavis {
-  DescriptorPool::DescriptorPool(std::shared_ptr<LogicalDevice> logical_device, uint32_t num_sets, uint32_t num_storage_images, uint32_t num_storage_buffers, uint32_t num_uniform_buffers) {
+  DescriptorPool::DescriptorPool(LogicalDevice* logical_device, uint32_t num_sets, uint32_t num_storage_images, uint32_t num_storage_buffers, uint32_t num_uniform_buffers) {
     this->logical_device_ = logical_device;
 
     VkDescriptorPoolSize uniforms = {};

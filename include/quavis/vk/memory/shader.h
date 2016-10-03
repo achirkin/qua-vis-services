@@ -15,7 +15,7 @@ namespace quavis {
     /**
     * Creates a new shader using the given SPIR-V code.
     */
-    Shader(std::shared_ptr<LogicalDevice> device, VkShaderStageFlagBits shader_stage, unsigned char* shader_code, uint32_t size);
+    Shader(LogicalDevice* device, VkShaderStageFlagBits shader_stage, unsigned char* shader_code, uint32_t size);
 
     /**
     * Destroys the shader module.
@@ -33,7 +33,7 @@ namespace quavis {
     VkShaderStageFlagBits vk_shader_stage;
 
   private:
-    std::shared_ptr<LogicalDevice> logical_device_;
+    LogicalDevice* logical_device_;
   };
 }
 

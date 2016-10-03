@@ -23,13 +23,13 @@ namespace quavis {
     /**
     * Calls the superclass constructor and stores the necessary buffers.
     */
-    GraphicsPipeline(std::shared_ptr<LogicalDevice> device,
-      std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets,
-      std::vector<std::shared_ptr<Shader>> shaders,
-      std::shared_ptr<Buffer> vertex_buffer,
-      std::shared_ptr<Buffer> index_buffer,
-      std::shared_ptr<Image> color_image,
-      std::shared_ptr<Image> depth_image);
+    GraphicsPipeline(LogicalDevice* device,
+      std::vector<DescriptorSet*> descriptor_sets,
+      std::vector<Shader*> shaders,
+      Buffer* vertex_buffer,
+      Buffer* index_buffer,
+      Image* color_image,
+      Image* depth_image);
 
     /**
      * Destroys the pipeline.
@@ -55,10 +55,10 @@ namespace quavis {
     VkRenderPass InitializeRenderPass();
     VkFramebuffer InitializeFramebuffer();
 
-    std::shared_ptr<Buffer> vertex_buffer_;
-    std::shared_ptr<Buffer> index_buffer_;
-    std::shared_ptr<Image> color_image_;
-    std::shared_ptr<Image> depth_image_;
+    Buffer* vertex_buffer_;
+    Buffer* index_buffer_;
+    Image* color_image_;
+    Image* depth_image_;
     
     VkRenderPass vk_render_pass_;
     VkFramebuffer vk_framebuffer_;

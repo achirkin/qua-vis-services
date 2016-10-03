@@ -1,7 +1,7 @@
 #include "quavis/vk/pipeline/pipeline.h"
 
 namespace quavis {
-  Pipeline::Pipeline(std::shared_ptr<LogicalDevice> logical_device, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, std::vector<std::shared_ptr<Shader>> shaders) {
+  Pipeline::Pipeline(LogicalDevice* logical_device, std::vector<DescriptorSet*> descriptor_sets, std::vector<Shader*> shaders) {
     this->logical_device_ = logical_device;
     this->descriptor_sets_ = descriptor_sets;
     this->shaders_ = shaders;

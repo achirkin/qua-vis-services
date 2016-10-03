@@ -71,29 +71,29 @@ int main(int argc, char** argv) {
 
   // create logical device with three queues
   quavis::Instance* instance = new quavis::Instance();
-  std::shared_ptr<quavis::PhysicalDevice> physicaldevice = std::make_shared<quavis::PhysicalDevice>(instance);
-  std::shared_ptr<quavis::LogicalDevice> logicaldevice = std::make_shared<quavis::LogicalDevice>(physicaldevice, 3);
-  std::shared_ptr<quavis::Allocator> allocator = std::make_shared<quavis::Allocator>(logicaldevice);
+  quavis::PhysicalDevice* physicaldevice = new quavis::PhysicalDevice(instance);
+  quavis::LogicalDevice* logicaldevice = new quavis::LogicalDevice(physicaldevice, 3);
+  quavis::Allocator* allocator = new quavis::Allocator(logicaldevice);
 
   VkQueue graphics_queue = logicaldevice->queues[0];
   VkQueue compute_queue = logicaldevice->queues[1];
   VkQueue transfer_queue = logicaldevice->queues[2];
 
   // Create buffers for vertices, indices and uniform buffer object
-  std::shared_ptr<quavis::Buffer> vertex_buffer = std::make_shared<quavis::Buffer>(logicaldevice, allocator, sizeof(vertices_[0])*vertices_.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-  std::shared_ptr<quavis::Buffer> index_buffer = std::make_shared<quavis::Buffer>(logicaldevice, allocator, sizeof(indices_[0])*indices_.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-  std::shared_ptr<quavis::Buffer> uniform_buffer = std::make_shared<quavis::Buffer>(logicaldevice, allocator, 32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+  quavis::Buffer* vertex_buffer = new quavis::Buffer(logicaldevice, allocator, sizeof(vertices_[0])*vertices_.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+  quavis::Buffer* index_buffer = new quavis::Buffer(logicaldevice, allocator, sizeof(indices_[0])*indices_.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+  quavis::Buffer* uniform_buffer = new quavis::Buffer(logicaldevice, allocator, 32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
   // Create shaders
-  std::shared_ptr<quavis::Shader> vert_shader = std::make_shared<quavis::Shader>(logicaldevice, VK_SHADER_STAGE_VERTEX_BIT, src_shaders_shader_vert_spv, src_shaders_shader_vert_spv_len);
-  std::shared_ptr<quavis::Shader> tesc_shader = std::make_shared<quavis::Shader>(logicaldevice, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, src_shaders_shader_tesc_spv, src_shaders_shader_tesc_spv_len);
-  std::shared_ptr<quavis::Shader> tese_shader = std::make_shared<quavis::Shader>(logicaldevice, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, src_shaders_shader_tese_spv, src_shaders_shader_tese_spv_len);
-  std::shared_ptr<quavis::Shader> geom_shader = std::make_shared<quavis::Shader>(logicaldevice, VK_SHADER_STAGE_GEOMETRY_BIT, src_shaders_shader_geom_spv, src_shaders_shader_geom_spv_len);
-  std::shared_ptr<quavis::Shader> frag_shader = std::make_shared<quavis::Shader>(logicaldevice, VK_SHADER_STAGE_FRAGMENT_BIT, src_shaders_shader_frag_spv, src_shaders_shader_frag_spv_len);
-  std::shared_ptr<quavis::Shader> comp_shader = std::make_shared<quavis::Shader>(logicaldevice, VK_SHADER_STAGE_COMPUTE_BIT, src_shaders_shader_comp_spv, src_shaders_shader_comp_spv_len);
+  quavis::Shader* vert_shader = new quavis::Shader(logicaldevice, VK_SHADER_STAGE_VERTEX_BIT, src_shaders_shader_vert_spv, src_shaders_shader_vert_spv_len);
+  quavis::Shader* tesc_shader = new quavis::Shader(logicaldevice, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, src_shaders_shader_tesc_spv, src_shaders_shader_tesc_spv_len);
+  quavis::Shader* tese_shader = new quavis::Shader(logicaldevice, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, src_shaders_shader_tese_spv, src_shaders_shader_tese_spv_len);
+  quavis::Shader* geom_shader = new quavis::Shader(logicaldevice, VK_SHADER_STAGE_GEOMETRY_BIT, src_shaders_shader_geom_spv, src_shaders_shader_geom_spv_len);
+  quavis::Shader* frag_shader = new quavis::Shader(logicaldevice, VK_SHADER_STAGE_FRAGMENT_BIT, src_shaders_shader_frag_spv, src_shaders_shader_frag_spv_len);
+  quavis::Shader* comp_shader = new quavis::Shader(logicaldevice, VK_SHADER_STAGE_COMPUTE_BIT, src_shaders_shader_comp_spv, src_shaders_shader_comp_spv_len);
 
   // create color image, depth image and compute shader image
-  std::shared_ptr<quavis::Image> color_image = std::make_shared<quavis::Image>(
+  quavis::Image* color_image = new quavis::Image(
     logicaldevice,
     allocator,
     graphics_queue,
@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_ASPECT_COLOR_BIT);
 
-  std::shared_ptr<quavis::Image> compute_image = std::make_shared<quavis::Image>(
+  quavis::Image* compute_image = new quavis::Image(
     logicaldevice,
     allocator,
     graphics_queue,
@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
     VK_IMAGE_LAYOUT_GENERAL,
     VK_IMAGE_ASPECT_COLOR_BIT);
 
-  std::shared_ptr<quavis::Image> depth_image = std::make_shared<quavis::Image>(
+  quavis::Image* depth_image = new quavis::Image(
     logicaldevice,
     allocator,
     graphics_queue,
@@ -133,9 +133,9 @@ int main(int argc, char** argv) {
   vkQueueWaitIdle(transfer_queue);
 
   // Create DescriptorSets
-  std::shared_ptr<quavis::DescriptorPool> descriptorpool = std::make_shared<quavis::DescriptorPool>(logicaldevice, 2, 2, 0, 1);
-  std::shared_ptr<quavis::DescriptorSet> graphics_descriptorset = std::make_shared<quavis::DescriptorSet>(logicaldevice, descriptorpool, 0,0,1);
-  std::shared_ptr<quavis::DescriptorSet> compute_descriptorset = std::make_shared<quavis::DescriptorSet>(logicaldevice, descriptorpool, 2,0,0);
+  quavis::DescriptorPool* descriptorpool = new quavis::DescriptorPool(logicaldevice, 2, 2, 0, 1);
+  quavis::DescriptorSet* graphics_descriptorset = new quavis::DescriptorSet(logicaldevice, descriptorpool, 0,0,1);
+  quavis::DescriptorSet* compute_descriptorset = new quavis::DescriptorSet(logicaldevice, descriptorpool, 2,0,0);
 
   graphics_descriptorset->AddUniformBuffer(0, uniform_buffer, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT);
   compute_descriptorset->AddStorageImage(0, color_image, VK_SHADER_STAGE_COMPUTE_BIT);
@@ -145,9 +145,9 @@ int main(int argc, char** argv) {
   compute_descriptorset->Create();
 
   // Create GraphicsPipeline
-  std::vector<std::shared_ptr<quavis::DescriptorSet>> descriptorsets = {graphics_descriptorset};
-  std::vector<std::shared_ptr<quavis::Shader>> shaders = {vert_shader, tesc_shader, tese_shader, geom_shader, frag_shader};
-  std::shared_ptr<quavis::GraphicsPipeline> gpipe = std::make_shared<quavis::GraphicsPipeline>(
+  std::vector<quavis::DescriptorSet*> descriptorsets = {graphics_descriptorset};
+  std::vector<quavis::Shader*> shaders = {vert_shader, tesc_shader, tese_shader, geom_shader, frag_shader};
+  quavis::GraphicsPipeline* gpipe = new quavis::GraphicsPipeline(
     logicaldevice,
     descriptorsets,
     shaders,
@@ -158,9 +158,9 @@ int main(int argc, char** argv) {
   );
 
   // Create ComputePipeline
-  std::vector<std::shared_ptr<quavis::DescriptorSet>> comp_descriptorsets = {compute_descriptorset};
-  std::vector<std::shared_ptr<quavis::Shader>> comp_shaders = {comp_shader};
-  std::shared_ptr<quavis::ComputePipeline> cpipe = std::make_shared<quavis::ComputePipeline>(
+  std::vector<quavis::DescriptorSet*> comp_descriptorsets = {compute_descriptorset};
+  std::vector<quavis::Shader*> comp_shaders = {comp_shader};
+  quavis::ComputePipeline* cpipe = new quavis::ComputePipeline(
     logicaldevice,
     comp_descriptorsets,
     comp_shaders,
@@ -179,6 +179,8 @@ int main(int argc, char** argv) {
   for (int i = 0; i < N; i++) {
     logicaldevice->SubmitCommandBuffer(graphics_queue, drawcommand, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
     vkQueueWaitIdle(graphics_queue);
+    logicaldevice->SubmitCommandBuffer(compute_queue, computecommand);
+    vkQueueWaitIdle(compute_queue);
   }
   auto t2 = std::chrono::high_resolution_clock::now();
   std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;

@@ -4,7 +4,7 @@
 
 namespace quavis {
 
-  LogicalDevice::LogicalDevice(std::shared_ptr<PhysicalDevice> physical_device, uint32_t num_queues)
+  LogicalDevice::LogicalDevice(PhysicalDevice* physical_device, uint32_t num_queues)
   {
     this->physical_device = physical_device;
 

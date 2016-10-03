@@ -3,7 +3,7 @@
 #include <iostream> //TODO
 
 namespace quavis {
-  Allocator::Allocator(std::shared_ptr<LogicalDevice> logical_device) {
+  Allocator::Allocator(LogicalDevice* logical_device) {
     this->logical_device_ = logical_device;
   }
 

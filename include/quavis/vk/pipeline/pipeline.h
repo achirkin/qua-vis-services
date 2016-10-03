@@ -22,7 +22,7 @@ namespace quavis {
     * shaders as protected attributes for command buffer creations in a
     * subclass.
     */
-    Pipeline(std::shared_ptr<LogicalDevice> logical_device, std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets, std::vector<std::shared_ptr<Shader>> shaders);
+    Pipeline(LogicalDevice* logical_device, std::vector<DescriptorSet*> descriptor_sets, std::vector<Shader*> shaders);
 
     /**
     * Destroys the pipeline object.
@@ -45,9 +45,9 @@ namespace quavis {
     VkPipelineLayout vk_layout;
 
   protected:
-    std::shared_ptr<LogicalDevice> logical_device_;
-    std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets_;
-    std::vector<std::shared_ptr<Shader>> shaders_;
+    LogicalDevice* logical_device_;
+    std::vector<DescriptorSet*> descriptor_sets_;
+    std::vector<Shader*> shaders_;
     std::vector<VkDescriptorSet> vk_descriptor_sets_;
 
     virtual VkPipeline InitializePipeline() = 0;

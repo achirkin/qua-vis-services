@@ -3,8 +3,8 @@
 
 namespace quavis {
   Image::Image(
-    std::shared_ptr<LogicalDevice> logical_device,
-    std::shared_ptr<Allocator> allocator,
+    LogicalDevice* logical_device,
+    Allocator* allocator,
     VkQueue queue,
     uint32_t width,
     uint32_t height,

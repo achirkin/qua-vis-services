@@ -20,9 +20,9 @@ namespace quavis {
     /**
     * Calls the super class constructor.
     */
-    ComputePipeline(std::shared_ptr<LogicalDevice> device,
-      std::vector<std::shared_ptr<DescriptorSet>> descriptor_sets,
-      std::vector<std::shared_ptr<Shader>> shaders,
+    ComputePipeline(LogicalDevice* device,
+      std::vector<DescriptorSet*> descriptor_sets,
+      std::vector<Shader*> shaders,
       uint32_t workgroup_size_1 = 1,
       uint32_t workgroup_size_2 = 1,
       uint32_t workgroup_size_3 = 1);

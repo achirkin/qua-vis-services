@@ -2,8 +2,10 @@
 #include <iostream>
 
 namespace quavis {
-  DescriptorSet::DescriptorSet(std::shared_ptr<LogicalDevice> device, std::shared_ptr<DescriptorPool> pool, uint32_t num_storage_images, uint32_t num_storage_buffers, uint32_t num_uniform_buffers)
-    : buffer_infos_(num_storage_buffers), image_infos_(num_storage_images), uniform_infos_(num_uniform_buffers) {
+  DescriptorSet::DescriptorSet(LogicalDevice* device, DescriptorPool* pool, uint32_t num_storage_images, uint32_t num_storage_buffers, uint32_t num_uniform_buffers) {
+    this->buffer_infos_.reserve(num_storage_buffers);
+    this->image_infos_.reserve(num_storage_images);
+    this->uniform_infos_.reserve(num_uniform_buffers);
     this->logical_device_ = device;
     this->descriptor_pool_ = pool;
   }
@@ -12,7 +14,7 @@ namespace quavis {
     vkDestroyDescriptorSetLayout(this->logical_device_->vk_handle, this->vk_layout, nullptr);
   }
 
-  uint32_t DescriptorSet::AddStorageImage(uint32_t index, std::shared_ptr<Image> image, VkShaderStageFlags shader_stages) {
+  uint32_t DescriptorSet::AddStorageImage(uint32_t index, Image* image, VkShaderStageFlags shader_stages) {
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = this->layout_bindings_.size();
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
@@ -43,7 +45,7 @@ namespace quavis {
     return this->layout_bindings_.size() - 1;
   }
 
-  uint32_t DescriptorSet::AddUniformBuffer(uint32_t index, std::shared_ptr<Buffer> buffer, VkShaderStageFlags shader_stages) {
+  uint32_t DescriptorSet::AddUniformBuffer(uint32_t index, Buffer* buffer, VkShaderStageFlags shader_stages) {
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = this->layout_bindings_.size();
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -74,7 +76,7 @@ namespace quavis {
     return this->layout_bindings_.size() - 1;
   }
 
-  uint32_t DescriptorSet::AddStorageBuffer(uint32_t index, std::shared_ptr<Buffer> buffer, VkShaderStageFlags shader_stages) {
+  uint32_t DescriptorSet::AddStorageBuffer(uint32_t index, Buffer* buffer, VkShaderStageFlags shader_stages) {
     VkDescriptorSetLayoutBinding layout_binding = {};
     layout_binding.binding = this->layout_bindings_.size();
     layout_binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;

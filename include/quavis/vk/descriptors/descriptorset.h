@@ -26,7 +26,7 @@ namespace quavis {
     /**
     * Creates a new DescriptorSet object for the given descriptor pool.
     */
-    DescriptorSet(std::shared_ptr<LogicalDevice> device, std::shared_ptr<DescriptorPool> pool, uint32_t num_storage_images, uint32_t num_storage_buffers, uint32_t num_uniform_buffers);
+    DescriptorSet(LogicalDevice* device, DescriptorPool* pool, uint32_t num_storage_images, uint32_t num_storage_buffers, uint32_t num_uniform_buffers);
 
     /**
     * Destroys the descriptor set. Note that all other dependent objects need
@@ -39,21 +39,21 @@ namespace quavis {
     * The method should *never* be called after the Create() method has been
     * invoked.
     */
-    uint32_t AddStorageImage(uint32_t index, std::shared_ptr<Image> image, VkShaderStageFlags shader_stages);
+    uint32_t AddStorageImage(uint32_t index, Image* image, VkShaderStageFlags shader_stages);
 
     /**
     * Adds a storage buffer and returns its binding index.
     * The method should *never* be called after the Create() method has been
     * invoked.
     */
-    uint32_t AddStorageBuffer(uint32_t index, std::shared_ptr<Buffer> buffer, VkShaderStageFlags shader_stages);
+    uint32_t AddStorageBuffer(uint32_t index, Buffer* buffer, VkShaderStageFlags shader_stages);
 
     /**
     * Adds a uniform buffer and returns its binding index.
     * The method should *never* be called after the Create() method has been
     * invoked.
     */
-    uint32_t AddUniformBuffer(uint32_t index, std::shared_ptr<Buffer> buffer, VkShaderStageFlags shader_stages);
+    uint32_t AddUniformBuffer(uint32_t index, Buffer* buffer, VkShaderStageFlags shader_stages);
 
     /**
     * Creates the Vulkan object for this descriptor set
@@ -79,14 +79,14 @@ namespace quavis {
     VkDescriptorSetLayout vk_layout;
 
   private:
-    std::shared_ptr<LogicalDevice> logical_device_;
-    std::shared_ptr<DescriptorPool> descriptor_pool_;
+    LogicalDevice* logical_device_;
+    DescriptorPool* descriptor_pool_;
 
-    std::vector<VkDescriptorSetLayoutBinding> layout_bindings_;
-    std::vector<VkWriteDescriptorSet> write_sets_;
-    std::vector<VkDescriptorBufferInfo> buffer_infos_;
-    std::vector<VkDescriptorBufferInfo> uniform_infos_;
-    std::vector<VkDescriptorImageInfo> image_infos_;
+    std::vector<VkDescriptorSetLayoutBinding> layout_bindings_ = {};
+    std::vector<VkWriteDescriptorSet> write_sets_ = {};
+    std::vector<VkDescriptorBufferInfo> buffer_infos_ = {};
+    std::vector<VkDescriptorBufferInfo> uniform_infos_ = {};
+    std::vector<VkDescriptorImageInfo> image_infos_ = {};
   };
 }
 

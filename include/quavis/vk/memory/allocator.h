@@ -24,7 +24,7 @@ namespace quavis {
     * The class furthermore provides methods for sending to and retreiving from
     * buffers.
     */
-    Allocator(std::shared_ptr<LogicalDevice> logical_device);
+    Allocator(LogicalDevice* logical_device);
 
     /**
     * Destroys the allocator object and all memory that has been allocated by
@@ -53,7 +53,7 @@ namespace quavis {
   private:
     uint32_t GetHeap(VkMemoryPropertyFlags flags);
 
-    std::shared_ptr<LogicalDevice> logical_device_;
+    LogicalDevice* logical_device_;
 
     std::vector<VkDeviceMemory> allocated_memory_;
   };
