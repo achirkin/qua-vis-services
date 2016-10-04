@@ -24,6 +24,7 @@ namespace quavis {
     vkDestroyRenderPass(this->logical_device_->vk_handle, this->vk_render_pass_, nullptr);
     vkDestroyFramebuffer(this->logical_device_->vk_handle, this->vk_framebuffer_, nullptr);
     vkDestroyPipeline(this->logical_device_->vk_handle, this->vk_handle, nullptr);
+    vkDestroyPipelineLayout(this->logical_device_->vk_handle, this->vk_layout, nullptr);
   }
 
   std::vector<VkPipelineShaderStageCreateInfo> GraphicsPipeline::InitializeShaderInfos() {

@@ -24,10 +24,7 @@ namespace quavis {
     */
     Pipeline(LogicalDevice* logical_device, std::vector<DescriptorSet*> descriptor_sets, std::vector<Shader*> shaders);
 
-    /**
-    * Destroys the pipeline object.
-    */
-    ~Pipeline();
+    virtual ~Pipeline() {};
 
     /**
     * Creates the command buffer to run this pipeline.

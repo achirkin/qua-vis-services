@@ -13,7 +13,7 @@ namespace quavis {
 
   ComputePipeline::~ComputePipeline() {
     vkDestroyPipeline(this->logical_device_->vk_handle, this->vk_handle, nullptr);
-
+    vkDestroyPipelineLayout(this->logical_device_->vk_handle, this->vk_layout, nullptr);
   }
 
   std::vector<VkPipelineShaderStageCreateInfo> ComputePipeline::InitializeShaderInfos() {

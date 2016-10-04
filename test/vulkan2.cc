@@ -21,8 +21,34 @@
 #include <iostream>
 #include <chrono>
 
-std::vector<quavis::Vertex> vertices_ = {};
-std::vector<uint32_t> indices_ = {};
+std::vector<quavis::Vertex> vertices_ = {
+  {{-1.0, -1.0,  1.0}, {255,255,255}},
+  {{1.0, -1.0,  1.0}, {255,255,255}},
+  {{1.0,  1.0,  1.0}, {255,255,255}},
+  {{-1.0,  1.0,  1.0}, {255,255,255}},
+  // back
+  {{-1.0, -1.0, -1.0}, {255,255,255}},
+  {{1.0, -1.0, -1.0}, {255,255,255}},
+  {{1.0,  1.0, -1.0}, {255,255,255}},
+  {{-1.0,  1.0, -1.0}, {255,255,255}}
+};
+
+std::vector<uint32_t> indices_ = {
+  1, 5, 6,
+  6, 2, 1,
+  // back
+  7, 6, 5,
+  5, 4, 7,
+  // bottom
+  4, 0, 3,
+  3, 7, 4,
+  // left
+  4, 5, 1,
+  1, 0, 4,
+  // right
+  3, 2, 6,
+  6, 7, 3,
+};
 
 uint32_t width = 2048;
 uint32_t height = 1024;
@@ -40,7 +66,7 @@ UniformBufferObject uniform_ = {
 };
 
 int main(int argc, char** argv) {
-  tinyobj::attrib_t attrib;
+  /*tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
   std::string err;
@@ -61,12 +87,10 @@ int main(int argc, char** argv) {
           0.0f,
           attrib.vertices[3 * index.vertex_index + 2]
       };
-      if (vertices_.size() < 10) {
-        vertices_.push_back(vertex);
-        indices_.push_back(indices_.size());
-      }
+      vertices_.push_back(vertex);
+      indices_.push_back(indices_.size());
     }
-  }
+  }*/
 
   // create logical device with three queues
   quavis::Instance* instance = new quavis::Instance();
@@ -102,7 +126,6 @@ int main(int argc, char** argv) {
     VK_FORMAT_R8G8B8A8_UNORM,
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_ASPECT_COLOR_BIT);
-  vkQueueWaitIdle(transfer_queue);
 
   quavis::Image* compute_image = new quavis::Image(
     logicaldevice,
@@ -114,7 +137,6 @@ int main(int argc, char** argv) {
     VK_FORMAT_R8G8B8A8_UNORM,
     VK_IMAGE_LAYOUT_GENERAL,
     VK_IMAGE_ASPECT_COLOR_BIT);
-  vkQueueWaitIdle(transfer_queue);
 
   quavis::Image* depth_image = new quavis::Image(
     logicaldevice,
@@ -126,29 +148,19 @@ int main(int argc, char** argv) {
     VK_FORMAT_D32_SFLOAT,
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     VK_IMAGE_ASPECT_DEPTH_BIT);
-  vkQueueWaitIdle(transfer_queue);
 
   // Upload data to Buffers
   vertex_buffer->SetData((void*)vertices_.data(), transfer_queue);
-  vkQueueWaitIdle(transfer_queue);
   index_buffer->SetData((void*)indices_.data(), transfer_queue);
-  vkQueueWaitIdle(transfer_queue);
   uniform_buffer->SetData((void*)&uniform_, transfer_queue);
-  vkQueueWaitIdle(transfer_queue);
 
   // Create DescriptorSets
   quavis::DescriptorPool* descriptorpool = new quavis::DescriptorPool(logicaldevice, 2, 2, 0, 1);
-  quavis::DescriptorSet* graphics_descriptorset = new quavis::DescriptorSet(logicaldevice, descriptorpool, 0,0,1);
-  quavis::DescriptorSet* compute_descriptorset = new quavis::DescriptorSet(logicaldevice, descriptorpool, 2,0,0);
-
-  graphics_descriptorset->AddUniformBuffer(0, uniform_buffer, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT);
-  compute_descriptorset->AddStorageImage(0, color_image, VK_SHADER_STAGE_COMPUTE_BIT);
-  compute_descriptorset->AddStorageImage(1, compute_image, VK_SHADER_STAGE_COMPUTE_BIT);
-
-  graphics_descriptorset->Create();
-  compute_descriptorset->Create();
 
   // Create GraphicsPipeline
+  quavis::DescriptorSet* graphics_descriptorset = new quavis::DescriptorSet(logicaldevice, descriptorpool, 0,0,1);
+  graphics_descriptorset->AddUniformBuffer(0, uniform_buffer, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT);
+  graphics_descriptorset->Create();
   std::vector<quavis::DescriptorSet*> descriptorsets = {graphics_descriptorset};
   std::vector<quavis::Shader*> shaders = {vert_shader, tesc_shader, tese_shader, geom_shader, frag_shader};
   quavis::GraphicsPipeline* gpipe = new quavis::GraphicsPipeline(
@@ -162,6 +174,10 @@ int main(int argc, char** argv) {
   );
 
   // Create ComputePipeline
+  quavis::DescriptorSet* compute_descriptorset = new quavis::DescriptorSet(logicaldevice, descriptorpool, 2,0,0);
+  compute_descriptorset->AddStorageImage(0, color_image, VK_SHADER_STAGE_COMPUTE_BIT);
+  compute_descriptorset->AddStorageImage(1, compute_image, VK_SHADER_STAGE_COMPUTE_BIT);
+  compute_descriptorset->Create();
   std::vector<quavis::DescriptorSet*> comp_descriptorsets = {compute_descriptorset};
   std::vector<quavis::Shader*> comp_shaders = {comp_shader};
   quavis::ComputePipeline* cpipe = new quavis::ComputePipeline(
@@ -174,11 +190,8 @@ int main(int argc, char** argv) {
   );
 
   // Initialize command buffers
-
   VkCommandBuffer drawcommand = gpipe->CreateCommandBuffer();
   VkCommandBuffer computecommand = cpipe->CreateCommandBuffer();
-
-  vkDeviceWaitIdle(logicaldevice->vk_handle);
 
   auto t1 = std::chrono::high_resolution_clock::now();
   int N = 1000;
@@ -215,4 +228,27 @@ int main(int argc, char** argv) {
   free(rendered);
 
   vkDeviceWaitIdle(logicaldevice->vk_handle);
+
+  delete allocator;
+  std::cout << "here" << std::endl;
+  delete cpipe;
+  delete compute_descriptorset;
+  delete gpipe;
+  delete graphics_descriptorset;
+  delete descriptorpool;
+  delete depth_image;
+  delete compute_image;
+  delete color_image;
+  delete comp_shader;
+  delete frag_shader;
+  delete geom_shader;
+  delete tese_shader;
+  delete tesc_shader;
+  delete vert_shader;
+  delete uniform_buffer;
+  delete index_buffer;
+  delete vertex_buffer;
+  delete logicaldevice;
+  delete physicaldevice;
+  delete instance;
 }

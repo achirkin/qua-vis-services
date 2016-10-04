@@ -31,6 +31,7 @@ namespace quavis {
     }
     // allocate memory
     VkDeviceMemory memory;
+    this->allocated_memory_.push_back(memory);
 
     VkMemoryAllocateInfo allocation_info = {
       VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO, // sType
@@ -43,12 +44,10 @@ namespace quavis {
       this->logical_device_->vk_handle, // the logical devcie
       &allocation_info, // the allocation info
       nullptr, // allocation callback
-      &memory // allocated memory for memory object
+      &this->allocated_memory_.back() // allocated memory for memory object
     );
 
-    // store memory and return it
-    this->allocated_memory_.push_back(memory);
-    return memory;
+    return this->allocated_memory_.back();
   }
 
   void Allocator::SetData(VkDeviceMemory destination_memory, void* data, uint32_t size) {

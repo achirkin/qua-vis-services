@@ -31,8 +31,4 @@ namespace quavis {
       &this->vk_layout
     );
   }
-
-  Pipeline::~Pipeline() {
-    vkDestroyPipelineLayout(this->logical_device_->vk_handle, this->vk_layout, nullptr);
-  }
 }
