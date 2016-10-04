@@ -6,9 +6,20 @@
 #include <math.h>
 
 namespace geojson {
+  /**
+   * 2D vector functions
+   */
   typedef struct vec2 {
     float x;
     float y;
+
+    vec2 operator*(const float scalar) {
+      return {x*scalar, y*scalar};
+    }
+
+    vec2 operator/(const float scalar) {
+      return {x/scalar, y/scalar};
+    }
 
     vec2 operator-(const vec2 other) {
       return {x-other.x, y-other.y};
@@ -22,12 +33,8 @@ namespace geojson {
       return x*other.x + y*other.y;
     }
 
-    vec2 operator*(const float scalar) {
-      return {x*scalar, y*scalar};
-    }
-
-    vec2 operator/(const float scalar) {
-      return {x/scalar, y/scalar};
+    bool operator==(const vec2 other) {
+      return x==other.x && y==other.y;
     }
 
     operator std::string() const {
@@ -39,10 +46,25 @@ namespace geojson {
     return sqrt(p*p);
   }
 
+  float ccw(vec2 p1, vec2 p2, vec2 p3) {
+    return (p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x);
+  }
+
+  /**
+   * 3D Vector functions
+   */
   typedef struct vec3 {
     float x;
     float y;
     float z;
+
+    vec3 operator*(const float scalar) {
+      return {x*scalar, y*scalar, z*scalar};
+    }
+
+    vec3 operator/(const float scalar) {
+      return {x/scalar, y/scalar, z/scalar};
+    }
 
     vec3 operator-(const vec3 other) {
       return {x-other.x, y-other.y, z-other.z};
@@ -56,12 +78,8 @@ namespace geojson {
       return x*other.x + y*other.y + z*other.z;
     }
 
-    vec3 operator*(const float scalar) {
-      return {x*scalar, y*scalar, z*scalar};
-    }
-
-    vec3 operator/(const float scalar) {
-      return {x/scalar, y/scalar, z/scalar};
+    bool operator==(const vec3 other) {
+      return x==other.x && y==other.y && z == other.z;
     }
 
     operator std::string() const {
@@ -115,10 +133,72 @@ namespace geojson {
     return b;
   }
 
+  bool intriangle2d(vec2 p, vec2 t1, vec2 t2, vec2 t3) {
+    float b1, b2, b3;
+    b1 = ccw(p, t1, t2) < 0;
+    b2 = ccw(p, t2, t3) < 0;
+    b3 = ccw(p, t3, t1) < 0;
+
+    return ((b1 == b2) && (b2 == b3));
+  }
+
+  std::vector<vec2> triangulate2d(std::vector<vec2> points) {
+    // TODO: Assumes a simple polygon
+    std::vector<vec2> triangles = {};
+    std::vector<vec2> unmarked { points.begin(), points.end() };
+
+    vec2 p0, p1, p2;
+    int index1 = 0;
+    int index2 = 1;
+    int index3 = 2;
+    while (unmarked.size() > 3) {
+      p0 = unmarked[index1];
+      p1 = unmarked[index2];
+      p2 = unmarked[index3];
+
+      bool found_removable_ear = true;
+      // check if we found a counter-clockwise triangle
+      if (ccw(p0, p1, p2) > 0) {
+        // check if triangle is an ear
+        for (vec2 pi : unmarked) {
+          if (pi == p0 || pi == p1 || pi == p2) continue;
+
+          if (intriangle2d(pi, p0, p1, p2)) {
+            found_removable_ear = false;
+            break;
+          }
+        }
+      }
+
+      if (found_removable_ear) {
+        // We found a triangle
+        triangles.push_back(p0);
+        triangles.push_back(p1);
+        triangles.push_back(p2);
+
+        std::cout << "Found at " << index2 << std::endl;
+
+        // Now remove p1 and adjust the indices
+        unmarked.erase(unmarked.begin() + index2);
+      }
+      else {
+        index1 = index2;
+        index2 = index3;
+        index3 = ++index3 % unmarked.size();
+        if (++index3 >= unmarked.size()) {
+          index3 = 0;
+        }
+      }
+    }
+    triangles.insert(triangles.end(), unmarked.begin(), unmarked.end());
+
+    return triangles;
+  }
+
   std::vector<vec3> triangulate(std::vector<vec3> points) {
     std::vector<vec3> basis = gramschmidt(points);
-    std::vector<vec2> xy = to2d(points, basis, points[0]);
-    std::vector<vec3> xyz = to3d(xy, basis, points[0]);
+    std::vector<vec2> points2d = to2d(points, basis, points[0]);
+    std::vector<vec3> points3d = to3d(points2d, basis, points[0]);
 
     std::cout << "Original:" << std::endl;
     for (geojson::vec3 p : points) {
@@ -131,12 +211,18 @@ namespace geojson {
     };
 
     std::cout << "2D:" << std::endl;
-    for (geojson::vec2 p : xy) {
+    for (geojson::vec2 p : points2d) {
       std::cout << std::string(p) << std::endl;
     };
 
     std::cout << "3D:" << std::endl;
-    for (geojson::vec3 p : xyz) {
+    for (geojson::vec3 p : points3d) {
+      std::cout << std::string(p) << std::endl;
+    };
+
+    std::vector<vec2> triangles2d = triangulate2d(points2d);
+    std::cout << "Triangles 2D:" << std::endl;
+    for (geojson::vec2 p : triangles2d) {
       std::cout << std::string(p) << std::endl;
     };
 
