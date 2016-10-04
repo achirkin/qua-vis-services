@@ -3,11 +3,20 @@
 
 #define EPS 0.00001
 
+#include <float.h> // FLT_MIN
+#include <math.h> // sqrt
+
 #include <vector>
-#include <iostream>
-#include <math.h>
+#include <numeric> // iota()
+#include <algorithm> // sort()
+#include <iostream> // TODO: Remove
 
 namespace geojson {
+  float abs(float x) {
+    return x > 0 ? x : -x;
+  }
+
+
   /**
    * 2D vector functions
    */
@@ -81,7 +90,7 @@ namespace geojson {
     }
 
     bool operator==(const vec3 other) {
-      return x==other.x && y==other.y && z == other.z;
+      return abs(x-other.x) < EPS && abs(y-other.y) < EPS && abs(z-other.z) < EPS;
     }
 
     operator std::string() const {
@@ -91,10 +100,6 @@ namespace geojson {
 
   float abs(vec3 p) {
     return sqrt(p*p);
-  }
-
-  float abs(float x) {
-    return x > 0 ? x : -x;
   }
 
   /**
@@ -150,8 +155,112 @@ namespace geojson {
     b2 = ccw2 < 0;
     b3 = ccw3 < 0;
 
-
     return ((b1 == b2) && (b2 == b3));
+  }
+
+  /**
+   * Augments the polygon with edges to create a suitible structure to use the
+   * ear-clipping algorithm
+   */
+  std::vector<vec2> augment(std::vector<vec2> points) {
+    // divide the point sequence into one outer polygon and multiple inner polygons (holes)
+    std::vector<vec2> outer_polygon = {};
+    std::vector<std::vector<vec2>> inner_polygons = {};
+    size_t polygon_index = 0;
+    for (size_t i = 1; i < points.size(); i++) {
+      if (points[i] == points[polygon_index]) {
+        if (polygon_index == 0) {
+          outer_polygon = std::vector<vec2> {points.begin()+polygon_index, points.begin()+i};
+        }
+        else {
+          inner_polygons.push_back(std::vector<vec2> {points.begin()+polygon_index, points.begin()+i});
+        }
+        polygon_index = ++i;
+      }
+    }
+
+    // for each inner polygon, sort its components by x and rotate it such
+    // that the rightmost vertex is at the first place
+    std::vector<size_t> rightmost_vertex(inner_polygons.size());
+    for (size_t i = 0; i < inner_polygons.size(); i++) {
+
+      std::cout << "Inner Ring " << i << std::endl;
+      for (size_t j = 0; j < inner_polygons[i].size(); j++) {
+        std::cout << std::string(inner_polygons[i][j]) << std::endl;
+      }
+
+      size_t max_index = 0;
+      float max_x = FLT_MIN;
+      for (size_t j = 0; j < inner_polygons[i].size(); j++) {
+        if (inner_polygons[i][j].x > max_x) {
+          max_x = inner_polygons[i][j].x;
+          max_index = j;
+        }
+      }
+
+      std::cout << "Maximum Index " << max_index << std::endl;
+
+      std::rotate(
+        inner_polygons[i].begin(),
+        inner_polygons[i].begin()+max_index,
+        inner_polygons[i].end()
+      );
+
+
+      std::cout << "Inner Ring Rotated " << i << std::endl;
+      for (size_t j = 0; j < inner_polygons[i].size(); j++) {
+        std::cout << std::string(inner_polygons[i][j]) << std::endl;
+      }
+    }
+    // sort the inner polygons by their maximum x value (descending)
+    std::vector<int> inner_order(inner_polygons.size());
+    std::iota(inner_order.begin(), inner_order.end(), 0);
+    std::sort(
+      inner_order.begin(),
+      inner_order.end(),
+      [&inner_polygons](size_t i, size_t j) -> bool {
+        return inner_polygons[i][0].x > inner_polygons[j][0].x;
+      }
+    );
+
+    // combine outer polygon P0 with first hole H0 to P1
+    // compine P1 with second hole H1 to P2
+    // continue until all holes are contained in P
+    std::vector<vec2> augmented = outer_polygon;
+    for (int i : inner_order) {
+      vec2 inner_point = inner_polygons[i][0];
+
+      // find the closest point on the outer polygon
+      // that is to the right of the inner point
+      // TODO: This can be buggy for certain cases (e.g. a spiral)
+      size_t closest_index = 0;
+      float min_distance = FLT_MAX;
+      for (size_t j = 0; j < augmented.size(); j++) {
+        if (augmented[j].x < inner_point.x) continue;
+
+        float distance = abs(inner_point - augmented[j]);
+        std::cout << std::string(augmented[j]) << " : " << distance << std::endl;
+        if (distance < min_distance) {
+          min_distance = distance;
+          closest_index = j;
+        }
+      }
+
+      std::cout << "Rightmost Inner point:" << std::string(inner_point) << std::endl;
+      std::cout << "Closest Outer point:" << std::string(augmented[closest_index]) << std::endl;
+
+      // augment the polygon
+      augmented.insert(augmented.begin()+closest_index+1, inner_polygons[i].begin(), inner_polygons[i].end());
+      augmented.insert(augmented.begin()+closest_index+1+inner_polygons[i].size(), inner_polygons[i][0]);
+      augmented.insert(augmented.begin()+closest_index+1+inner_polygons[i].size()+1, augmented[closest_index]);
+
+      std::cout << "Augmented:" << std::endl;
+      for (size_t j = 0; j < augmented.size(); j++) {
+        std::cout << std::string(augmented[j]) << std::endl;
+      }
+    }
+
+    return augmented;
   }
 
   std::vector<vec2> triangulate2d(std::vector<vec2> points) {
@@ -169,7 +278,7 @@ namespace geojson {
       p2 = unmarked[index3];
 
       bool found_removable_ear = false;
-      // check if we found a counter-clockwise triangles
+      // check if we found a counter-clockwise triangle
       if (ccw(p0, p1, p2) > 0) {
         found_removable_ear = true;
         // check if triangle is an ear
@@ -183,13 +292,13 @@ namespace geojson {
         }
       }
 
+      // If it was an ear, we clip it
       if (found_removable_ear) {
-        // We found a triangle
         triangles.push_back(p0);
         triangles.push_back(p1);
         triangles.push_back(p2);
 
-        // Now remove p1 and adjust the indices
+        // Now remove the 2nd vertex of this ear and adjust the indices
         unmarked.erase(unmarked.begin() + index2);
         index1 %= unmarked.size();
         index2 %= unmarked.size();
@@ -208,10 +317,11 @@ namespace geojson {
 
   std::vector<vec3> triangulate(std::vector<vec3> points) {
     if (points.size() < 3) return points;
-    
+
     std::vector<vec3> basis = gramschmidt(points);
     std::vector<vec2> points2d = to2d(points, basis, points[0]);
-    std::vector<vec2> triangles2d = triangulate2d(points2d);
+    std::vector<vec2> augmented = augment(points2d);
+    std::vector<vec2> triangles2d = triangulate2d(augmented);
     std::vector<vec3> triangles3d = to3d(triangles2d, basis, points[0]);
 
     return triangles3d;

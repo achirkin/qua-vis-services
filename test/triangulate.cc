@@ -2,12 +2,89 @@
 
 #include <vector>
 
+void test_square_with_hole() {
+  std::vector<geojson::vec3> polygon = {
+    {0,0,0},
+    {0,1,0},
+    {1,1,0},
+    {1,0,0},
+    {0,0,0},
+    {.25,.25,0},
+    {.75,.25,0},
+    {.75,.75,0},
+    {.25,.75,0},
+    {.25,.25,0}
+  };
+
+  std::vector<geojson::vec3> expected = {
+    {0.000000,1.000000,0.000000},
+    {1.000000,1.000000,0.000000},
+    {0.750000,0.750000,0.000000},
+    {0.000000,1.000000,0.000000},
+    {0.750000,0.750000,0.000000},
+    {0.250000,0.750000,0.000000},
+    {0.000000,1.000000,0.000000},
+    {0.250000,0.750000,0.000000},
+    {0.250000,0.250000,0.000000},
+    {0.750000,0.250000,0.000000},
+    {0.750000,0.750000,0.000000},
+    {1.000000,1.000000,0.000000},
+    {0.750000,0.250000,0.000000},
+    {1.000000,1.000000,0.000000},
+    {1.000000,0.000000,0.000000},
+    {0.750000,0.250000,0.000000},
+    {1.000000,0.000000,0.000000},
+    {0.000000,0.000000,0.000000},
+    {0.000000,0.000000,0.000000},
+    {0.000000,1.000000,0.000000},
+    {0.250000,0.250000,0.000000},
+    {0.000000,0.000000,0.000000},
+    {0.250000,0.250000,0.000000},
+    {0.750000,0.250000,0.000000}
+  };
+
+  std::vector<geojson::vec3> result = triangulate(polygon);
+  for (size_t i = 0; i < result.size(); i++) {
+    if(!(result[i] == expected[i])) throw;
+  }
+}
+
+void test_with_two_holes() {
+  std::vector<geojson::vec3> polygon = {
+    {-3,-3,0},
+    {-3,3,0},
+    {3,3,0},
+    {3,-3,0},
+    {-3,-3,0},
+    {0.5,0,0},
+    {0.5,-1,0},
+    {1,0,0},
+    {0.5,1,0},
+    {-0.5,1,0},
+    {-1,0,0},
+    {-0.5,-1,0},
+    {-0.5,0,0},
+    {0.5,0,0},
+    {2.25,2.25,0},
+    {2.75,2.25,0},
+    {2.75,2.75,0},
+    {2.25,2.75,0},
+    {2.25,2.25,0},
+  };
+
+  std::vector<geojson::vec3> result = triangulate(polygon);
+  for (size_t i = 0; i < result.size(); i++) {
+    std::cout << std::string(result[i]) << std::endl;
+  }
+}
+
 void test_square() {
   std::vector<geojson::vec3> polygon = {
     {0,0,0},
     {0,1,0},
     {1,1,0},
-    {1,0,0}
+    {1,0,0},
+    {0,0,0}
   };
 
   std::vector<geojson::vec3> expected = {
@@ -15,6 +92,30 @@ void test_square() {
     {0,1,0},
     {1,1,0},
     {0,0,0},
+    {1,1,0},
+    {1,0,0}
+  };
+
+  std::vector<geojson::vec3> result = triangulate(polygon);
+  for (size_t i = 0; i < result.size(); i++) {
+    if(!(result[i] == expected[i])) throw;
+  }
+}
+
+void test_rotated_square() {
+  std::vector<geojson::vec3> polygon = {
+    {0,0,1},
+    {0,1,1},
+    {1,1,0},
+    {1,0,0},
+    {0,0,1}
+  };
+
+  std::vector<geojson::vec3> expected = {
+    {0,0,1},
+    {0,1,1},
+    {1,1,0},
+    {0,0,1},
     {1,1,0},
     {1,0,0}
   };
@@ -34,7 +135,8 @@ void test_polygon_no_holes() {
     {-0.5,1,0},
     {-1,0,0},
     {-0.5,-1,0},
-    {-0.5,0,0}
+    {-0.5,0,0},
+    {0.5,0,0}
   };
 
   std::vector<geojson::vec3> expected = {
@@ -65,6 +167,9 @@ void test_polygon_no_holes() {
 }
 
 int main() {
-  test_polygon_no_holes();
   test_square();
+  test_rotated_square();
+  test_polygon_no_holes();
+  test_square_with_hole();
+  test_with_two_holes();
 }
