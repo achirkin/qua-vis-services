@@ -5,7 +5,7 @@
 
 #include <float.h> // FLT_MIN
 #include <math.h> // sqrt
-
+#
 #include <vector>
 #include <numeric> // iota()
 #include <algorithm> // sort()
@@ -100,6 +100,10 @@ namespace geojson {
 
   float abs(vec3 p) {
     return sqrt(p*p);
+  }
+
+  float abs(float x) {
+    return x > 0 ? x : -x;
   }
 
   /**
@@ -317,7 +321,6 @@ namespace geojson {
 
   std::vector<vec3> triangulate(std::vector<vec3> points) {
     if (points.size() < 3) return points;
-
     std::vector<vec3> basis = gramschmidt(points);
     std::vector<vec2> points2d = to2d(points, basis, points[0]);
     std::vector<vec2> augmented = augment(points2d);
