@@ -143,6 +143,7 @@ namespace quavis {
 
       // submit command buffer
       this->logical_device_->SubmitCommandBuffer(queue, command_buffer);
+      vkQueueWaitIdle(queue);
     }
   }
 
@@ -183,7 +184,6 @@ namespace quavis {
 
       this->SetLayout(this->vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->vk_layout, this->aspect_flags_, queue);
       this->SetLayout(this->vk_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, this->aspect_flags_, queue);
-      vkQueueWaitIdle(queue);
 
       return this->allocator_->GetData(this->vk_staging_memory_, this->memory_size_);
     }
@@ -247,5 +247,6 @@ namespace quavis {
 
     this->logical_device_->EndCommandBuffer(command_buffer_1);
     this->logical_device_->SubmitCommandBuffer(queue, command_buffer_1);
+    vkQueueWaitIdle(queue);
   }
 }

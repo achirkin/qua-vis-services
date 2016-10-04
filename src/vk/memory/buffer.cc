@@ -92,6 +92,7 @@ namespace quavis {
 
       // submit command buffer
       this->logical_device_->SubmitCommandBuffer(queue, command_buffer);
+      vkQueueWaitIdle(queue);
     }
   }
 
@@ -110,6 +111,7 @@ namespace quavis {
 
       // submit command buffer
       this->logical_device_->SubmitCommandBuffer(queue, command_buffer);
+      vkQueueWaitIdle(queue);
 
       return this->allocator_->GetData(this->vk_staging_memory_, this->size);
     }

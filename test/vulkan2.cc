@@ -22,7 +22,6 @@
 #include <chrono>
 
 std::vector<quavis::Vertex> vertices_ = {};
-
 std::vector<uint32_t> indices_ = {};
 
 uint32_t width = 2048;
@@ -62,7 +61,7 @@ int main(int argc, char** argv) {
           0.0f,
           attrib.vertices[3 * index.vertex_index + 2]
       };
-      if (vertices_.size() < 10000) {
+      if (vertices_.size() < 10) {
         vertices_.push_back(vertex);
         indices_.push_back(indices_.size());
       }
@@ -82,7 +81,7 @@ int main(int argc, char** argv) {
   // Create buffers for vertices, indices and uniform buffer object
   quavis::Buffer* vertex_buffer = new quavis::Buffer(logicaldevice, allocator, sizeof(vertices_[0])*vertices_.size(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
   quavis::Buffer* index_buffer = new quavis::Buffer(logicaldevice, allocator, sizeof(indices_[0])*indices_.size(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-  quavis::Buffer* uniform_buffer = new quavis::Buffer(logicaldevice, allocator, 32, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+  quavis::Buffer* uniform_buffer = new quavis::Buffer(logicaldevice, allocator, sizeof(UniformBufferObject), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
 
   // Create shaders
   quavis::Shader* vert_shader = new quavis::Shader(logicaldevice, VK_SHADER_STAGE_VERTEX_BIT, src_shaders_shader_vert_spv, src_shaders_shader_vert_spv_len);
@@ -96,39 +95,44 @@ int main(int argc, char** argv) {
   quavis::Image* color_image = new quavis::Image(
     logicaldevice,
     allocator,
-    graphics_queue,
+    transfer_queue,
     width,
     height,
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
     VK_FORMAT_R8G8B8A8_UNORM,
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_ASPECT_COLOR_BIT);
+  vkQueueWaitIdle(transfer_queue);
 
   quavis::Image* compute_image = new quavis::Image(
     logicaldevice,
     allocator,
-    graphics_queue,
+    transfer_queue,
     width,
     height,
     VK_IMAGE_USAGE_STORAGE_BIT,
     VK_FORMAT_R8G8B8A8_UNORM,
     VK_IMAGE_LAYOUT_GENERAL,
     VK_IMAGE_ASPECT_COLOR_BIT);
+  vkQueueWaitIdle(transfer_queue);
 
   quavis::Image* depth_image = new quavis::Image(
     logicaldevice,
     allocator,
-    graphics_queue,
+    transfer_queue,
     width,
     height,
     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
     VK_FORMAT_D32_SFLOAT,
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     VK_IMAGE_ASPECT_DEPTH_BIT);
+  vkQueueWaitIdle(transfer_queue);
 
   // Upload data to Buffers
   vertex_buffer->SetData((void*)vertices_.data(), transfer_queue);
+  vkQueueWaitIdle(transfer_queue);
   index_buffer->SetData((void*)indices_.data(), transfer_queue);
+  vkQueueWaitIdle(transfer_queue);
   uniform_buffer->SetData((void*)&uniform_, transfer_queue);
   vkQueueWaitIdle(transfer_queue);
 
@@ -173,6 +177,8 @@ int main(int argc, char** argv) {
 
   VkCommandBuffer drawcommand = gpipe->CreateCommandBuffer();
   VkCommandBuffer computecommand = cpipe->CreateCommandBuffer();
+
+  vkDeviceWaitIdle(logicaldevice->vk_handle);
 
   auto t1 = std::chrono::high_resolution_clock::now();
   int N = 1000;
