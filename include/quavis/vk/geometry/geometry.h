@@ -2,6 +2,11 @@
 #define QUAVIS_GEOMETRY_H
 
 namespace quavis {
+  typedef struct vec2 {
+    float x;
+    float y;
+  } vec2;
+
   typedef struct vec3 {
     float x;
     float y;
