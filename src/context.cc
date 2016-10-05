@@ -4,30 +4,20 @@
 using namespace quavis;
 
 Context::Context() {
-  tinyobj::attrib_t attrib;
-  std::vector<tinyobj::shape_t> shapes;
-  std::vector<tinyobj::material_t> materials;
-  std::string err;
-  std::string path = "/home/mfranzen/Downloads/chalet.obj";
-  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
-    throw std::runtime_error(err);
-  }
-  for (const auto& shape : shapes) {
-    for (const auto& index : shape.mesh.indices) {
-      Vertex vertex = {};
-      vertex.pos = {
-          attrib.vertices[3 * index.vertex_index + 0],
-          attrib.vertices[3 * index.vertex_index + 1],
-          attrib.vertices[3 * index.vertex_index + 2]
-      };
-      vertex.color = {
-          0.0f,
-          0.0f,
-          attrib.vertices[3 * index.vertex_index + 2]
-      };
-      vertices_.push_back(vertex);
-      indices_.push_back(indices_.size());
+  std::ifstream fh ("/home/mfranzen/Downloads/mooctask.geojson");
+  if (fh.is_open()) {
+    std::string contents ((std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>());
+    std::vector<vec3> points = geojson::parse(contents);
+
+    vertices_ = std::vector<Vertex>(points.size());
+    for (uint32_t i = 0; i < points.size(); i++) {
+      vertices_[i] = { points[i], {255,255,255}};
+      uniform_.observation_point = uniform_.observation_point + points[i];
     }
+    uniform_.observation_point = uniform_.observation_point / points.size() + vec3 {0, 0, 4100};
+
+    indices_ = std::vector<uint32_t>(vertices_.size());
+    std::iota(indices_.begin(), indices_.end(), 0);
   }
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
@@ -49,7 +39,8 @@ Context::Context() {
 
   // initialize graphics
   VkDescriptorSetLayout layouts[] = {this->vk_graphics_descriptor_set_layout_};
-  this->CreateAndUpdateDescriptorSet(layouts, sizeof(UniformBufferObject), this->vk_uniform_buffer_, &this->vk_graphics_descriptor_set_);
+  this->CreateGraphicsDescriptorSet(layouts, &this->vk_graphics_descriptor_set_);
+  this->UpdateGraphicsDescriptorSet(sizeof(UniformBufferObject), this->vk_uniform_buffer_, &this->vk_graphics_descriptor_set_);
   this->InitializeVkGraphicsCommandBuffers();
 
   // initialize compute
@@ -1575,7 +1566,7 @@ void Context::CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memor
   );
 }
 
-void Context::CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set) {
+void Context::CreateGraphicsDescriptorSet(VkDescriptorSetLayout layouts[], VkDescriptorSet* descriptor_set) {
   VkDescriptorSetAllocateInfo allocInfo = {};
   allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
   allocInfo.descriptorPool = this->vk_descriptor_pool_;
@@ -1585,7 +1576,9 @@ void Context::CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint
   debug::handleVkResult(
     vkAllocateDescriptorSets(this->vk_logical_device_, &allocInfo, descriptor_set)
   );
+}
 
+void Context::UpdateGraphicsDescriptorSet(uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set) {
   VkDescriptorBufferInfo bufferInfo = {};
   bufferInfo.buffer = buffer;
   bufferInfo.offset = 0;

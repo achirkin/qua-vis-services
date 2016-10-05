@@ -70,18 +70,7 @@ endif ()
 
 # Quavis
 add_library(quavis SHARED
-  "${CMAKE_SOURCE_DIR}/src/vk/instance.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/device/physicaldevice.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/device/logicaldevice.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/memory/allocator.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/memory/buffer.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/memory/image.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/memory/shader.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/descriptors/descriptorpool.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/descriptors/descriptorset.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/pipeline/pipeline.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/pipeline/graphicspipeline.cc"
-  "${CMAKE_SOURCE_DIR}/src/vk/pipeline/computepipeline.cc"
+  "${CMAKE_SOURCE_DIR}/src/context.cc"
 )
 add_definitions('-g')
 target_link_libraries(quavis ${VULKAN_LIBRARY})
@@ -89,7 +78,7 @@ add_dependencies(quavis shaders)
 
 # Tests
 add_executable (testvulkan
-  "${CMAKE_SOURCE_DIR}/test/vulkan2.cc"
+  "${CMAKE_SOURCE_DIR}/test/vulkan.cc"
 )
 target_link_libraries (testvulkan quavis)
 add_dependencies(testvulkan quavis)

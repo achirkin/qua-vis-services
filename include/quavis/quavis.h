@@ -4,7 +4,9 @@
 #include "quavis/version.h"
 #include "quavis/shaders.h"
 #include "quavis/vk/debug.h"
-#include "quavis/vk/geometry/triangulate.h"
+#include "quavis/vk/geometry/geometry.h"
+#include "quavis/vk/geometry/vertex.h"
+#include "quavis/vk/geometry/geojson.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
@@ -21,48 +23,10 @@
 #include <array>
 
 namespace quavis {
-  typedef struct vec3 {
-    float x;
-    float y;
-    float z;
-  } vec3;
-
-  typedef struct mat4 {
-    float data[16];
-  } mat4;
-
   struct UniformBufferObject {
     vec3 observation_point;
     float r_max;
     float alpha_max;
-  };
-
-  struct Vertex {
-      vec3 pos;
-      vec3 color;
-
-      static VkVertexInputBindingDescription getBindingDescription() {
-          VkVertexInputBindingDescription bindingDescription = {};
-          bindingDescription.binding = 0;
-          bindingDescription.stride = sizeof(Vertex);
-          bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-          return bindingDescription;
-      }
-
-      static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
-          std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
-          attributeDescriptions[0].binding = 0;
-          attributeDescriptions[0].location = 0;
-          attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-          attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-          attributeDescriptions[1].binding = 0;
-          attributeDescriptions[1].location = 1;
-          attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-          attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-          return attributeDescriptions;
-      }
   };
 
   /**
@@ -104,7 +68,8 @@ namespace quavis {
     void CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory);
     void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
     void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview);
-    void CreateAndUpdateDescriptorSet(VkDescriptorSetLayout layouts[], uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
+    void CreateGraphicsDescriptorSet(VkDescriptorSetLayout layouts[], VkDescriptorSet* descriptor_set);
+    void UpdateGraphicsDescriptorSet(uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
     void CreateComputeDescriptorSets();
     void UpdateComputeDescriptorSets();
     void CreateFrameBuffer();
@@ -227,65 +192,13 @@ namespace quavis {
     const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
 
-    std::vector<Vertex> vertices_ = {
-      //front
-      /*{{-1.0, -1.0,  1.0}, {255,255,255}},
-      {{1.0, -1.0,  1.0}, {255,255,255}},
-      {{1.0,  1.0,  1.0}, {255,255,255}},
-      {{-1.0,  1.0,  1.0}, {255,255,255}},
-      // back
-      {{-1.0, -1.0, -1.0}, {255,255,255}},
-      {{1.0, -1.0, -1.0}, {255,255,255}},
-      {{1.0,  1.0, -1.0}, {255,255,255}},
-      {{-1.0,  1.0, -1.0}, {255,255,255}}*/
-      /*{{5,5,4},{0,0,0}},
-      {{5,5,5},{0,0,0}},
-      {{5,0,5},{0,0,0}},
-      {{5,5,9},{0,0,0}},
-      {{5,0,20},{0,0,0}},
-      {{5,5,20},{0,0,0}},
-      {{5,10,1},{0,0,0}},
-      {{5,0,2},{0,0,0}},
-      {{5,10,2},{0,0,0}},
-      {{-10,-1,0},{0,0,0}},
-      {{-10,-1,2},{0,0,0}},
-      {{-10,1,1},{0,0,0}},
-      {{-10,-1,3},{0,0,0}},
-      {{-10,0,5},{0,0,0}},
-      {{-10,1,3},{0,0,0}},
-      {{-10,0,-3},{0,0,0}},
-      {{-10,0,-4},{0,0,0}},
-      {{-10,2,-3},{0,0,0}},
-      {{-10,0,-5},{0,0,0}},
-      {{-10,-1,-7},{0,0,0}},
-      {{-10,-2,-6},{0,0,0}}*/
-    };
+    std::vector<Vertex> vertices_ = {};
 
-    std::vector<uint32_t> indices_ = {
-      //0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20
-      // front
-       /*0, 1, 2,
-       2, 3, 0,
-       // top
-       1, 5, 6,
-       6, 2, 1,
-       // back
-       7, 6, 5,
-       5, 4, 7,
-       // bottom
-       4, 0, 3,
-       3, 7, 4,
-       // left
-       4, 5, 1,
-       1, 0, 4,
-       // right
-       3, 2, 6,
-       6, 7, 3,*/
-    };
+    std::vector<uint32_t> indices_ = {};
 
-    const UniformBufferObject uniform_ = {
+    UniformBufferObject uniform_ = {
       vec3 {0, 0, 0},
-      2,
+      50000,
       .1
     };
   };
