@@ -1,20 +1,18 @@
 #version 450
 #define N 16
 #define M 16
-#define R_MAX 50000
 
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 layout (binding = 0, r32f) uniform readonly image2D inputImage;
 layout (binding = 1) buffer result {
-  uint isovist;
+  float isovist;
 };
 
 void main()
 {
   float tmp = 0;
-  for (uint x = gl_GlobalInvocationID.x; x < gl_GlobalInvocationID.x+N; x++) {
-    tmp += imageLoad(inputImage, ivec2(x, gl_GlobalInvocationID.y*M)).x;
+  for (int x = gl_GlobalInvocationID.x; x < gl_GlobalInvocationID.x+N; x++) {
+    tmp += imageLoad(inputImage, ivec(x, gl_GlobalInvocationID.y*M));
   }
-  uint res = uint(tmp*R_MAX);
-  atomicAdd(isovist, res);
+  atomicAdd(isovist, tmp);
 }

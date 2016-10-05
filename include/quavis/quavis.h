@@ -88,6 +88,8 @@ namespace quavis {
     void RetrieveRenderImage(uint32_t i);
     void RetrieveDepthImage();
     void RetrieveComputeImage();
+    void* RetrieveResult();
+    void ResetResult();
 
     // instance data
     VkInstance vk_instance_;
@@ -136,12 +138,16 @@ namespace quavis {
     VkBuffer vk_index_buffer_;
     VkBuffer vk_uniform_staging_buffer_;
     VkBuffer vk_uniform_buffer_;
+    VkBuffer vk_compute_staging_buffer_;
+    VkBuffer vk_compute_buffer_;
     VkDeviceMemory vk_vertex_staging_buffer_memory_;
     VkDeviceMemory vk_vertex_buffer_memory_;
     VkDeviceMemory vk_index_staging_buffer_memory_;
     VkDeviceMemory vk_index_buffer_memory_;
     VkDeviceMemory vk_uniform_staging_buffer_memory_;
     VkDeviceMemory vk_uniform_buffer_memory_;
+    VkDeviceMemory vk_compute_staging_buffer_memory_;
+    VkDeviceMemory vk_compute_buffer_memory_;
 
     // images
     VkImageView vk_color_imageview_;
@@ -189,13 +195,14 @@ namespace quavis {
     // rendering attributes
     const uint32_t render_width_ = 512;
     const uint32_t render_height_ = 256;
-    const VkFormat color_format_ = VK_FORMAT_R8G8B8A8_UNORM;
+    const VkFormat color_format_ = VK_FORMAT_R32_SFLOAT;
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
 
+    const uint32_t compute_size_ = sizeof(unsigned int);
+    unsigned int compute_default_value_ = 0;
+
     std::vector<Vertex> vertices_ = {};
-
     std::vector<uint32_t> indices_ = {};
-
     UniformBufferObject uniform_ = {
       vec3 {0, 0, 0},
       100000,
