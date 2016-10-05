@@ -1,7 +1,10 @@
 #version 450
-#define N 16
-#define M 16
-#define R_MAX 50000
+#define N 16 // the number of work groups on the x-axis
+#define M 16 // the number of work groups on the y-axis
+#define W 128 // each work item covers a patch of size (W/N)x(H/M)
+#define H 64
+#define PI 3.1415926
+#define R_MAX 1000000
 
 layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 layout (binding = 0, r32f) uniform readonly image2D inputImage;
@@ -12,9 +15,13 @@ layout (binding = 1) buffer result {
 void main()
 {
   float tmp = 0;
-  for (uint x = gl_GlobalInvocationID.x; x < gl_GlobalInvocationID.x+N; x++) {
-    tmp += imageLoad(inputImage, ivec2(x, gl_GlobalInvocationID.y*M)).x;
+  float weight = 0;
+  for (uint y = 0; y < H/M; y++) {
+    float weight = float(R_MAX)*sin(float(gl_GlobalInvocationID.y*(H/M) + y)/float(H)*float(PI));
+    for (uint x = 0; x < W/N; x++) {
+      tmp += weight*float(imageLoad(inputImage, ivec2(gl_GlobalInvocationID.x*(W/N) + x, gl_GlobalInvocationID.y*(H/M) + y)).x);
+    }
   }
-  uint res = uint(tmp*R_MAX);
+  uint res = uint(tmp);
   atomicAdd(isovist, res);
 }

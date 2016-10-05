@@ -40,17 +40,15 @@ Context::Context() {
   vec3 upper_right = {FLT_MIN,FLT_MIN,FLT_MIN};
   vec3 delta = {0,0,0};
   for (Vertex v : vertices_) {
-    if (v.pos.x < lower_left.x || (v.pos.x == lower_left.x && v.pos.y < lower_left.y)) {
-      lower_left = v.pos;
-    }
-    if (v.pos.x > upper_right.x || (v.pos.x == upper_right.x && v.pos.y > upper_right.y)) {
-      upper_right = v.pos;
-    }
+    lower_left.x = v.pos.x < lower_left.x ? v.pos.x : lower_left.x;
+    lower_left.y = v.pos.y < lower_left.y ? v.pos.y : lower_left.y;
+    upper_right.x = v.pos.x > upper_right.x ? v.pos.x : upper_right.x;
+    upper_right.y = v.pos.y > upper_right.y ? v.pos.y : upper_right.y;
   }
-
-  uint32_t X = 100;
-  uint32_t Y = 100;
   delta = upper_right - lower_left;
+
+  uint32_t X = num_observation_points_x;
+  uint32_t Y = delta.y / delta.x * X;
   delta.x = delta.x / X;
   delta.y = delta.y / Y;
   std::vector<vec3> observation_points (X*Y);
@@ -76,20 +74,24 @@ Context::Context() {
   this->UpdateComputeDescriptorSets();
   this->InitializeVkComputeCommandBuffers();
 
+  // MAGIIC
   auto t1 = std::chrono::high_resolution_clock::now();
+  std::vector<unsigned int> results(observation_points.size());
   for (uint32_t i = 0; i < observation_points.size(); i++) {
     this->ResetResult();
     this->uniform_.observation_point = observation_points[i];
     this->SubmitUniformData();
     this->VkDraw();
     this->VkCompute();
-    std::cout << *(unsigned int*)this->RetrieveResult() << std::endl;
-    //this->RetrieveRenderImage(i);
+    results[i] = *(unsigned int*)this->RetrieveResult();
   }
   auto t2 = std::chrono::high_resolution_clock::now();
+  for (uint32_t i = 0; i < observation_points.size(); i++) {
+    std::cout << results[i] << std::endl;
+  }
+  std::cout << X*Y << " points" << std::endl;
+  std::cout << (std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count())/1000.0 << " seconds" << std::endl;
   std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)(X*Y)/1000.0) << " fps" << std::endl;
-
-  this->RetrieveDepthImage();
 }
 
 Context::~Context() {
@@ -1268,9 +1270,9 @@ void Context::InitializeVkComputeCommandBuffers() {
 
   vkCmdDispatch(
     this->vk_compute_commandbuffer_,
-    this->render_width_ / 16, //TODO: best performance with 1 (!?)
-    this->render_height_ / 16, //TODO:   best performance with 1 (!?)
-    1
+    this->workgroups[0], //TODO: best performance with 1 (!?)
+    this->workgroups[1], //TODO:   best performance with 1 (!?)
+    this->workgroups[2]
   ); //TODO: COMPUTESHADERTODO
 
   debug::handleVkResult(
