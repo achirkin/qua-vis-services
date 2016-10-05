@@ -2,6 +2,7 @@
 #include <chrono>
 #include <cfloat>
 #include <unordered_map>
+#include <unordered_set>
 
 using namespace quavis;
 
@@ -61,6 +62,21 @@ Context::Context() {
     }
   }
 
+  // Create a list of vertices that lie are in some triangle
+  std::unordered_set<size_t> ignore = {};
+  for (size_t o = 0; o < observation_points.size(); o++) {
+    for (size_t i = 0; i < indices_.size(); i+=3) {
+      vec2 p0, p1, p2;
+      p0 = {vertices_[indices_[i]].pos.x, vertices_[indices_[i]].pos.y};
+      p1 = {vertices_[indices_[i+1]].pos.x, vertices_[indices_[i+1]].pos.y};
+      p2 = {vertices_[indices_[i+2]].pos.x, vertices_[indices_[i+2]].pos.y};
+
+      if (triangulation::intriangle2d({observation_points[o].x, observation_points[o].y}, p0, p1, p2)) {
+        ignore.insert(o);
+      }
+    }
+  }
+
   this->SubmitVertexData();
   this->SubmitIndexData();
   this->SubmitUniformData();
@@ -79,7 +95,11 @@ Context::Context() {
   // MAGIIC
   auto t1 = std::chrono::high_resolution_clock::now();
   std::vector<unsigned int> results(observation_points.size());
-  for (uint32_t i = 0; i < observation_points.size(); i++) {
+  for (size_t i = 0; i < observation_points.size(); i++) {
+    if (ignore.find(i) != ignore.end()) {
+      results[i] = 0;
+      continue;
+    }
     this->ResetResult();
     this->uniform_.observation_point = observation_points[i];
     this->SubmitUniformData();

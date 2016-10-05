@@ -194,7 +194,7 @@ namespace quavis {
     const uint32_t render_width_ = 128;
     const uint32_t render_height_ = 64;
     const size_t workgroups[3] = {1, 64, 1};
-    const size_t num_observation_points_x = 100;
+    const size_t num_observation_points_x = 200;
     const VkFormat color_format_ = VK_FORMAT_R32_SFLOAT;
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
 
