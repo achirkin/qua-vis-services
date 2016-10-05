@@ -1,9 +1,11 @@
 #include "quavis/quavis.h"
 #include <chrono>
+#include <cfloat>
 
 using namespace quavis;
 
 Context::Context() {
+
   std::ifstream fh ("/home/mfranzen/Downloads/mooctask.geojson");
   if (fh.is_open()) {
     std::string contents ((std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>());
@@ -15,7 +17,6 @@ Context::Context() {
       uniform_.observation_point = uniform_.observation_point + points[i];
     }
     uniform_.observation_point = uniform_.observation_point / points.size() + vec3 {0, 0, 4100};
-
     indices_ = std::vector<uint32_t>(vertices_.size());
     std::iota(indices_.begin(), indices_.end(), 0);
   }
@@ -33,40 +34,59 @@ Context::Context() {
   this->InitializeVkMemory();
   this->InitializeVkImageLayouts();
 
+  // create a grid
+  // determine the observation points
+  vec3 lower_left = {FLT_MAX,FLT_MAX,FLT_MAX};
+  vec3 upper_right = {FLT_MIN,FLT_MIN,FLT_MIN};
+  vec3 delta = {0,0,0};
+  for (Vertex v : vertices_) {
+    if (v.pos.x < lower_left.x || (v.pos.x == lower_left.x && v.pos.y < lower_left.y)) {
+      lower_left = v.pos;
+    }
+    if (v.pos.x > upper_right.x || (v.pos.x == upper_right.x && v.pos.y > upper_right.y)) {
+      upper_right = v.pos;
+    }
+  }
+
+  uint32_t X = 10;
+  uint32_t Y = 10;
+  delta = upper_right - lower_left;
+  delta.x = delta.x / X;
+  delta.y = delta.y / Y;
+  std::vector<vec3> observation_points (X*Y);
+  for (uint32_t x = 0; x < X; x++) {
+    for (uint32_t y = 0; y < Y; y++) {
+      observation_points[x*Y + y] = vec3 {delta.x*x, delta.y*y, 0} + lower_left;
+      observation_points[x*Y + y].z = 4100;
+    }
+  }
+
   this->SubmitVertexData();
   this->SubmitIndexData();
   this->SubmitUniformData();
 
-  // initialize graphics
   VkDescriptorSetLayout layouts[] = {this->vk_graphics_descriptor_set_layout_};
   this->CreateGraphicsDescriptorSet(layouts, &this->vk_graphics_descriptor_set_);
   this->UpdateGraphicsDescriptorSet(sizeof(UniformBufferObject), this->vk_uniform_buffer_, &this->vk_graphics_descriptor_set_);
   this->InitializeVkGraphicsCommandBuffers();
 
-  // initialize compute
   VkFenceCreateInfo fenceCreateInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, nullptr, 0x00000001};
-  debug::handleVkResult(
-    vkCreateFence(
-      this->vk_logical_device_,
-      &fenceCreateInfo,
-      nullptr,
-      &this->vk_compute_fence_
-    )
-  );
+  debug::handleVkResult(vkCreateFence(this->vk_logical_device_,&fenceCreateInfo,nullptr,&this->vk_compute_fence_));
   this->CreateComputeDescriptorSets();
   this->UpdateComputeDescriptorSets();
-  this->InitializeVkComputeCommandBuffers(); // TODO:COMPUTESHADER
+  this->InitializeVkComputeCommandBuffers();
 
   auto t1 = std::chrono::high_resolution_clock::now();
-  int N = 1000;
-  for (int i = 0; i < N; i++) {
+  for (uint32_t i = 0; i < observation_points.size(); i++) {
+    this->uniform_.observation_point = observation_points[i];
+    this->SubmitUniformData();
     this->VkDraw();
     this->VkCompute();
+    //this->RetrieveRenderImage(i);
   }
   auto t2 = std::chrono::high_resolution_clock::now();
-  std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)N/1000.0) << " fps" << std::endl;
+  std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)(X*Y)/1000.0) << " fps" << std::endl;
 
-  this->RetrieveRenderImage();
   this->RetrieveDepthImage();
   this->RetrieveComputeImage();
 }
@@ -1258,6 +1278,7 @@ void Context::InitializeVkImageLayouts() {
     this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
     this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
     this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void Context::VkDraw() {
@@ -1397,12 +1418,12 @@ void Context::SubmitUniformData() {
   this->EndSingleTimeBuffer(commandbuffer);
 }
 
-void Context::RetrieveRenderImage() {
+void Context::RetrieveRenderImage(uint32_t i) {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
   this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT);
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
 
@@ -1431,8 +1452,10 @@ void Context::RetrieveRenderImage() {
   }
 */
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  stbi_write_png("bin/rendered.png", this->render_width_, this->render_height_, 4, (void*)pixels, 0);
+  std::string filename = "bin/rendered_" + std::to_string(i) + ".png";
+  stbi_write_png(filename.c_str(), this->render_width_, this->render_height_, 4, (void*)pixels, 0);
   free(pixels);
+  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void Context::RetrieveDepthImage() {
