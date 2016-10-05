@@ -1,24 +1,26 @@
 #include "quavis/quavis.h"
 #include <chrono>
 #include <cfloat>
+#include <unordered_map>
 
 using namespace quavis;
 
 Context::Context() {
-
   std::ifstream fh ("/home/mfranzen/Downloads/mooctask.geojson");
   if (fh.is_open()) {
     std::string contents ((std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>());
     std::vector<vec3> points = geojson::parse(contents);
 
-    vertices_ = std::vector<Vertex>(points.size());
+    std::unordered_map<Vertex, int> vertex_map = {};
+    vertices_ = std::vector<Vertex>();
     for (uint32_t i = 0; i < points.size(); i++) {
-      vertices_[i] = { points[i], {255,255,255}};
-      uniform_.observation_point = uniform_.observation_point + points[i];
+      Vertex vertex = {points[i], {255,255,255}};
+      if (vertex_map.count(vertex) == 0) {
+        vertex_map[vertex] = vertices_.size();
+        vertices_.push_back(vertex);
+      }
+      indices_.push_back(vertex_map[vertex]);
     }
-    uniform_.observation_point = uniform_.observation_point / points.size() + vec3 {0, 0, 4100};
-    indices_ = std::vector<uint32_t>(vertices_.size());
-    std::iota(indices_.begin(), indices_.end(), 0);
   }
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();

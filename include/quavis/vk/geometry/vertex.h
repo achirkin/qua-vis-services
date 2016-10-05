@@ -33,7 +33,24 @@ namespace quavis {
 
           return attributeDescriptions;
       }
+
+      bool operator==(const Vertex& other) const {
+        return pos.x == other.pos.x && pos.y == other.pos.y && pos.z == other.pos.z;
+      }
   };
 }
+
+namespace std {
+  template<> struct hash<quavis::Vertex> {
+      size_t operator()(quavis::Vertex const& vertex) const {
+          std::size_t h = hash<float>()(vertex.pos.x);
+          h ^= hash<float>()(vertex.pos.y) << 1;
+          h >>= 1;
+          h ^= hash<float>()(vertex.pos.z) << 1;
+          return h;
+      }
+  };
+}
+
 
 #endif
