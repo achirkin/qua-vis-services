@@ -181,6 +181,7 @@ Context::~Context() {
   vkDestroyPipeline(this->vk_logical_device_, this->vk_graphics_pipeline_, nullptr);
   vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_compute_pipeline_layout_, nullptr);
   vkDestroyPipeline(this->vk_logical_device_, this->vk_compute_pipeline_, nullptr);
+  vkDestroyPipeline(this->vk_logical_device_, this->vk_compute_pipeline_2_, nullptr);
 
   // destroy shaders
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_vertex_shader_, nullptr);
@@ -189,6 +190,7 @@ Context::~Context() {
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_geoemtry_shader_, nullptr);
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_fragment_shader_, nullptr);
   vkDestroyShaderModule(this->vk_logical_device_, this->vk_compute_shader_, nullptr);
+  vkDestroyShaderModule(this->vk_logical_device_, this->vk_compute_shader_2_, nullptr);
 
   // destroy logical device
   vkDeviceWaitIdle(this->vk_logical_device_);
@@ -584,6 +586,24 @@ void Context::InitializeVkShaderModules() {
       &this->vk_compute_shader_ // the allocated memory for the logical device
     )
   );
+
+  // create compute shader
+  VkShaderModuleCreateInfo compute_shader2_info = {
+    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    src_shaders_shader_2_comp_spv_len, // fragment shader size
+    (uint32_t*)src_shaders_shader_2_comp_spv // fragment shader code
+  };
+
+  debug::handleVkResult(
+    vkCreateShaderModule(
+      this->vk_logical_device_, // the logical device
+      &compute_shader2_info, // shader meta data
+      nullptr, // allocation callback (see documentation)
+      &this->vk_compute_shader_2_ // the allocated memory for the logical device
+    )
+  );
 }
 
 void Context::InitializeVkRenderPass() {
@@ -697,61 +717,43 @@ void Context::InitializeVkDescriptorSetLayout() {
     )
   );
 
-  // Compute Tmp
+  // Compute
   VkDescriptorSetLayoutBinding computeLayoutBindingIn = {};
   computeLayoutBindingIn.binding = 0;
   computeLayoutBindingIn.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
   computeLayoutBindingIn.descriptorCount = 1;
   computeLayoutBindingIn.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-  VkDescriptorSetLayoutBinding computeLayoutBindingTmp = {};
-  computeLayoutBindingTmp.binding = 1;
-  computeLayoutBindingTmp.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  computeLayoutBindingTmp.descriptorCount = 1;
-  computeLayoutBindingTmp.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-  std::vector<VkDescriptorSetLayoutBinding> tmpBindings = {
-    computeLayoutBindingIn,
-    computeLayoutBindingTmp
-  };
-
-  VkDescriptorSetLayoutCreateInfo computeLayoutInfoTmp = {};
-  computeLayoutInfoTmp.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  computeLayoutInfoTmp.bindingCount = tmpBindings.size();
-  computeLayoutInfoTmp.pBindings = tmpBindings.data();
-
-  debug::handleVkResult(
-    vkCreateDescriptorSetLayout(
-      this->vk_logical_device_,
-      &computeLayoutInfoTmp,
-      nullptr,
-      &this->vk_compute_descriptor_set_layout_
-    )
-  );
-
-  // Compute Out
   VkDescriptorSetLayoutBinding computeLayoutBindingOut = {};
-  computeLayoutBindingOut.binding = 0;
+  computeLayoutBindingOut.binding = 1;
   computeLayoutBindingOut.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   computeLayoutBindingOut.descriptorCount = 1;
   computeLayoutBindingOut.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
-  std::vector<VkDescriptorSetLayoutBinding> outBindings = {
-    computeLayoutBindingTmp,
-    computeLayoutBindingOut
+  VkDescriptorSetLayoutBinding computeLayoutBindingTmp = {};
+  computeLayoutBindingTmp.binding = 2;
+  computeLayoutBindingTmp.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+  computeLayoutBindingTmp.descriptorCount = 1;
+  computeLayoutBindingTmp.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+
+
+  std::vector<VkDescriptorSetLayoutBinding> bindings = {
+    computeLayoutBindingIn,
+    computeLayoutBindingOut,
+    computeLayoutBindingTmp
   };
 
-  VkDescriptorSetLayoutCreateInfo computeLayoutInfoOut = {};
-  computeLayoutInfoOut.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-  computeLayoutInfoOut.bindingCount = outBindings.size();
-  computeLayoutInfoOut.pBindings = outBindings.data();
+  VkDescriptorSetLayoutCreateInfo computeLayoutInfo = {};
+  computeLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+  computeLayoutInfo.bindingCount = bindings.size();
+  computeLayoutInfo.pBindings = bindings.data();
 
   debug::handleVkResult(
     vkCreateDescriptorSetLayout(
       this->vk_logical_device_,
-      &computeLayoutInfoOut,
+      &computeLayoutInfo,
       nullptr,
-      &this->vk_compute_out_descriptor_set_layout_
+      &this->vk_compute_descriptor_set_layout_
     )
   );
 }
@@ -769,7 +771,7 @@ void Context::InitializeVkDescriptorPool() {
 
   VkDescriptorPoolSize computePoolSizeTmp = {};
   computePoolSizeTmp.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-  computePoolSizeTmp.descriptorCount = 3;
+  computePoolSizeTmp.descriptorCount = 2;
 
 
   // create pool
@@ -783,7 +785,7 @@ void Context::InitializeVkDescriptorPool() {
   poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   poolInfo.poolSizeCount = poolSizes.size();
   poolInfo.pPoolSizes = poolSizes.data();
-  poolInfo.maxSets = 3;
+  poolInfo.maxSets = 2;
 
   debug::handleVkResult(
     vkCreateDescriptorPool(this->vk_logical_device_, &poolInfo, nullptr, &this->vk_descriptor_pool_)
@@ -1070,12 +1072,32 @@ void Context::InitializeVkComputePipeline() {
     nullptr // VkSpecializationInfo (see documentation)
   };
 
+  VkPipelineShaderStageCreateInfo compute_shader_2_stage_info = {
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, // sType (see documentation)
+    nullptr, // next (see documentation, must be null)
+    0, // flags (see documentation, must be 0)
+    VK_SHADER_STAGE_COMPUTE_BIT, // stage flag
+    this->vk_compute_shader_2_, // shader module
+    "main", // the pipeline's name
+    nullptr // VkSpecializationInfo (see documentation)
+  };
+
   // Define pipeline info
   VkComputePipelineCreateInfo pipeline_info = {
     VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, // sType
     nullptr, // next (see documentation, must be null)
     0, // pipeline create flags (have no child pipelines, so don't care)
     compute_shader_stage_info, // shader stage create infos
+    this->vk_compute_pipeline_layout_,
+    VK_NULL_HANDLE,
+    -1 // parent pipeline index
+  };
+
+  VkComputePipelineCreateInfo pipeline_info_2 = {
+    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO, // sType
+    nullptr, // next (see documentation, must be null)
+    0, // pipeline create flags (have no child pipelines, so don't care)
+    compute_shader_2_stage_info, // shader stage create infos
     this->vk_compute_pipeline_layout_,
     VK_NULL_HANDLE,
     -1 // parent pipeline index
@@ -1091,6 +1113,18 @@ void Context::InitializeVkComputePipeline() {
       &this->vk_compute_pipeline_ // allocated memory for the pipeline
     )
   );
+
+  debug::handleVkResult(
+    vkCreateComputePipelines(
+      this->vk_logical_device_, // logical device
+      VK_NULL_HANDLE, // pipeline cache // TODO: Add pipeline cache (?)
+      1, // pipeline count
+      &pipeline_info_2, // pipeline infos
+      nullptr, // allocation callback
+      &this->vk_compute_pipeline_2_ // allocated memory for the pipeline
+    )
+  );
+
 
 }
 
@@ -1203,6 +1237,7 @@ void Context::InitializeVkMemory() {
   // compute command buffers
   this->CreateCommandPool(&this->vk_compute_command_pool_);
   this->CreateCommandBuffer(this->vk_compute_command_pool_, &this->vk_compute_commandbuffer_);
+  this->CreateCommandBuffer(this->vk_compute_command_pool_, &this->vk_compute_commandbuffer_2_);
 }
 
 // RENDERING
@@ -1334,11 +1369,60 @@ void Context::InitializeVkComputeCommandBuffers() {
     this->workgroups[0],
     this->workgroups[1],
     this->workgroups[2]
-  ); //TODO: COMPUTESHADERTODO
+  );
 
   debug::handleVkResult(
     vkEndCommandBuffer(
       this->vk_compute_commandbuffer_
+    )
+  );
+
+  // next one
+  VkCommandBufferBeginInfo command_buffer_begin_info2 = {
+    VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, // sType
+    nullptr, // pNext (see documentation, must be null)
+    VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, // can be submitted and run simultaniously
+    nullptr // VkCommandBufferInheritanceInfo (we don't need it)
+  };
+
+  debug::handleVkResult(
+    vkBeginCommandBuffer(
+      this->vk_compute_commandbuffer_2_,
+      &command_buffer_begin_info2
+    )
+  );
+
+  vkCmdBindPipeline(
+    this->vk_compute_commandbuffer_2_,
+    VK_PIPELINE_BIND_POINT_COMPUTE,
+    this->vk_compute_pipeline_2_
+  );
+
+  std::vector<VkDescriptorSet> descriptor_sets_2 = {
+    this->vk_compute_descriptor_set_
+  };
+
+  vkCmdBindDescriptorSets(
+    this->vk_compute_commandbuffer_2_,
+    VK_PIPELINE_BIND_POINT_COMPUTE,
+    this->vk_compute_pipeline_layout_,
+    0,
+    descriptor_sets_2.size(),
+    descriptor_sets_2.data(),
+    0,
+    0
+  );
+
+  vkCmdDispatch(
+    this->vk_compute_commandbuffer_2_,
+    this->workgroups2[0],
+    this->workgroups2[1],
+    this->workgroups2[2]
+  );
+
+  debug::handleVkResult(
+    vkEndCommandBuffer(
+      this->vk_compute_commandbuffer_2_
     )
   );
 }
@@ -1398,6 +1482,30 @@ void Context::VkCompute() {
       this->vk_queue_compute_, // queue
       1, // num infos
       &submit_info, // info
+      this->vk_compute_fence_// fence (we don't need it)
+    )
+  );
+
+  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
+
+  VkSubmitInfo submit_info2 = {
+    VK_STRUCTURE_TYPE_SUBMIT_INFO, // sType,
+    nullptr, // next (see documentaton, must be null)
+    0, // wait semaphore count
+    nullptr, // semaphore to wait for
+    nullptr, // stage until next semaphore is triggered
+    1, //
+    &this->vk_compute_commandbuffer_2_,
+    0,
+    nullptr
+  };
+
+  debug::handleVkResult(
+    vkQueueSubmit(
+      this->vk_queue_compute_, // queue
+      1, // num infos
+      &submit_info2, // info
       this->vk_compute_fence_// fence (we don't need it)
     )
   );
@@ -1729,34 +1837,18 @@ void Context::UpdateGraphicsDescriptorSet(uint32_t size, VkBuffer buffer, VkDesc
 }
 
 void Context::CreateComputeDescriptorSets() {
-  // Tmp
-  std::vector<VkDescriptorSet> descriptor_set_tmp = {
+  std::vector<VkDescriptorSet> descriptor_sets = {
     this->vk_compute_descriptor_set_,
   };
 
-  VkDescriptorSetAllocateInfo alloc_info_tmp = {};
-  alloc_info_tmp.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  alloc_info_tmp.descriptorPool = this->vk_descriptor_pool_;
-  alloc_info_tmp.descriptorSetCount = descriptor_set_tmp.size();
-  alloc_info_tmp.pSetLayouts = &this->vk_compute_descriptor_set_layout_;
+  VkDescriptorSetAllocateInfo allocInfo = {};
+  allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+  allocInfo.descriptorPool = this->vk_descriptor_pool_;
+  allocInfo.descriptorSetCount = descriptor_sets.size();
+  allocInfo.pSetLayouts = &this->vk_compute_descriptor_set_layout_;
 
   debug::handleVkResult(
-    vkAllocateDescriptorSets(this->vk_logical_device_, &alloc_info_tmp, &this->vk_compute_descriptor_set_)
-  );
-
-  // Out
-  std::vector<VkDescriptorSet> descriptor_set_out = {
-    this->vk_compute_out_descriptor_set_,
-  };
-
-  VkDescriptorSetAllocateInfo alloc_info_out = {};
-  alloc_info_out.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-  alloc_info_out.descriptorPool = this->vk_descriptor_pool_;
-  alloc_info_out.descriptorSetCount = descriptor_set_out.size();
-  alloc_info_out.pSetLayouts = &this->vk_compute_out_descriptor_set_layout_;
-
-  debug::handleVkResult(
-    vkAllocateDescriptorSets(this->vk_logical_device_, &alloc_info_out, &this->vk_compute_out_descriptor_set_)
+    vkAllocateDescriptorSets(this->vk_logical_device_, &allocInfo, &this->vk_compute_descriptor_set_)
   );
 }
 
@@ -1767,6 +1859,7 @@ void Context::UpdateComputeDescriptorSets() {
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
   };
 
+  // Output: Image
   VkDescriptorBufferInfo buffer_out_info = {};
   buffer_out_info.buffer = this->vk_compute_buffer_;
   buffer_out_info.offset = 0;
@@ -1800,21 +1893,10 @@ void Context::UpdateComputeDescriptorSets() {
   compute_in_descriptor_write.pBufferInfo = nullptr;
   compute_in_descriptor_write.pTexelBufferView = nullptr;
 
-  VkWriteDescriptorSet compute_tmp_descriptor_write = {};
-  compute_tmp_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  compute_tmp_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
-  compute_tmp_descriptor_write.dstBinding = 1;
-  compute_tmp_descriptor_write.dstArrayElement = 0;
-  compute_tmp_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // TODO: COMPUTESHADERTODO - Change to bufferinfo
-  compute_tmp_descriptor_write.descriptorCount = tmp_infos.size();
-  compute_tmp_descriptor_write.pImageInfo = nullptr;
-  compute_tmp_descriptor_write.pBufferInfo = tmp_infos.data();
-  compute_tmp_descriptor_write.pTexelBufferView = nullptr;
-
   VkWriteDescriptorSet compute_out_descriptor_write = {};
   compute_out_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  compute_out_descriptor_write.dstSet = this->vk_compute_out_descriptor_set_;
-  compute_out_descriptor_write.dstBinding = 0;
+  compute_out_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
+  compute_out_descriptor_write.dstBinding = 1;
   compute_out_descriptor_write.dstArrayElement = 0;
   compute_out_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // TODO: COMPUTESHADERTODO - Change to bufferinfo
   compute_out_descriptor_write.descriptorCount = out_infos.size();
@@ -1822,29 +1904,24 @@ void Context::UpdateComputeDescriptorSets() {
   compute_out_descriptor_write.pBufferInfo = out_infos.data();
   compute_out_descriptor_write.pTexelBufferView = nullptr;
 
-  VkWriteDescriptorSet compute_tmp_out_descriptor_write = {};
-  compute_tmp_out_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  compute_tmp_out_descriptor_write.dstSet = this->vk_compute_out_descriptor_set_;
-  compute_tmp_out_descriptor_write.dstBinding = 1;
-  compute_tmp_out_descriptor_write.dstArrayElement = 0;
-  compute_tmp_out_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // TODO: COMPUTESHADERTODO - Change to bufferinfo
-  compute_tmp_out_descriptor_write.descriptorCount = tmp_infos.size();
-  compute_tmp_out_descriptor_write.pImageInfo = nullptr;
-  compute_tmp_out_descriptor_write.pBufferInfo = tmp_infos.data();
-  compute_tmp_out_descriptor_write.pTexelBufferView = nullptr;
+  VkWriteDescriptorSet compute_tmp_descriptor_write = {};
+  compute_tmp_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+  compute_tmp_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
+  compute_tmp_descriptor_write.dstBinding = 2;
+  compute_tmp_descriptor_write.dstArrayElement = 0;
+  compute_tmp_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // TODO: COMPUTESHADERTODO - Change to bufferinfo
+  compute_tmp_descriptor_write.descriptorCount = tmp_infos.size();
+  compute_tmp_descriptor_write.pImageInfo = nullptr;
+  compute_tmp_descriptor_write.pBufferInfo = tmp_infos.data();
+  compute_tmp_descriptor_write.pTexelBufferView = nullptr;
 
-  std::vector<VkWriteDescriptorSet> writedescriptor_sets1 = {
+  std::vector<VkWriteDescriptorSet> writedescriptor_sets = {
     compute_in_descriptor_write,
+    compute_out_descriptor_write,
     compute_tmp_descriptor_write
   };
 
-  std::vector<VkWriteDescriptorSet> writedescriptor_sets2 = {
-    compute_out_descriptor_write,
-    compute_tmp_out_descriptor_write
-  };
-
-  vkUpdateDescriptorSets(this->vk_logical_device_, writedescriptor_sets1.size(), writedescriptor_sets1.data(), 0, nullptr);
-  vkUpdateDescriptorSets(this->vk_logical_device_, writedescriptor_sets2.size(), writedescriptor_sets2.data(), 0, nullptr);
+  vkUpdateDescriptorSets(this->vk_logical_device_, writedescriptor_sets.size(), writedescriptor_sets.data(), 0, nullptr);
 }
 
 void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {

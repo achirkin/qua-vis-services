@@ -116,6 +116,7 @@ namespace quavis {
     VkShaderModule vk_geoemtry_shader_;
     VkShaderModule vk_fragment_shader_;
     VkShaderModule vk_compute_shader_;
+    VkShaderModule vk_compute_shader_2_;
 
     // pipeline
     VkRenderPass vk_render_pass_;
@@ -123,6 +124,7 @@ namespace quavis {
     VkPipelineLayout vk_compute_pipeline_layout_;
     VkPipeline vk_graphics_pipeline_;
     VkPipeline vk_compute_pipeline_;
+    VkPipeline vk_compute_pipeline_2_;
 
     // descriptors
     VkDescriptorPool vk_descriptor_pool_;
@@ -177,6 +179,7 @@ namespace quavis {
     // command buffers
     VkCommandBuffer vk_graphics_commandbuffer_;
     VkCommandBuffer vk_compute_commandbuffer_;
+    VkCommandBuffer vk_compute_commandbuffer_2_;
 
     // semaphores
     VkSemaphore vk_render_semaphore_;
@@ -184,7 +187,6 @@ namespace quavis {
 
     // meta data for initialization
     const std::vector<const char*> vk_instance_extension_names_ = {
-      "VK_EXT_debug_report"
     };
 
     // meta data for initialization
@@ -192,7 +194,6 @@ namespace quavis {
     };
 
     const std::vector<const char*> vk_validation_layers_ = {
-      "VK_LAYER_LUNARG_standard_validation"
     };
 
 
@@ -200,6 +201,7 @@ namespace quavis {
     const uint32_t render_width_ = 128;
     const uint32_t render_height_ = 64;
     const size_t workgroups[3] = {64, 1, 1};
+    const size_t workgroups2[3] = {1, 1, 1};
     const size_t num_observation_points_x = 150;
     const VkFormat color_format_ = VK_FORMAT_R32G32_SFLOAT;
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
