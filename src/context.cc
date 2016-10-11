@@ -99,11 +99,14 @@ Context::Context() {
       results[i] = 0;
       continue;
     }
-    this->ResetResult();
     this->uniform_.observation_point = observation_points[i];
     this->SubmitUniformData();
+    vkQueueWaitIdle(this->vk_queue_graphics_);
     this->VkDraw();
+    this->ResetResult();
+    vkQueueWaitIdle(this->vk_queue_graphics_);
     this->VkCompute();
+    vkQueueWaitIdle(this->vk_queue_compute_);
     results[i] = *(float*)this->RetrieveResult();
   }
   auto t2 = std::chrono::high_resolution_clock::now();
@@ -1457,14 +1460,9 @@ void Context::VkDraw() {
       VK_NULL_HANDLE // fence (we don't need it)
     )
   );
-
-  vkQueueWaitIdle(this->vk_queue_graphics_);
 }
 
 void Context::VkCompute() {
-  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
-  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
-
   VkSubmitInfo submit_info = {
     VK_STRUCTURE_TYPE_SUBMIT_INFO, // sType,
     nullptr, // next (see documentaton, must be null)
@@ -1486,8 +1484,7 @@ void Context::VkCompute() {
     )
   );
 
-  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
-  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
+  vkQueueWaitIdle(this->vk_queue_compute_);
 
   VkSubmitInfo submit_info2 = {
     VK_STRUCTURE_TYPE_SUBMIT_INFO, // sType,
@@ -1671,9 +1668,6 @@ void Context::RetrieveDepthImage() {
 }
 
 void Context::ResetResult() {
-  vkQueueWaitIdle(this->vk_queue_graphics_);
-  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
-
   // copy from stating buffer to device local buffer
   void *data;
   vkMapMemory(this->vk_logical_device_, this->vk_compute_staging_buffer_memory_, 0, this->compute_size_, 0, (void **)&data);
@@ -1690,9 +1684,6 @@ void Context::ResetResult() {
 }
 
 void* Context::RetrieveResult() {
-  vkQueueWaitIdle(this->vk_queue_graphics_);
-  vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
-
   // copy from stating buffer to device local buffer
   VkCommandBuffer commandbuffer = this->BeginSingleTimeBuffer();
   VkBufferCopy copyRegion = {};
