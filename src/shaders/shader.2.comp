@@ -1,0 +1,23 @@
+#version 450
+#define N_GLOBAL 64 // the number of work groups on the x-axis
+
+layout (local_size_x = N_GLOBAL, local_size_y = 1, local_size_z = 1) in;
+layout (binding = 0) buffer outputBuffer {
+  float isovist;
+};
+layout (binding = 1) buffer tempBuffer {
+  float tmp_global[];
+};
+
+void main()
+{
+  // compute sum globally
+  if (gl_LocalInvocationID.x == 0) {
+    isovist = 0;
+    float global_result = 0.0;
+    for (uint x = 0; x < N_GLOBAL; x++) {
+      global_result += tmp_global[x];
+    }
+    isovist = global_result;
+  }
+}

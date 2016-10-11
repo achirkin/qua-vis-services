@@ -128,8 +128,10 @@ namespace quavis {
     VkDescriptorPool vk_descriptor_pool_;
     VkDescriptorSetLayout vk_graphics_descriptor_set_layout_;
     VkDescriptorSetLayout vk_compute_descriptor_set_layout_;
+    VkDescriptorSetLayout vk_compute_out_descriptor_set_layout_;
     VkDescriptorSet vk_graphics_descriptor_set_;
     VkDescriptorSet vk_compute_descriptor_set_;
+    VkDescriptorSet vk_compute_out_descriptor_set_;
 
     // vertex data
     VkBuffer vk_vertex_staging_buffer_;
@@ -140,6 +142,7 @@ namespace quavis {
     VkBuffer vk_uniform_buffer_;
     VkBuffer vk_compute_staging_buffer_;
     VkBuffer vk_compute_buffer_;
+    VkBuffer vk_compute_tmp_buffer_;
     VkDeviceMemory vk_vertex_staging_buffer_memory_;
     VkDeviceMemory vk_vertex_buffer_memory_;
     VkDeviceMemory vk_index_staging_buffer_memory_;
@@ -148,6 +151,7 @@ namespace quavis {
     VkDeviceMemory vk_uniform_buffer_memory_;
     VkDeviceMemory vk_compute_staging_buffer_memory_;
     VkDeviceMemory vk_compute_buffer_memory_;
+    VkDeviceMemory vk_compute_tmp_buffer_memory_;
 
     // images
     VkImageView vk_color_imageview_;
@@ -180,6 +184,7 @@ namespace quavis {
 
     // meta data for initialization
     const std::vector<const char*> vk_instance_extension_names_ = {
+      "VK_EXT_debug_report"
     };
 
     // meta data for initialization
@@ -187,25 +192,26 @@ namespace quavis {
     };
 
     const std::vector<const char*> vk_validation_layers_ = {
+      "VK_LAYER_LUNARG_standard_validation"
     };
 
 
     // rendering attributes
     const uint32_t render_width_ = 128;
     const uint32_t render_height_ = 64;
-    const size_t workgroups[3] = {1, 64, 1};
-    const size_t num_observation_points_x = 200;
-    const VkFormat color_format_ = VK_FORMAT_R32_SFLOAT;
+    const size_t workgroups[3] = {64, 1, 1};
+    const size_t num_observation_points_x = 150;
+    const VkFormat color_format_ = VK_FORMAT_R32G32_SFLOAT;
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
 
-    const uint32_t compute_size_ = sizeof(unsigned int);
+    const uint32_t compute_size_ = sizeof(float);
     unsigned int compute_default_value_ = 0;
 
     std::vector<Vertex> vertices_ = {};
     std::vector<uint32_t> indices_ = {};
     UniformBufferObject uniform_ = {
       vec3 {0, 0, 0},
-      100000,
+      1000000,
       .1
     };
   };

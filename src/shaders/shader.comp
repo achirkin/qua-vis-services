@@ -1,28 +1,50 @@
 #version 450
-#define N 1 // the number of work groups on the x-axis
-#define M 64 // the number of work groups on the y-axis
-#define W 128 // each work item covers a patch of size (W/N)x(H/M)
-#define H 64
-#define PI 3.1415926
-#define R_MAX 1000000.0
+// image settings
+#define WIDTH 128 // each work item covers a patch of size (W/N)x(H/M)
+#define HEIGHT 64
 
-layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-layout (binding = 0, r32f) uniform readonly image2D inputImage;
-layout (binding = 1) buffer result {
-  uint isovist;
+// local dimensions
+#define N_LOCAL 16 // the number of local work items on the x-axis
+
+// constants
+#define PI 3.1415926
+#define R_MAX 1000.0
+
+layout (local_size_x = N_LOCAL, local_size_y = 1, local_size_z = 1) in;
+
+layout (binding = 0, rg32f) uniform readonly image2D inputImage;
+layout (binding = 1) buffer tempBuffer {
+  float tmp_global[];
 };
+shared float tmp_local[N_LOCAL];
+shared uint ypos;
+shared float weight;
 
 void main()
 {
-  float tmp = 0;
-  float weight = 0;
-  uint ypos = gl_GlobalInvocationID.y*(H/M);
-  for (uint y = 0; y < H/M; y++) {
-    float weight = R_MAX*sin(float(ypos + y)/float(H)*PI);
-    for (uint x = 0; x < W/N; x++) {
-      tmp += weight*float(imageLoad(inputImage, ivec2(gl_GlobalInvocationID.x*(W/N) + x, ypos + y)).x);
-    }
+  if (gl_LocalInvocationID.x == 0) {
+    tmp_global[gl_GlobalInvocationID.x] = 0.0;
+    weight = sin(float(gl_GlobalInvocationID.x)/float(HEIGHT)*PI);
+    ypos = gl_GlobalInvocationID.x;
   }
-  uint res = uint(tmp);
-  atomicAdd(isovist, res);
+  memoryBarrierShared();
+  barrier();
+
+  // compute sum per item
+  uint xpos = gl_LocalInvocationID.x * WIDTH / N_LOCAL;
+  float tmp = 0.0;
+  for (uint x = 0; x < WIDTH / N_LOCAL; x++) {
+    tmp += R_MAX*weight*imageLoad(inputImage, ivec2(xpos + x, ypos)).x;
+  }
+  tmp_local[gl_LocalInvocationID.x] = tmp;
+  barrier();
+
+  // compute sum per group
+  if (gl_LocalInvocationID.x == 0) {
+    float local_result = 0.0;
+    for (uint x = 0; x < N_LOCAL; x++) {
+      local_result += tmp_local[x];
+    }
+    tmp_global[gl_GlobalInvocationID.x] = local_result;
+  }
 }
