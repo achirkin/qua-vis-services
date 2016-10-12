@@ -46,8 +46,14 @@ protected:
 
   void HandleRun(int64_t callId, std::string serviceName, json inputs, std::vector<luciconnect::Attachment*> attachments) {
     this->clientCallId = callId;
-    const quavis::vec3* d = reinterpret_cast<const quavis::vec3*>(&attachments[0]->data);
-    this->current_points = std::vector<quavis::vec3>(d, d + attachments[0]->size / sizeof(quavis::vec3));
+
+    luciconnect::Attachment atc = *attachments[0];
+
+    quavis::vec3* raw = (quavis::vec3*)atc.data;
+    this->current_points = std::vector<quavis::vec3>(raw, raw + attachments[0]->size / sizeof(quavis::vec3));
+    for (quavis::vec3 v : this->current_points) {
+      std::cout << std::string(v) << std::endl;
+    }
     this->SendRun(13371, "scenario.geojson.Get", {{"ScID", inputs["ScID"]}});
   };
 
@@ -56,6 +62,10 @@ protected:
     if (callId = 13371) {
       if (result.count("registeredName") > 0) {
         // registered
+        /*
+        std::vector<quavis::vec3> points = {{0,0,0}, {1,1,1}, {2,2,2}};
+        luciconnect::Attachment testattachment = luciconnect::Attachment {points.size()*sizeof(quavis::vec3), (const char*)points.data(), "format", "name"};
+        this->HandleRun(1, "test", (json){{"ScID", 2}}, {&testattachment});*/
       }
       else {
         if (result.count("geometry_output") > 0) {
@@ -65,15 +75,15 @@ protected:
           std::vector<float> results = context->Parse(geojson, this->current_points);
           json result = {
             {"unit", "m3"},
-            {"mode", "points"},
-            {"values", results}
+            {"mode", "points"}
           };
-          this->SendResult(this->clientCallId, result, {});
+          luciconnect::Attachment atc {results.size()*sizeof(float), (const char*)results.data(), "float-array", "values"};
+          std::vector<luciconnect::Attachment*> atcs = {&atc};
+          this->SendResult(this->clientCallId, result, atcs);
         }
       }
     }
     else {
-      // something strange happened
       std::cout << result << std::endl;
     }
   };
@@ -99,7 +109,7 @@ void exithandler(int param) {
 int main(int argc, char **argv) {
   signal(SIGINT, exithandler);
 
-  std::shared_ptr<luciconnect::Connection> connection = std::make_shared<luciconnect::Connection>("127.0.0.1", 7654);
+  std::shared_ptr<luciconnect::Connection> connection = std::make_shared<luciconnect::Connection>("129.132.6.33", 7654);
   GenericIsovistService* service = new GenericIsovistService(connection);
   service->Run();
 }
