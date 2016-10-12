@@ -77,8 +77,9 @@ target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
 
 # Tests
-add_executable (testvulkan
-  "${CMAKE_SOURCE_DIR}/test/vulkan.cc"
+add_executable (service
+  "${CMAKE_SOURCE_DIR}/src/service.cc"
 )
-target_link_libraries (testvulkan quavis)
-add_dependencies(testvulkan quavis)
+target_link_libraries (service quavis)
+target_link_libraries (service luciconnect)
+add_dependencies(service quavis)

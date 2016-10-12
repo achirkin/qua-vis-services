@@ -13,7 +13,7 @@ public:
   }
 
   void initializeVulkan() {
-    this->context_ = new quavis::Context();
+    this->context_ = new quavis::Context("/home/mfranzen/Downloads/mooctask.geojson");
   }
 
   ~VulkanTest() {

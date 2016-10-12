@@ -7,21 +7,6 @@
 using namespace quavis;
 
 Context::Context() {
-  std::ifstream fh ("/home/mfranzen/Downloads/mooctask.geojson");
-  if (fh.is_open()) {
-    std::string contents ((std::istreambuf_iterator<char>(fh)), std::istreambuf_iterator<char>());
-    std::vector<vec3> points = geojson::parse(contents);
-    std::unordered_map<Vertex, int> vertex_map = {};
-    vertices_ = std::vector<Vertex>();
-    for (uint32_t i = 0; i < points.size(); i++) {
-      Vertex vertex = {points[i], {255,255,255}};
-      if (vertex_map.count(vertex) == 0) {
-        vertex_map[vertex] = vertices_.size();
-        vertices_.push_back(vertex);
-      }
-      indices_.push_back(vertex_map[vertex]);
-    }
-  }
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -33,33 +18,25 @@ Context::Context() {
   this->InitializeVkComputePipelineLayout();
   this->InitializeVkGraphicsPipeline();
   this->InitializeVkComputePipeline();
+}
+
+std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analysispoints) {
+  std::vector<vec3> points = geojson::parse(contents);
+  std::unordered_map<Vertex, int> vertex_map = {};
+  vertices_ = std::vector<Vertex>();
+  for (uint32_t i = 0; i < points.size(); i++) {
+    Vertex vertex = {points[i], {255,255,255}};
+    if (vertex_map.count(vertex) == 0) {
+      vertex_map[vertex] = vertices_.size();
+      vertices_.push_back(vertex);
+    }
+    indices_.push_back(vertex_map[vertex]);
+  }
+
   this->InitializeVkMemory();
   this->InitializeVkImageLayouts();
 
-  // create a grid
-  // determine the observation points
-  vec3 lower_left = {FLT_MAX,FLT_MAX,FLT_MAX};
-  vec3 upper_right = {FLT_MIN,FLT_MIN,FLT_MIN};
-  vec3 delta = {0,0,0};
-  for (Vertex v : vertices_) {
-    lower_left.x = v.pos.x < lower_left.x ? v.pos.x : lower_left.x;
-    lower_left.y = v.pos.y < lower_left.y ? v.pos.y : lower_left.y;
-    upper_right.x = v.pos.x > upper_right.x ? v.pos.x : upper_right.x;
-    upper_right.y = v.pos.y > upper_right.y ? v.pos.y : upper_right.y;
-  }
-  delta = upper_right - lower_left;
-
-  uint32_t X = num_observation_points_x;
-  uint32_t Y = delta.y / delta.x * X;
-  delta.x = delta.x / X;
-  delta.y = delta.y / Y;
-  std::vector<vec3> observation_points (X*Y);
-  for (uint32_t x = 0; x < X; x++) {
-    for (uint32_t y = 0; y < Y; y++) {
-      observation_points[x*Y + y] = vec3 {delta.x*x, delta.y*y, 0} + lower_left;
-      observation_points[x*Y + y].z = 0;
-    }
-  }
+  std::vector<vec3> observation_points = analysispoints;
 
   // Create a list of vertices that lie are in some triangle
   std::unordered_set<size_t> ignore = {};
@@ -69,10 +46,6 @@ Context::Context() {
       p0 = {vertices_[indices_[i]].pos.x, vertices_[indices_[i]].pos.y};
       p1 = {vertices_[indices_[i+1]].pos.x, vertices_[indices_[i+1]].pos.y};
       p2 = {vertices_[indices_[i+2]].pos.x, vertices_[indices_[i+2]].pos.y};
-
-      if (triangulation::intriangle2d({observation_points[o].x, observation_points[o].y}, p0, p1, p2)) {
-        ignore.insert(o);
-      }
     }
   }
 
@@ -92,13 +65,8 @@ Context::Context() {
   this->InitializeVkComputeCommandBuffers();
 
   // MAGIIC
-  auto t1 = std::chrono::high_resolution_clock::now();
   std::vector<float> results(observation_points.size());
   for (size_t i = 0; i < observation_points.size(); i++) {
-    if (ignore.find(i) != ignore.end()) {
-      results[i] = 0;
-      continue;
-    }
     this->uniform_.observation_point = observation_points[i];
     this->SubmitUniformData();
     vkQueueWaitIdle(this->vk_queue_graphics_);
@@ -109,13 +77,7 @@ Context::Context() {
     vkQueueWaitIdle(this->vk_queue_compute_);
     results[i] = *(float*)this->RetrieveResult();
   }
-  auto t2 = std::chrono::high_resolution_clock::now();
-  for (uint32_t i = 0; i < observation_points.size(); i++) {
-    std::cout << results[i] << std::endl;
-  }
-  std::cout << X*Y << " points" << std::endl;
-  std::cout << (std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count())/1000.0 << " seconds" << std::endl;
-  std::cout << 1.0/(std::chrono::duration_cast<std::chrono::milliseconds>(t2-t1).count()/(float)(X*Y)/1000.0) << " fps" << std::endl;
+  return results;
 }
 
 Context::~Context() {
