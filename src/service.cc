@@ -51,9 +51,6 @@ protected:
 
     quavis::vec3* raw = (quavis::vec3*)atc.data;
     this->current_points = std::vector<quavis::vec3>(raw, raw + attachments[0]->size / sizeof(quavis::vec3));
-    for (quavis::vec3 v : this->current_points) {
-      std::cout << std::string(v) << std::endl;
-    }
     this->SendRun(13371, "scenario.geojson.Get", {{"ScID", inputs["ScID"]}});
   };
 
@@ -77,7 +74,8 @@ protected:
             {"unit", "m3"},
             {"mode", "points"}
           };
-          luciconnect::Attachment atc {results.size()*sizeof(float), (const char*)results.data(), "float-array", "values"};
+          float* raw = results.data();
+          luciconnect::Attachment atc {results.size()*sizeof(float), (const char*)raw, "Float32Array", "values"};
           std::vector<luciconnect::Attachment*> atcs = {&atc};
           this->SendResult(this->clientCallId, result, atcs);
         }
@@ -109,7 +107,7 @@ void exithandler(int param) {
 int main(int argc, char **argv) {
   signal(SIGINT, exithandler);
 
-  std::shared_ptr<luciconnect::Connection> connection = std::make_shared<luciconnect::Connection>("129.132.6.33", 7654);
+  std::shared_ptr<luciconnect::Connection> connection = std::make_shared<luciconnect::Connection>("localhost", 7654);
   GenericIsovistService* service = new GenericIsovistService(connection);
   service->Run();
 }
