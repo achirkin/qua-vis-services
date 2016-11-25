@@ -20,7 +20,9 @@ Context::Context() {
   this->InitializeVkComputePipeline();
 }
 
-std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analysispoints) {
+std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_max, float r_max) {
+  this->uniform_.alpha_max = alpha_max;
+  this->uniform_.r_max = r_max;
   std::vector<vec3> points = geojson::parse(contents);
   std::unordered_map<Vertex, int> vertex_map = {};
   vertices_ = std::vector<Vertex>();
