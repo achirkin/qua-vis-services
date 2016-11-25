@@ -1,3 +1,0 @@
-[submodule "lib/luci-connect"]
-	path = lib/luci-connect
-	url = git@github.com:mtfranzen/luci-connect.git
