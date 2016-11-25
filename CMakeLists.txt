@@ -44,6 +44,9 @@ else (WIN32)
     add_definitions (-std=c++14)
     add_definitions (-pipe)
     add_definitions ("-Wall")
+    add_definitions('-g')
+    add_definitions(-DELPP_THREAD_SAFE)
+    add_definitions(-DELPP_DISABLE_DEFAULT_CRASH_HANDLING)
 endif (WIN32)
 
 # Configure
@@ -72,7 +75,7 @@ endif ()
 add_library(quavis SHARED
   "${CMAKE_SOURCE_DIR}/src/context.cc"
 )
-add_definitions('-g')
+
 target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
 

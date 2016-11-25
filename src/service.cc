@@ -29,7 +29,7 @@ protected:
       {"points", "attachment"}
     }},
     {"outputs", {
-      {"unit", "string"},
+      {"units", "string"},
       {"values", "string"}
     }},
     {"exampleCall", {
@@ -71,7 +71,7 @@ protected:
           quavis::Context* context = new quavis::Context();
           std::vector<float> results = context->Parse(geojson, this->current_points);
           json result = {
-            {"unit", "m3"},
+            {"units", "m3"},
             {"mode", "points"}
           };
           float* raw = results.data();
