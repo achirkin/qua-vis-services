@@ -76,10 +76,12 @@ add_definitions('-g')
 target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
 
-# Tests
+# Service
+add_subdirectory (lib/luci-connect)
 add_executable (service
   "${CMAKE_SOURCE_DIR}/src/service.cc"
 )
 target_link_libraries (service quavis)
 target_link_libraries (service luciconnect)
 add_dependencies(service quavis)
+add_dependencies(service luciconnect)
