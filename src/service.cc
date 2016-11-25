@@ -56,7 +56,7 @@ protected:
 
 
   void HandleResult(int64_t callId, json result, std::vector<luciconnect::Attachment*> attachments) {
-    if (callId = 13371) {
+    if (callId == 13371) {
       if (result.count("registeredName") > 0) {
         // registered
         /*
