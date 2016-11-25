@@ -26,11 +26,21 @@ protected:
     {"inputs", {
       {"ScID", "number"},
       {"mode", "string"},
-      {"points", "attachment"}
+      {"points", "attachment"},
+      {"alpha", "number"}
     }},
     {"outputs", {
       {"units", "string"},
       {"values", "string"}
+    }},
+    {"constraints", {
+      {"mode", {"points", "objects", "scenario", "new"}},
+      {"alpha", {
+        {"integer", false},
+        {"min", 0.01},
+        {"max", 1.5},
+        {"def", 0.05}
+      }}
     }},
     {"exampleCall", {
       {"run", "GenericIsovistService"},
