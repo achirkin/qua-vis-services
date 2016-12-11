@@ -7,7 +7,7 @@ set (CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/lib")
 set (CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 
 # Project
-project(quaviss)
+project(quavis-services)
 set (VERSION_MAJOR 0)
 set (VERSION_MINOR 1)
 set (VERSION_PATCH 0)
@@ -47,6 +47,7 @@ else (WIN32)
     add_definitions('-g')
     add_definitions(-DELPP_THREAD_SAFE)
     add_definitions(-DELPP_DISABLE_DEFAULT_CRASH_HANDLING)
+    add_definitions(-DASIO_STANDALONE)
 endif (WIN32)
 
 # Configure
@@ -80,11 +81,55 @@ target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
 
 # Service
-add_subdirectory (lib/luci-connect)
-add_executable (service
+add_executable (quavis-isovist-area
   "${CMAKE_SOURCE_DIR}/src/service.cc"
 )
-target_link_libraries (service quavis)
-target_link_libraries (service luciconnect)
-add_dependencies(service quavis)
-add_dependencies(service luciconnect)
+target_link_libraries (quavis-isovist-area quavis)
+target_link_libraries (quavis-isovist-area luciconnect)
+add_dependencies(quavis-isovist-area quavis)
+add_dependencies(quavis-isovist-area luciconnect)
+
+# Install Directivey
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/quavis DESTINATION include COMPONENT headers)
+install(TARGETS quavis DESTINATION lib COMPONENT libraries)
+install(TARGETS quavis-isovist-area DESTINATION bin COMPONENT binaries)
+
+# Packaging
+include (InstallRequiredSystemLibraries)
+set (CPACK_PACKAGE_CONTACT "franzen@arch.ethz.ch")
+set (CPACK_PACKAGE_MAINTAINER "Michael Franzen <franzen@arch.ethz.ch>")
+set (CPACK_PACKAGE_NAME "quavis-services")
+set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Isovist Services for QUA-Server" )
+
+## Components
+set (CPACK_COMPONENTS_ALL libraries binaries headers)
+
+set (CPACK_COMPONENT_LIBRARIES_DISPLAY_NAME "Library")
+set (CPACK_COMPONENT_LIBRARIES_DESCRIPTION "Shared Libraries")
+set (CPACK_COMPONENT_LIBRARIES_REQUIRED luciconnect)
+
+set (CPACK_COMPONENT_BINARIES_DISPLAY_NAME "Binaries")
+set (CPACK_COMPONENT_BINARIES_DESCRIPTION "The service binaries")
+set (CPACK_COMPONENT_BINARIES_REQUIRED libraries)
+
+set (CPACK_COMPONENT_HEADERS_DISPLAY_NAME "C++ Headers")
+set (CPACK_COMPONENT_HEADERS_DESCRIPTION "C++ Headers for Quavis-Services")
+set (CPACK_COMPONENT_HEADERS_DEPENDS libraries binaries)
+
+# Component settings
+set (CPACK_COMPONENT_LIBRARIES_GROUP "Development")
+set (CPACK_COMPONENT_BINARIES_GROUP "Development")
+set (CPACK_COMPONENT_HEADERS_GROUP "Development")
+set (CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set (CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
+set (CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
+set (CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
+set (CPACK_PACKAGE_VERSION "${VERSION}")
+
+if (WIN32)
+  set (CPACK_GENERATOR "NSIS")
+else (WIN32)
+  set (CPACK_GENERATOR "DEB")
+endif (WIN32)
+
+include (CPack)
