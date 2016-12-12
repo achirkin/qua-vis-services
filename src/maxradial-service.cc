@@ -72,12 +72,12 @@ protected:
     this->current_points = std::vector<quavis::vec3>(raw, raw + attachments[0]->size / sizeof(quavis::vec3));
     this->r_max = inputs["r_max"];
     this->alpha_max = inputs["alpha_max"];
-    this->SendRun(13371, "scenario.geojson.Get", {{"ScID", inputs["ScID"]}});
+    this->SendRun(13372, "scenario.geojson.Get", {{"ScID", inputs["ScID"]}});
   };
 
 
   void HandleResult(int64_t callId, json result, std::vector<luciconnect::Attachment*> attachments) {
-    if (callId == 13371) {
+    if (callId == 13372) {
       if (result.count("registeredName") > 0) {
         // registered
         /*
@@ -89,10 +89,10 @@ protected:
         if (result.count("geometry_output") > 0) {
           // got scenario
           std::string geojson = result["geometry_output"]["geometry"].dump();
-          quavis::Context* context = new quavis::Context();
+          quavis::Context* context = new quavis::Context("maxradial");
           std::vector<float> results = context->Parse(geojson, this->current_points, this->alpha_max, this->r_max);
           json result = {
-            {"units", "m3"},
+            {"units", "m"},
             {"mode", "points"}
           };
           float* raw = results.data();
