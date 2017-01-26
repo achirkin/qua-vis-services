@@ -6,7 +6,9 @@
 
 using namespace quavis;
 
-Context::Context() {
+Context::Context(std::string shader_name) {
+  this->shader_name_ = shader_name;
+
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
   this->InitializeVkLogicalDevice();
@@ -444,7 +446,27 @@ void Context::InitializeVkLogicalDevice() {
 }
 
 void Context::InitializeVkShaderModules() {
-  // TODO: Add better mechanism for shader loading
+  uint32_t* comp_shader, *comp2_shader;
+  size_t comp_shader_length, comp2_shader_length;
+
+  if (this->shader_name_ == "area") {
+    comp_shader = (uint32_t*)src_shaders_shader_area_comp_spv;
+    comp_shader_length = src_shaders_shader_area_comp_spv_len;
+    comp2_shader = (uint32_t*)src_shaders_shader_2_area_comp_spv;
+    comp2_shader_length = src_shaders_shader_2_area_comp_spv_len;
+  }
+  else if (this->shader_name_ == "minradial") {
+      comp_shader = (uint32_t*)src_shaders_shader_minradial_comp_spv;
+      comp_shader_length = src_shaders_shader_minradial_comp_spv_len;
+      comp2_shader = (uint32_t*)src_shaders_shader_2_minradial_comp_spv;
+      comp2_shader_length = src_shaders_shader_2_minradial_comp_spv_len;
+  }
+  else if (this->shader_name_ == "maxradial") {
+    comp_shader = (uint32_t*)src_shaders_shader_maxradial_comp_spv;
+    comp_shader_length = src_shaders_shader_maxradial_comp_spv_len;
+    comp2_shader = (uint32_t*)src_shaders_shader_2_maxradial_comp_spv;
+    comp2_shader_length = src_shaders_shader_2_maxradial_comp_spv_len;
+  }
 
   // create vertex shader
   VkShaderModuleCreateInfo vertex_shader_info = {
@@ -541,8 +563,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_shader_comp_spv_len, // fragment shader size
-    (uint32_t*)src_shaders_shader_comp_spv // fragment shader code
+    comp_shader_length, // fragment shader size
+    (uint32_t*)comp_shader // fragment shader code
   };
 
   debug::handleVkResult(
@@ -559,8 +581,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_shader_2_comp_spv_len, // fragment shader size
-    (uint32_t*)src_shaders_shader_2_comp_spv // fragment shader code
+    comp2_shader_length, // fragment shader size
+    (uint32_t*)comp2_shader // fragment shader code
   };
 
   debug::handleVkResult(

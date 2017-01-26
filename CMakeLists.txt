@@ -80,19 +80,38 @@ add_library(quavis SHARED
 target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
 
-# Service
+# Services
 add_executable (quavis-isovist-area
-  "${CMAKE_SOURCE_DIR}/src/service.cc"
+  "${CMAKE_SOURCE_DIR}/src/area-service.cc"
 )
 target_link_libraries (quavis-isovist-area quavis)
 target_link_libraries (quavis-isovist-area luciconnect)
 add_dependencies(quavis-isovist-area quavis)
 add_dependencies(quavis-isovist-area luciconnect)
 
+add_executable (quavis-isovist-minradial
+  "${CMAKE_SOURCE_DIR}/src/minradial-service.cc"
+)
+target_link_libraries (quavis-isovist-minradial quavis)
+target_link_libraries (quavis-isovist-minradial luciconnect)
+add_dependencies(quavis-isovist-minradial quavis)
+add_dependencies(quavis-isovist-minradial luciconnect)
+
+add_executable (quavis-isovist-maxradial
+  "${CMAKE_SOURCE_DIR}/src/maxradial-service.cc"
+)
+target_link_libraries (quavis-isovist-maxradial quavis)
+target_link_libraries (quavis-isovist-maxradial luciconnect)
+add_dependencies(quavis-isovist-maxradial quavis)
+add_dependencies(quavis-isovist-maxradial luciconnect)
+
+
 # Install Directivey
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/quavis DESTINATION include COMPONENT headers)
 install(TARGETS quavis DESTINATION lib COMPONENT libraries)
 install(TARGETS quavis-isovist-area DESTINATION bin COMPONENT binaries)
+install(TARGETS quavis-isovist-minradial DESTINATION bin COMPONENT binaries)
+install(TARGETS quavis-isovist-maxradial DESTINATION bin COMPONENT binaries)
 
 # Packaging
 include (InstallRequiredSystemLibraries)
