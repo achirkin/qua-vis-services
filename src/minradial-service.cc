@@ -6,6 +6,7 @@
 #include <argp.h>
 #include <signal.h>
 #include <unistd.h>
+#include <time.h>
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -130,14 +131,35 @@ void exithandler(int param) {
   exit(1);
 }
 
+void run_service(GenericIsovistService* service, int retries) {
+  time_t timestamp = std::time(NULL);
+  try {
+    LOG(INFO) << "Starting Service";
+    service->Run();
+  }
+  catch (const char* what) {
+    LOG(WARNING) << "An error occurred: " << what;
+    LOG(INFO) << "Trying to reestablish the connection in 1 seconds.";
+    usleep(1000000);
+    if (std::time(NULL) - timestamp < retries) {
+      run_service(service, --retries);
+    }
+    else {
+      LOG(ERROR) << "Number of retries exceeded.";
+      exit(-1);
+    }
+  }
+}
+
 /* Argument parsing options */
-struct arguments { char const *host; int port; int loglevel;};
+struct arguments { char const *host; int port; int loglevel; int retries;};
 static char doc[] = "Runs the generic isovist service until terminated.";
 static char args_doc[] = "";
 static struct argp_option options[] = {
   {"host", 'h', "localhost", 0, "The host address of Luci"},
   {"port", 'p', "7654", 0, "The port of Luci"},
-  {"loglevel", 'l', "2", 0, "The loglevel (0: all, 1: debug, 2: info, 3: warning, 4: error"},
+  {"loglevel", 'l', "2", 0, "The loglevel\n0: all, 1: debug, 2: info, 3: warning, 4: error"},
+  {"retries", 'r', "5", 0, "The number of retries when the connection could not be established or has ended unexpectedly. The service performs one retry per second."},
   {0}
 };
 static error_t parse_opt (int key, char *arg, struct argp_state *state) {
@@ -152,6 +174,9 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
       break;
     case 'l':
       args->loglevel = arg ? atoi(arg) : 2;
+      break;
+    case 'r':
+      args->retries = arg ? atoi(arg) : 5;
       break;
     case ARGP_KEY_END:
       if (state->arg_num < 0) argp_usage (state);
@@ -174,6 +199,7 @@ int main(int argc, char **argv) {
   args.host = "localhost";
   args.port = 7654;
   args.loglevel = 2;
+  args.retries = 5;
 
   /* Parse our arguments; every option seen by parse_opt will be
      reflected in arguments. */
@@ -184,14 +210,14 @@ int main(int argc, char **argv) {
   el::Configurations defaultConf;
   defaultConf.setToDefault();
   switch (args.loglevel) {
-    case 1:
-      defaultConf.set(el::Level::Trace, el::ConfigurationType::Enabled, "false");
-    case 2:
-      defaultConf.set(el::Level::Debug, el::ConfigurationType::Enabled, "false");
-    case 3:
-      defaultConf.set(el::Level::Info, el::ConfigurationType::Enabled, "false");
     case 4:
       defaultConf.set(el::Level::Warning, el::ConfigurationType::Enabled, "false");
+    case 3:
+      defaultConf.set(el::Level::Info, el::ConfigurationType::Enabled, "false");
+    case 2:
+      defaultConf.set(el::Level::Debug, el::ConfigurationType::Enabled, "false");
+    case 1:
+      defaultConf.set(el::Level::Trace, el::ConfigurationType::Enabled, "false");
       break;
     default:
       break;
@@ -202,5 +228,5 @@ int main(int argc, char **argv) {
   signal(SIGINT, exithandler);
   std::shared_ptr<luciconnect::Connection> connection = std::make_shared<luciconnect::Connection>(args.host, args.port);
   GenericIsovistService* service = new GenericIsovistService(connection);
-  service->Run();
+  run_service(service, args.retries);
 }
