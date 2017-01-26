@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <argp.h>
 #include <signal.h>
+#include <unistd.h>
 
 INITIALIZE_EASYLOGGINGPP
 
@@ -17,7 +18,9 @@ public:
     this->Connect();
     this->SendRun(0, "RemoteRegister", this->register_message_);
 
-    while(1);
+    while(1) {
+      usleep(50);
+    }
   }
 
 protected:
