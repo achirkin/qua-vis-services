@@ -128,7 +128,7 @@ void exithandler(int param) {
 }
 
 /* Argument parsing options */
-struct arguments { char* host; int port;};
+struct arguments { char const *host; int port;};
 static char doc[] = "Runs the generic isovist service until terminated.";
 static char args_doc[] = "HOST";
 static struct argp_option options[] = {{"port", 'p', "7654", 0, "The port"},{0}};
