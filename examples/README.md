@@ -1,6 +1,7 @@
 # Usage
-1. Compile compute shader to SPIR-V using the Khronos [GlslangValidator](https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/tools/glslang/Install/)
-2. Run the generic analysis `quavis-generic-service` where
+1. Compile the main project
+2. Compile the compute shader to SPIR-V using the Khronos [GlslangValidator](https://cvs.khronos.org/svn/repos/ogl/trunk/ecosystem/public/sdk/tools/glslang/Install/)
+3. Run the generic analysis `quavis-generic-service` where
  * `-a` is the maxium angle in radians
  * `-r` is the maximum visible distance
  * `-s` is the first-stage compute shader (aggregating row-wise)
