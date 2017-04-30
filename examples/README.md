@@ -24,6 +24,12 @@ glslangValidator -V shaders/shader.2.area.comp -o shaders/shader.2.area.comp.spv
 ../bin/quavis-generic-service -a 0.1 -r 10000.0 -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/empower-shack.geojson" < data/empower-shack-grid.txt
 ```
 
+## Isovist Map (created using map.py)
+
+![Isovist Map](map.png)
+
+## Debug Images
+
 Using line-mode or debug-mode yields the following depth images for an observation inside of a building:
 
 ### Depth-Image (Debug):

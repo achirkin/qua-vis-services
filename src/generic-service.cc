@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
   std::vector<float> results = context->Parse(content, observation_points, args.max_angle, args.max_distance);
 
   for (size_t i = 0; i < observation_points.size(); i++) {
-    std::cout << observation_points[i].x << " " << observation_points[i].y << " " << observation_points[i].z << " : " << results[i] << std::endl;
+    std::cout << observation_points[i].x << " " << observation_points[i].y << " " << observation_points[i].z << " " << results[i] << std::endl;
   }
 
   /* Start the Service */
