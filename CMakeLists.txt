@@ -81,37 +81,17 @@ target_link_libraries(quavis ${VULKAN_LIBRARY})
 add_dependencies(quavis shaders)
 
 # Services
-add_executable (quavis-isovist-area
-  "${CMAKE_SOURCE_DIR}/src/area-service.cc"
+add_executable (quavis-generic-service
+  "${CMAKE_SOURCE_DIR}/src/generic-service.cc"
 )
-target_link_libraries (quavis-isovist-area quavis)
-target_link_libraries (quavis-isovist-area luciconnect)
-add_dependencies(quavis-isovist-area quavis)
-add_dependencies(quavis-isovist-area luciconnect)
-
-add_executable (quavis-isovist-minradial
-  "${CMAKE_SOURCE_DIR}/src/minradial-service.cc"
-)
-target_link_libraries (quavis-isovist-minradial quavis)
-target_link_libraries (quavis-isovist-minradial luciconnect)
-add_dependencies(quavis-isovist-minradial quavis)
-add_dependencies(quavis-isovist-minradial luciconnect)
-
-add_executable (quavis-isovist-maxradial
-  "${CMAKE_SOURCE_DIR}/src/maxradial-service.cc"
-)
-target_link_libraries (quavis-isovist-maxradial quavis)
-target_link_libraries (quavis-isovist-maxradial luciconnect)
-add_dependencies(quavis-isovist-maxradial quavis)
-add_dependencies(quavis-isovist-maxradial luciconnect)
+target_link_libraries (quavis-generic-service quavis)
+add_dependencies(quavis-generic-service quavis)
 
 
 # Install Directivey
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/quavis DESTINATION include COMPONENT headers)
 install(TARGETS quavis DESTINATION lib COMPONENT libraries)
-install(TARGETS quavis-isovist-area DESTINATION bin COMPONENT binaries)
-install(TARGETS quavis-isovist-minradial DESTINATION bin COMPONENT binaries)
-install(TARGETS quavis-isovist-maxradial DESTINATION bin COMPONENT binaries)
+install(TARGETS quavis-generic-service DESTINATION bin COMPONENT binaries)
 
 # Packaging
 include (InstallRequiredSystemLibraries)
@@ -122,10 +102,6 @@ set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Isovist Services for QUA-Server" )
 
 ## Components
 set (CPACK_COMPONENTS_ALL libraries binaries headers)
-
-set (CPACK_COMPONENT_LIBRARIES_DISPLAY_NAME "Library")
-set (CPACK_COMPONENT_LIBRARIES_DESCRIPTION "Shared Libraries")
-set (CPACK_COMPONENT_LIBRARIES_REQUIRED luciconnect)
 
 set (CPACK_COMPONENT_BINARIES_DISPLAY_NAME "Binaries")
 set (CPACK_COMPONENT_BINARIES_DESCRIPTION "The service binaries")

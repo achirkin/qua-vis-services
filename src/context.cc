@@ -3,11 +3,34 @@
 #include <cfloat>
 #include <unordered_map>
 #include <unordered_set>
+#include <fstream>
+#include <iterator>
 
 using namespace quavis;
 
-Context::Context(std::string shader_name) {
-  this->shader_name_ = shader_name;
+Context::Context(std::string cp_shader_1, std::string cp_shader_2) {
+  // Load compute shader code
+  std::ifstream cp_shader_1_stream(cp_shader_1, std::ios::ate | std::ios::binary);
+  if (!cp_shader_1_stream.is_open()) {
+    throw std::runtime_error("failed to open compute shader #1!");
+  }
+  this->cp_shader_1_len_ = (size_t)cp_shader_1_stream.tellg();
+  std::vector<char> cp_shader_1_buffer(this->cp_shader_1_len_);
+  cp_shader_1_stream.seekg(0);
+  cp_shader_1_stream.read(cp_shader_1_buffer.data(), this->cp_shader_1_len_);
+  this->cp_shader_1_src_ = cp_shader_1_buffer.data();
+  cp_shader_1_stream.close();
+
+  std::ifstream cp_shader_2_stream(cp_shader_2, std::ios::ate | std::ios::binary);
+  if (!cp_shader_2_stream.is_open()) {
+    throw std::runtime_error("failed to open compute shader #2!");
+  }
+  this->cp_shader_2_len_ = (size_t)cp_shader_2_stream.tellg();
+  std::vector<char> cp_shader_2_buffer(this->cp_shader_2_len_);
+  cp_shader_2_stream.seekg(0);
+  cp_shader_2_stream.read(cp_shader_2_buffer.data(), this->cp_shader_2_len_);
+  this->cp_shader_2_src_ = cp_shader_2_buffer.data();
+  cp_shader_2_stream.close();
 
   this->InitializeVkInstance();
   this->InitializeVkPhysicalDevice();
@@ -449,24 +472,10 @@ void Context::InitializeVkShaderModules() {
   uint32_t* comp_shader, *comp2_shader;
   size_t comp_shader_length, comp2_shader_length;
 
-  if (this->shader_name_ == "area") {
-    comp_shader = (uint32_t*)src_shaders_shader_area_comp_spv;
-    comp_shader_length = src_shaders_shader_area_comp_spv_len;
-    comp2_shader = (uint32_t*)src_shaders_shader_2_area_comp_spv;
-    comp2_shader_length = src_shaders_shader_2_area_comp_spv_len;
-  }
-  else if (this->shader_name_ == "minradial") {
-      comp_shader = (uint32_t*)src_shaders_shader_minradial_comp_spv;
-      comp_shader_length = src_shaders_shader_minradial_comp_spv_len;
-      comp2_shader = (uint32_t*)src_shaders_shader_2_minradial_comp_spv;
-      comp2_shader_length = src_shaders_shader_2_minradial_comp_spv_len;
-  }
-  else if (this->shader_name_ == "maxradial") {
-    comp_shader = (uint32_t*)src_shaders_shader_maxradial_comp_spv;
-    comp_shader_length = src_shaders_shader_maxradial_comp_spv_len;
-    comp2_shader = (uint32_t*)src_shaders_shader_2_maxradial_comp_spv;
-    comp2_shader_length = src_shaders_shader_2_maxradial_comp_spv_len;
-  }
+  comp_shader = (uint32_t*)cp_shader_1_src_;
+  comp_shader_length = cp_shader_1_len_;
+  comp2_shader = (uint32_t*)cp_shader_2_src_;
+  comp2_shader_length = cp_shader_2_len_;
 
   // create vertex shader
   VkShaderModuleCreateInfo vertex_shader_info = {

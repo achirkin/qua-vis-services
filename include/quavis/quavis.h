@@ -39,7 +39,7 @@ namespace quavis {
     * Creates a new instance of the Context class. During its initialization,
     * the vulkan devices and pipelines are prepared for rendering / computation.
     */
-    Context(std::string compute_shader);
+    Context(std::string cp_shader_1, std::string cp_shader_2);
 
     std::vector<float> Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_min, float r_max);
 
@@ -93,7 +93,11 @@ namespace quavis {
     void* RetrieveResult();
     void ResetResult();
 
-    std::string shader_name_;
+    char* cp_shader_1_src_;
+    char* cp_shader_2_src_;
+    size_t cp_shader_1_len_;
+    size_t cp_shader_2_len_;
+
 
     // instance data
     VkInstance vk_instance_;
