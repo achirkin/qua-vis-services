@@ -15,4 +15,4 @@ The project can be compiled on both Linux using CMake and the respective build s
 1. Clone the project using the recursive tag: `git clone --recursive git@github.com:mtfranzen/qua-vis-services.git`
 2. Switch to this branch `git checkout standalone`
 3. Build the project using CMake and Make: `cmake . && make`
-4. Continue with the [examples](examples/README.md)
+4. Continue with the [examples](examples/README.md) in the `examples/` directory
