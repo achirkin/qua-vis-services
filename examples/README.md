@@ -24,8 +24,10 @@ glslangValidator -V shaders/shader.2.area.comp -o shaders/shader.2.area.comp.spv
 
 Using line-mode or debug-mode yields the following depth images for an observation inside of a building:
 
-Depth-Image (Debug)
+### Depth-Image (Debug):
+
 ![Inside Building Panorama](inside_building_panorama.png)
 
-Depth-Image in Line-Mode:
+### Depth-Image in Line-Mode:
+
 ![Inside Building Tessellated](inside_building_tessellation.png)
