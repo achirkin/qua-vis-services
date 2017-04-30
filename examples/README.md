@@ -28,4 +28,4 @@ Depth-Image (Debug)
 ![Inside Building Panorama](inside_building_panorama.png)
 
 Depth-Image in Line-Mode:
-![Inside Building Tessellated](inside_building_tessellated.png)
+![Inside Building Tessellated](inside_building_tessellation.png)
