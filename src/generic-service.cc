@@ -11,7 +11,7 @@ void exithandler(int param) {
 }
 
 /* Argument parsing options */
-struct arguments { char const *geojson_file; char const *cp_shader_1; char const *cp_shader_2; float max_distance; float max_angle;};
+struct arguments { char const *geojson_file; char const *cp_shader_1; char const *cp_shader_2; float max_distance; float max_angle; int debug_mode; int line_mode;};
 static char doc[] = "Runs the generic isovist service on a given input file.";
 static char args_doc[] = "";
 static struct argp_option options[] = {
@@ -20,6 +20,8 @@ static struct argp_option options[] = {
   {"cp_shader_2", 't', "<path>", 0, "The path to the 2nd level compute shader"},
   {"max_distance", 'r', "100000", 0, "The maximum visible distance"},
   {"max_angle", 'a', "0.1", 0, "The maximum angle, controls tessellation"},
+  {"debug", 'd', "0", 0, "debug-mode=1"},
+  {"line", 'l', "0", 0, "line-mode=1"},
   {0}
 };
 static error_t parse_opt (int key, char *arg, struct argp_state *state) {
@@ -41,6 +43,10 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
     case 'a':
       args->max_angle = arg ? atof(arg) : 0.1;
       break;
+    case 'd':
+      args->debug_mode = arg ? atoi(arg) : 0;
+    case 'l':
+      args->line_mode = arg ? atoi(arg) : 0;
     case ARGP_KEY_END:
       if (state->arg_num < 0) argp_usage (state);
       break;
@@ -64,6 +70,8 @@ int main(int argc, char **argv) {
   args.cp_shader_2 = "shader.2.comp.spv";
   args.max_distance = 100000;
   args.max_angle = 0.1;
+  args.debug_mode = 0;
+  args.line_mode = 0;
 
   /* Parse our arguments; every option seen by parse_opt will be
      reflected in arguments. */
@@ -75,8 +83,7 @@ int main(int argc, char **argv) {
   while(std::cin >> x >> y >> z) {
     observation_points.push_back(quavis::vec3 { x, y, z });
   }
-
-  quavis::Context* context = new quavis::Context(args.cp_shader_1, args.cp_shader_2);
+  quavis::Context* context = new quavis::Context(args.cp_shader_1, args.cp_shader_2, args.debug_mode == 1 ? true : false, args.line_mode == 1 ? true : false);
 
   std::ifstream ifs(args.geojson_file);
   std::string content( (std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()    ) );

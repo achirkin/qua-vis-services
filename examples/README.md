@@ -6,6 +6,7 @@
  * `-s` is the first-stage compute shader (aggregating row-wise)
  * `-t` is the second-stage compute shader (aggregating column-wise)
  * `-f` is the geojson file to be analysid
+ * `-d` set to 1 to store debug images into `images/` folder. Note that the results become wrong in this mode
  * *stdin* is the list of observation points in the format
 ```
 x1 y1 z1
@@ -18,5 +19,13 @@ x2 y2 z2
 cd examples
 glslangValidator -V shaders/shader.area.comp -o shaders/shader.area.comp.spv
 glslangValidator -V shaders/shader.2.area.comp -o shaders/shader.2.area.comp.spv
-../bin/quavis-generic-service -a 0.1 -r 1000000.0 -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/empower-shack.geojson" < data/empower-shack-grid.txt
+../bin/quavis-generic-service -a 0.1 -r 10000.0 -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/empower-shack.geojson" < data/empower-shack-grid.txt
 ```
+
+Using line-mode or debug-mode yields the following depth images for an observation inside of a building:
+
+Depth-Image (Debug)
+![Inside Building Panorama](inside_building_panorama.png)
+
+Depth-Image in Line-Mode:
+![Inside Building Tessellated](inside_building_tessellated.png)

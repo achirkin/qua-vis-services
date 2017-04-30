@@ -39,7 +39,7 @@ namespace quavis {
     * Creates a new instance of the Context class. During its initialization,
     * the vulkan devices and pipelines are prepared for rendering / computation.
     */
-    Context(std::string cp_shader_1, std::string cp_shader_2);
+    Context(std::string cp_shader_1, std::string cp_shader_2, bool debug, bool line);
 
     std::vector<float> Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_min, float r_max);
 
@@ -88,10 +88,13 @@ namespace quavis {
     void SubmitIndexData();
     void SubmitUniformData();
     void RetrieveRenderImage(uint32_t i);
-    void RetrieveDepthImage();
+    void RetrieveDepthImage(uint32_t i);
     void RetrieveComputeImage();
     void* RetrieveResult();
     void ResetResult();
+
+    bool debug_mode_;
+    bool line_mode_;
 
     char* cp_shader_1_src_;
     char* cp_shader_2_src_;
@@ -206,9 +209,9 @@ namespace quavis {
 
 
     // rendering attributes
-    const uint32_t render_width_ = 128;
-    const uint32_t render_height_ = 64;
-    const size_t workgroups[3] = {64, 1, 1};
+    const uint32_t render_width_ = 512;
+    const uint32_t render_height_ = 256;
+    const size_t workgroups[3] = {render_height_, 1, 1};
     const size_t workgroups2[3] = {1, 1, 1};
     const size_t num_observation_points_x = 100;
     const VkFormat color_format_ = VK_FORMAT_R32G32_SFLOAT;

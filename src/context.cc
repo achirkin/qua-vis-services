@@ -8,7 +8,10 @@
 
 using namespace quavis;
 
-Context::Context(std::string cp_shader_1, std::string cp_shader_2) {
+Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=false, bool line=false) {
+  this->debug_mode_ = debug;
+  this->line_mode_ = line;
+
   // Load compute shader code
   std::ifstream cp_shader_1_stream(cp_shader_1, std::ios::ate | std::ios::binary);
   if (!cp_shader_1_stream.is_open()) {
@@ -103,6 +106,7 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     this->VkCompute();
     vkQueueWaitIdle(this->vk_queue_compute_);
     results[i] = *(float*)this->RetrieveResult();
+    if (this->debug_mode_) this->RetrieveDepthImage(i);
   }
   return results;
 }
@@ -417,6 +421,7 @@ void Context::InitializeVkLogicalDevice() {
   device_features.tessellationShader = VK_TRUE;
   device_features.geometryShader = VK_TRUE;
   device_features.fillModeNonSolid = VK_TRUE;
+  if (this->line_mode_) device_features.fillModeNonSolid = VK_FALSE;
   device_features.shaderStorageImageExtendedFormats = VK_TRUE;
 
   // Create lgocial device metadata
@@ -952,7 +957,7 @@ void Context::InitializeVkGraphicsPipeline() {
     0, // flags (see documentation, must be 0)
     VK_FALSE, // depth clamping
     VK_FALSE, // discard primitives before rendering?
-    VK_POLYGON_MODE_FILL, // fill polygons (alternatively: draw only edges / vertices)
+    this->line_mode_ == false ? VK_POLYGON_MODE_FILL : VK_POLYGON_MODE_LINE, // fill polygons (alternatively: draw only edges / vertices)
     VK_CULL_MODE_NONE, // discard one of the two faces of a polygon
     VK_FRONT_FACE_COUNTER_CLOCKWISE, // counter clockwise = front
     VK_FALSE, // depth bias // TODO: Find out whether we need depth bias
@@ -1618,13 +1623,13 @@ void Context::RetrieveRenderImage(uint32_t i) {
     image[i/4] = floor(px*255);
   }
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  std::string filename = "bin/rendered_" + std::to_string(i) + ".png";
+  std::string filename = "images/rendered_" + std::to_string(i) + ".png";
   stbi_write_png(filename.c_str(), this->render_width_, this->render_height_, 1, (void*)image, 0);
   free(pixels);
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
-void Context::RetrieveDepthImage() {
+void Context::RetrieveDepthImage(uint32_t i) {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
@@ -1656,9 +1661,9 @@ void Context::RetrieveDepthImage() {
     memcpy(&px, (uint8_t*)pixels + i, 4);
     image[i/4] = floor((1.0 - px)*255);
   }
-
+  std::string filename = "images/depth_" + std::to_string(i) + ".png";
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  stbi_write_png("bin/depth.png", this->render_width_, this->render_height_, 1, (void*)image, 0);
+  stbi_write_png(filename.c_str(), this->render_width_, this->render_height_, 1, (void*)image, 0);
   free(pixels);
 }
 
