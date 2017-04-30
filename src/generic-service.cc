@@ -17,7 +17,7 @@ static char args_doc[] = "";
 static struct argp_option options[] = {
   {"geojson_file", 'f', "<path>", 0, "The geojson file that is going to be processed"},
   {"cp_shader_1", 's', "<path>", 0, "The path to the 1st level compute shader"},
-  {"cp_shader_2", 'p', "<path>", 0, "The path to the 2nd level compute shader"},
+  {"cp_shader_2", 't', "<path>", 0, "The path to the 2nd level compute shader"},
   {"max_distance", 'r', "100000", 0, "The maximum visible distance"},
   {"max_angle", 'a', "0.1", 0, "The maximum angle, controls tessellation"},
   {0}
@@ -32,7 +32,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
     case 's':
       args->cp_shader_1 = arg;
       break;
-    case 'p':
+    case 't':
       args->cp_shader_2 = arg;
       break;
     case 'r':
