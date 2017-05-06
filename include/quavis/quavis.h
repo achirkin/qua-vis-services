@@ -21,6 +21,7 @@
 #include <vector>
 #include <set>
 #include <array>
+#include <ctime>
 
 namespace quavis {
   struct UniformBufferObject {
@@ -39,7 +40,7 @@ namespace quavis {
     * Creates a new instance of the Context class. During its initialization,
     * the vulkan devices and pipelines are prepared for rendering / computation.
     */
-    Context(std::string cp_shader_1, std::string cp_shader_2, bool debug, bool line);
+    Context(std::string cp_shader_1, std::string cp_shader_2, bool debug, bool line, bool timing);
 
     std::vector<float> Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_min, float r_max);
 
@@ -92,9 +93,6 @@ namespace quavis {
     void RetrieveComputeImage();
     void* RetrieveResult();
     void ResetResult();
-
-    bool debug_mode_;
-    bool line_mode_;
 
     char* cp_shader_1_src_;
     char* cp_shader_2_src_;
@@ -227,6 +225,22 @@ namespace quavis {
       1000000,
       .1
     };
+
+    // flags
+    bool debug_mode_;
+    bool line_mode_;
+    bool timing_mode_;
+
+    // timings
+    std::clock_t start_time_;
+    double init_memory_time_;
+    double init_image_layout_time_;
+    double submission_time_;
+    double graphics_time_ = 0;
+    double compute_time_ = 0;
+    double image_retrieval_time_ = 0;
+    double image_storage_time_ = 0;
+    double result_retrieval_time_ = 0;
   };
 }
 

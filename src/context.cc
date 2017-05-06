@@ -8,9 +8,10 @@
 
 using namespace quavis;
 
-Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=false, bool line=false) {
+Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=false, bool line=false, bool timing=false) {
   this->debug_mode_ = debug;
   this->line_mode_ = line;
+  this->timing_mode_ = timing;
 
   // Load compute shader code
   std::ifstream cp_shader_1_stream(cp_shader_1, std::ios::ate | std::ios::binary);
@@ -63,8 +64,13 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     indices_.push_back(vertex_map[vertex]);
   }
 
+  this->start_time_ = std::clock();
   this->InitializeVkMemory();
+  this->init_memory_time_ = double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
+
+  this->start_time_ = std::clock();
   this->InitializeVkImageLayouts();
+  this->init_image_layout_time_ = double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
   std::vector<vec3> observation_points = analysispoints;
 
@@ -79,9 +85,12 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     }
   }
 
+  this->start_time_ = std::clock();
   this->SubmitVertexData();
   this->SubmitIndexData();
   this->SubmitUniformData();
+  this->submission_time_ = double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
+
 
   VkDescriptorSetLayout layouts[] = {this->vk_graphics_descriptor_set_layout_};
   this->CreateGraphicsDescriptorSet(layouts, &this->vk_graphics_descriptor_set_);
@@ -97,17 +106,40 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
   // MAGIIC
   std::vector<float> results(observation_points.size());
   for (size_t i = 0; i < observation_points.size(); i++) {
+    this->start_time_ = std::clock();
     this->uniform_.observation_point = observation_points[i];
     this->SubmitUniformData();
     vkQueueWaitIdle(this->vk_queue_graphics_);
     this->VkDraw();
+    this->graphics_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
+
+    this->start_time_ = std::clock();
     this->ResetResult();
     vkQueueWaitIdle(this->vk_queue_graphics_);
     this->VkCompute();
     vkQueueWaitIdle(this->vk_queue_compute_);
+    this->compute_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
     results[i] = *(float*)this->RetrieveResult();
-    if (this->debug_mode_) this->RetrieveDepthImage(i);
+
+    if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
   }
+
+  if (this->timing_mode_) {
+    std::cout << "INIT MEMORY " << this->init_memory_time_ << std::endl;
+    std::cout << "INIT IMAGE LAYOUTS " << this->init_image_layout_time_ << std::endl;
+    std::cout << "SUBMIT DATA " << this->submission_time_ << std::endl;
+    std::cout << "GRAPHICS " << this->graphics_time_ << std::endl;
+    std::cout << "COMPUTING " << this->compute_time_ << std::endl;
+    std::cout << "RESULT RETRIEVAL " << this->result_retrieval_time_ << std::endl;
+    std::cout << "IMAGE RETRIEVAL " << this->image_retrieval_time_ << std::endl;
+    std::cout << "IMAGE STORAGE " << this->image_storage_time_ << std::endl;
+    std::cout << "GRAPHICS FPS " << double(results.size()) / this->graphics_time_ << std::endl;
+    std::cout << "COMPUTING FPS " << double(results.size()) / this->compute_time_ << std::endl;
+    std::cout << "RESULT RETRIEVAL FPS " << double(results.size()) / this->result_retrieval_time_ << std::endl;
+    std::cout << "IMAGE RETRIEVAL FPS " << double(results.size()) / this->image_retrieval_time_ << std::endl;
+    std::cout << "IMAGE STORAGE FPS " << double(results.size()) / this->image_storage_time_ << std::endl;
+  }
+
   return results;
 }
 
@@ -1616,6 +1648,10 @@ void Context::RetrieveRenderImage(uint32_t i) {
   vkMapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_);
+  this->image_retrieval_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
+
+
+  this->start_time_ = std::clock();
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
@@ -1626,10 +1662,13 @@ void Context::RetrieveRenderImage(uint32_t i) {
   std::string filename = "images/rendered_" + std::to_string(i) + ".png";
   stbi_write_png(filename.c_str(), this->render_width_, this->render_height_, 1, (void*)image, 0);
   free(pixels);
+  this->image_storage_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
+
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
 
 void Context::RetrieveDepthImage(uint32_t i) {
+  this->start_time_ = std::clock();
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
@@ -1654,7 +1693,9 @@ void Context::RetrieveDepthImage(uint32_t i) {
   vkMapMemory(this->vk_logical_device_, this->vk_depth_stencil_staging_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_depth_stencil_staging_image_memory_);
+  this->image_retrieval_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
+  this->start_time_ = std::clock();
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
@@ -1665,6 +1706,7 @@ void Context::RetrieveDepthImage(uint32_t i) {
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
   stbi_write_png(filename.c_str(), this->render_width_, this->render_height_, 1, (void*)image, 0);
   free(pixels);
+  this->image_storage_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 }
 
 void Context::ResetResult() {
@@ -1684,6 +1726,7 @@ void Context::ResetResult() {
 }
 
 void* Context::RetrieveResult() {
+  this->start_time_ = std::clock();
   // copy from stating buffer to device local buffer
   VkCommandBuffer commandbuffer = this->BeginSingleTimeBuffer();
   VkBufferCopy copyRegion = {};
@@ -1698,6 +1741,7 @@ void* Context::RetrieveResult() {
   vkMapMemory(this->vk_logical_device_, this->vk_compute_staging_buffer_memory_, 0, this->compute_size_, 0, (void **)&data);
   memcpy(result, data, this->compute_size_);
   vkUnmapMemory(this->vk_logical_device_, this->vk_compute_staging_buffer_memory_);
+  this->result_retrieval_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
   return result;
 }

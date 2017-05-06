@@ -9,6 +9,7 @@
  * `-f` is the geojson file to be analysid
  * `-d` set to 1 to store debug images into `images/` folder. Note that the results become wrong in this mode
  * `-l` set to 1 to store the images with lines-only (no filling)
+ * `-u` set to 1 to print timings instead of results
  * *stdin* is the list of observation points in the format
 ```
 x1 y1 z1
