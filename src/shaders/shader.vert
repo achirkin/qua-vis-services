@@ -1,9 +1,15 @@
 #version 450
 
-layout(binding = 0) uniform UniformBufferObject {
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+layout(push_constant) uniform UniformBufferObject {
   vec3 observation_point;
   float r_max;
   float alpha_max;
+  mat4 projection;
+  mat4 view;
+  mat4 model;
 } ubo;
 
 layout(location = 0) in vec3 inPosition;

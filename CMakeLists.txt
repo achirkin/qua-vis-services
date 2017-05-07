@@ -16,14 +16,17 @@ set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 # Requirements
 find_package (Threads REQUIRED)
 find_package (Vulkan REQUIRED)
+find_package (GLM REQUIRED)
 
 # Headers
 include_directories (${PROJECT_SOURCE_DIR}/include)
 include_directories (${VULKAN_INCLUDE_DIR})
+include_directories (${GLM_INCLUDE_DIR})
 
 # Linker
 link_directories (${PROJECT_SOURCE_DIR}/lib)
 link_directories (${VULKAN_LIBRARY})
+link_directories (${GLM_LIBRARY})
 
 set (ENV{VK_LAYER_PATH} "/usr/local/x86_64/etc/explicit_layer.d/")
 

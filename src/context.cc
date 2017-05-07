@@ -108,7 +108,8 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
   for (size_t i = 0; i < observation_points.size(); i++) {
     this->start_time_ = std::clock();
     this->uniform_.observation_point = observation_points[i];
-    this->SubmitUniformData();
+    this->InitializeVkGraphicsCommandBuffers();
+    //this->SubmitUniformData();
     vkQueueWaitIdle(this->vk_queue_graphics_);
     this->VkDraw();
     this->graphics_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
@@ -828,6 +829,16 @@ void Context::InitializeVkDescriptorPool() {
 }
 
 void Context::InitializeVkGraphicsPipelineLayout() {
+  VkPushConstantRange push_constant_range = {
+    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
+    sizeof(uniform_),
+    0
+  };
+
+  std::vector<VkPushConstantRange> push_constant_ranges = {
+    push_constant_range
+  };
+
   // Define Pipeline layout
   VkPipelineLayoutCreateInfo pipeline_layout_info = {
     VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // sType
@@ -835,8 +846,8 @@ void Context::InitializeVkGraphicsPipelineLayout() {
     0, // flags (see documentation, must be 0)
     1, // layout count
     &this->vk_graphics_descriptor_set_layout_, // layouts
-    0, // push constant range count
-    nullptr // push constant ranges
+    push_constant_ranges.size(), // push constant range count
+    push_constant_ranges.data() // push constant ranges
   };
 
   // Create pipeline layout
@@ -1064,7 +1075,7 @@ void Context::InitializeVkGraphicsPipeline() {
     VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, // sType
     nullptr, // next (see documentation, must be null)
     0, // pipeline create flags (have no child pipelines, so don't care)
-    5, // number of stages (we have 2 shaders for now)
+    5, // number of stages (we have 5 shaders for now)
     shader_stages, // shader stage create infos
     &vertex_input_info, // vertex input info
     &input_assembly_info, // inpt assembly info
@@ -1311,6 +1322,15 @@ void Context::InitializeVkGraphicsCommandBuffers() {
     this->vk_graphics_commandbuffer_, // command buffer
     &render_pass_info, // render pass info
     VK_SUBPASS_CONTENTS_INLINE // store contents in primary command buffer
+  );
+
+  vkCmdPushConstants(
+    this->vk_graphics_commandbuffer_,
+    this->vk_graphics_pipeline_layout_,
+    VK_SHADER_STAGE_VERTEX_BIT,
+    0,
+    sizeof(UniformBufferObject),
+    &this->uniform_
   );
 
   // bind graphics pipeline

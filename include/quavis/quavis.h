@@ -23,11 +23,18 @@
 #include <array>
 #include <ctime>
 
+// glm
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 namespace quavis {
   struct UniformBufferObject {
     vec3 observation_point;
     float r_max;
     float alpha_max;
+    mat4 projection;
+    mat4 view;
+    mat4 model;
   };
 
   /**
@@ -223,7 +230,10 @@ namespace quavis {
     UniformBufferObject uniform_ = {
       vec3 {0, 0, 0},
       1000000,
-      .1
+      .1,
+      mat4 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+      mat4 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+      mat4 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
     };
 
     // flags
