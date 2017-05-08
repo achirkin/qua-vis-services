@@ -122,7 +122,7 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     this->compute_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
     results[i] = *(float*)this->RetrieveResult();
 
-    if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
+    //if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
   }
 
   if (this->timing_mode_) {
@@ -831,8 +831,8 @@ void Context::InitializeVkDescriptorPool() {
 void Context::InitializeVkGraphicsPipelineLayout() {
   VkPushConstantRange push_constant_range = {
     VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
-    sizeof(uniform_),
-    0
+    0,
+    sizeof(UniformBufferObject)
   };
 
   std::vector<VkPushConstantRange> push_constant_ranges = {
@@ -846,7 +846,7 @@ void Context::InitializeVkGraphicsPipelineLayout() {
     0, // flags (see documentation, must be 0)
     1, // layout count
     &this->vk_graphics_descriptor_set_layout_, // layouts
-    push_constant_ranges.size(), // push constant range count
+    (uint32_t)push_constant_ranges.size(), // push constant range count
     push_constant_ranges.data() // push constant ranges
   };
 
@@ -1327,7 +1327,7 @@ void Context::InitializeVkGraphicsCommandBuffers() {
   vkCmdPushConstants(
     this->vk_graphics_commandbuffer_,
     this->vk_graphics_pipeline_layout_,
-    VK_SHADER_STAGE_VERTEX_BIT,
+    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
     0,
     sizeof(UniformBufferObject),
     &this->uniform_
@@ -1527,6 +1527,7 @@ void Context::VkCompute() {
     nullptr
   };
 
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
   debug::handleVkResult(
     vkQueueSubmit(
       this->vk_queue_compute_, // queue
@@ -1550,6 +1551,7 @@ void Context::VkCompute() {
     nullptr
   };
 
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
   debug::handleVkResult(
     vkQueueSubmit(
       this->vk_queue_compute_, // queue
@@ -1646,6 +1648,7 @@ void Context::SubmitUniformData() {
 void Context::RetrieveRenderImage(uint32_t i) {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
 
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -1691,6 +1694,7 @@ void Context::RetrieveDepthImage(uint32_t i) {
   this->start_time_ = std::clock();
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
 
   this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
   this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -1769,6 +1773,7 @@ void* Context::RetrieveResult() {
 void Context::RetrieveComputeImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
 
   this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
@@ -1908,10 +1913,12 @@ void Context::CreateComputeDescriptorSets() {
 }
 
 void Context::UpdateComputeDescriptorSets() {
+  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
   VkDescriptorImageInfo image_in_info = { // TODO: COMPUTESHADERTODO - Change to bufferinfo
     VK_NULL_HANDLE,
     this->vk_color_imageview_,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+    VK_IMAGE_LAYOUT_GENERAL
   };
 
   // Output: Image
@@ -1977,6 +1984,8 @@ void Context::UpdateComputeDescriptorSets() {
   };
 
   vkUpdateDescriptorSets(this->vk_logical_device_, writedescriptor_sets.size(), writedescriptor_sets.data(), 0, nullptr);
+  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+
 }
 
 void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {
@@ -2114,7 +2123,7 @@ void Context::CreateCommandPool(VkCommandPool* pool) {
   VkCommandPoolCreateInfo command_pool_info = {
     VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
     nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
+    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, // flags (see documentation, must be 0)
     this->queue_family_index_ // the queue family
   };
 

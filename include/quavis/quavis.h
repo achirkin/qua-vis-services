@@ -203,6 +203,7 @@ namespace quavis {
 
     // meta data for initialization
     const std::vector<const char*> vk_instance_extension_names_ = {
+      "VK_EXT_debug_report"
     };
 
     // meta data for initialization
@@ -210,8 +211,13 @@ namespace quavis {
     };
 
     const std::vector<const char*> vk_validation_layers_ = {
+      "VK_LAYER_GOOGLE_threading",
+			"VK_LAYER_LUNARG_parameter_validation",
+			"VK_LAYER_LUNARG_object_tracker",
+			"VK_LAYER_LUNARG_core_validation",
+			"VK_LAYER_LUNARG_swapchain",
+			"VK_LAYER_GOOGLE_unique_objects"
     };
-
 
     // rendering attributes
     const uint32_t render_width_ = 512;
