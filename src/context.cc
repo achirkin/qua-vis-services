@@ -694,7 +694,6 @@ void Context::InitializeVkRenderPass() {
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // layout
   };
 
-
   //TODO: CUBEMAP: Multiple subpasses with different color_attachment_reference
   // create subpass for attachments
   VkSubpassDescription subpass_description = {
