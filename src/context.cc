@@ -122,6 +122,7 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     this->compute_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
     results[i] = *(float*)this->RetrieveResult();
     if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
+    break;
   }
 
   if (this->timing_mode_) {
@@ -216,7 +217,9 @@ Context::~Context() {
 
   // destroy pipeline
   vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_graphics_pipeline_layout_, nullptr);
-  vkDestroyPipeline(this->vk_logical_device_, this->vk_graphics_pipeline_, nullptr);
+  for (int i = 0; i < 6; i++) {
+    vkDestroyPipeline(this->vk_logical_device_, this->vk_graphics_pipelines_[i], nullptr);
+  }
   vkDestroyPipelineLayout(this->vk_logical_device_, this->vk_compute_pipeline_layout_, nullptr);
   vkDestroyPipeline(this->vk_logical_device_, this->vk_compute_pipeline_, nullptr);
   vkDestroyPipeline(this->vk_logical_device_, this->vk_compute_pipeline_2_, nullptr);
@@ -684,50 +687,84 @@ void Context::InitializeVkRenderPass() {
     attachment_descriptions.push_back(depth_attachment_description);
   }
 
-  VkAttachmentReference color_attachment_reference = {
-    0, // index
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // layout
-  };
+  std::vector<std::vector<VkAttachmentReference>> attachment_references = {};
+  for (uint32_t i = 0; i < 6; i++) {
+    // color attachment, depth attachment
+    std::vector<VkAttachmentReference> subpass_attachment_references = {};
+    VkAttachmentReference color_attachment_reference = {
+      i, // index
+      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // layout
+    };
+    VkAttachmentReference depth_stencil_attachment_reference = {
+      i+6, // index
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // layout
+    };
+    subpass_attachment_references.push_back(color_attachment_reference);
+    subpass_attachment_references.push_back(depth_stencil_attachment_reference);
+    attachment_references.push_back(subpass_attachment_references);
+  }
 
-  VkAttachmentReference depth_stencil_attachment_reference = {
-    6, // index
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // layout
-  };
+  std::vector<std::vector<uint32_t>> preserved_attachment_indices = {};
+  for (uint32_t i = 0; i < 6; i++) {
+    // preserved attachments
+    std::vector<uint32_t> subpass_preserved_attachment_indices = {};
+    for (uint32_t j = 0; j < i; j++) {
+      subpass_preserved_attachment_indices.push_back(j);
+      subpass_preserved_attachment_indices.push_back(j+6);
+    }
+    preserved_attachment_indices.push_back(subpass_preserved_attachment_indices);
+  }
 
-  //TODO: CUBEMAP: Multiple subpasses with different color_attachment_reference
-  // create subpass for attachments
-  VkSubpassDescription subpass_description = {
-    0, // flags (see documentation, must be 0)
-    VK_PIPELINE_BIND_POINT_GRAPHICS, // bind point (graphics / compute)
-    0, // input attachment count(0 for now) // TODO: Add correct vertex input
-    nullptr, // input attachments
-    1, // color attachment count
-    &color_attachment_reference, // color attachment references
-    nullptr, // resolve attachment references
-    &depth_stencil_attachment_reference, // stencil attachment
-    0, // preserved attachment count
-    nullptr // preserved attachments
-  };
+  std::vector<VkSubpassDescription> subpass_descriptions = {};
+  for (int i = 0; i < 6; i++) {
+    VkSubpassDescription subpass_description = {
+      0, // flags (see documentation, must be 0)
+      VK_PIPELINE_BIND_POINT_GRAPHICS, // bind point (graphics / compute)
+      0, // input attachment count(0 for now) // TODO: Add correct vertex input
+      nullptr, // input attachments
+      1, // color attachment count
+      &attachment_references[i][0], // color attachment references
+      nullptr, // resolve attachment references
+      &attachment_references[i][1], // stencil attachment
+      (uint32_t)preserved_attachment_indices[i].size(), // preserved attachment count
+      preserved_attachment_indices[i].data() // preserved attachments
+    };
+    subpass_descriptions.push_back(subpass_description);
+  }
+  std::vector<VkSubpassDependency> dependencies = {};
+  VkSubpassDependency first_dependency = {};
+  first_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+  first_dependency.dstSubpass = 0;
+  first_dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  first_dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+  first_dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  first_dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  dependencies.push_back(first_dependency);
 
-  VkSubpassDependency dependency = {};
-  dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-  dependency.dstSubpass = 0;
-  dependency.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-  dependency.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-  dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+/*
+  for (int i = 1; i < 6; i++) {
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = i-1;
+    dependency.dstSubpass = i;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+    dependency.dstStageMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+    dependencies.push_back(dependency);
+  }
+*/
 
   // create render pass
   VkRenderPassCreateInfo render_pass_info = {
     VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, // sType
     nullptr, // next (see documentation, must be null)
     0, // flags
-    attachment_descriptions.size(), // attachment count
+    (uint32_t)attachment_descriptions.size(), // attachment count
     attachment_descriptions.data(), // attachment descriptions
-    1, // subpass count
-    &subpass_description, // subpass
-    1, // dependency count between subpasses
-    &dependency // dependencies
+    (uint32_t)subpass_descriptions.size(), // subpass count //TODO: CUBEMAP: Change to size()
+    subpass_descriptions.data(), // subpass
+    (uint32_t)dependencies.size(), // dependency count between subpasses
+    dependencies.data() // dependencies
   };
 
   debug::handleVkResult(
@@ -1079,39 +1116,45 @@ void Context::InitializeVkGraphicsPipeline() {
     3 // number of vertices per patch
   };
 
-  // Define pipeline info
-  VkGraphicsPipelineCreateInfo pipeline_info = {
-    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, // sType
-    nullptr, // next (see documentation, must be null)
-    0, // pipeline create flags (have no child pipelines, so don't care)
-    5, // number of stages (we have 5 shaders for now)
-    shader_stages, // shader stage create infos
-    &vertex_input_info, // vertex input info
-    &input_assembly_info, // inpt assembly info
-    &tessellation_info, // tesselation info
-    &viewport_info, // viewport info
-    &rasterizer_info, // rasterization info
-    &multisampling_info, // multisampling info
-    &depth_stencil_info, // depth stencil info
-    &color_blend_info, // blending info
-    nullptr, // dynamic states info (e.g. window size changes or so)
-    this->vk_graphics_pipeline_layout_, // pipeline layout
-    this->vk_render_pass_, // render pass
-    0, // subpass index for this pipeline (we only have 1)
-    VK_NULL_HANDLE, // parent pipeline
-    -1 // parent pipeline index
-  };
+  for (uint32_t i = 0; i < 6; i++) {
+    VkPipeline graphicsPipeline;
 
-  debug::handleVkResult(
-    vkCreateGraphicsPipelines(
-      this->vk_logical_device_, // logical device
-      VK_NULL_HANDLE, // pipeline cache // TODO: Add pipeline cache (?)
-      1, // pipeline count
-      &pipeline_info, // pipeline infos
-      nullptr, // allocation callback
-      &this->vk_graphics_pipeline_ // allocated memory for the pipeline
-    )
-  );
+    // Define pipeline info
+    VkGraphicsPipelineCreateInfo pipeline_info = {
+      VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, // sType
+      nullptr, // next (see documentation, must be null)
+      0, // pipeline create flags (have no child pipelines, so don't care)
+      5, // number of stages (we have 5 shaders for now)
+      shader_stages, // shader stage create infos
+      &vertex_input_info, // vertex input info
+      &input_assembly_info, // inpt assembly info
+      &tessellation_info, // tesselation info
+      &viewport_info, // viewport info
+      &rasterizer_info, // rasterization info
+      &multisampling_info, // multisampling info
+      &depth_stencil_info, // depth stencil info
+      &color_blend_info, // blending info
+      nullptr, // dynamic states info (e.g. window size changes or so)
+      this->vk_graphics_pipeline_layout_, // pipeline layout
+      this->vk_render_pass_, // render pass
+      i, // subpass index for this pipeline (we only have 1)
+      VK_NULL_HANDLE, // parent pipeline
+      -1 // parent pipeline index
+    };
+
+    debug::handleVkResult(
+      vkCreateGraphicsPipelines(
+        this->vk_logical_device_, // logical device
+        VK_NULL_HANDLE, // pipeline cache // TODO: Add pipeline cache (?)
+        1, // pipeline count
+        &pipeline_info, // pipeline infos
+        nullptr, // allocation callback
+        &graphicsPipeline // allocated memory for the pipeline
+      )
+    );
+
+    this->vk_graphics_pipelines_.push_back(graphicsPipeline);
+  }
 }
 
 
@@ -1250,7 +1293,8 @@ void Context::InitializeVkMemory() {
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     &this->vk_color_image_,
     &this->vk_color_image_memory_,
-    6);
+    6,
+    {this->render_width_, this->render_height_, 1});
 
   this->CreateImage(this->color_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
@@ -1259,7 +1303,8 @@ void Context::InitializeVkMemory() {
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
     &this->vk_color_staging_image_,
     &this->vk_color_staging_image_memory_,
-    1);
+    1,
+    {4*this->render_width_, 3*this->render_height_, 1});
 
   // depth image
   this->CreateImage(this->depth_stencil_format_,
@@ -1269,7 +1314,8 @@ void Context::InitializeVkMemory() {
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     &this->vk_depth_stencil_image_,
     &this->vk_depth_stencil_image_memory_,
-    6);
+    6,
+    {this->render_width_, this->render_height_, 1});
 
   this->CreateImage(this->depth_stencil_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
@@ -1278,7 +1324,8 @@ void Context::InitializeVkMemory() {
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
     &this->vk_depth_stencil_staging_image_,
     &this->vk_depth_stencil_staging_image_memory_,
-    1);
+    1,
+    {4*this->render_width_, 3*this->render_height_, 1});
 
   // image views
   this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_1_, 0);
@@ -1355,55 +1402,61 @@ void Context::InitializeVkGraphicsCommandBuffers() {
     VK_SUBPASS_CONTENTS_INLINE // store contents in primary command buffer
   );
 
-  vkCmdPushConstants(
-    this->vk_graphics_commandbuffer_,
-    this->vk_graphics_pipeline_layout_,
-    VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
-    0,
-    sizeof(UniformBufferObject),
-    &this->uniform_
-  );
+  for (int i = 0; i < 6; i++) {
+    vkCmdPushConstants(
+      this->vk_graphics_commandbuffer_,
+      this->vk_graphics_pipeline_layout_,
+      VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
+      0,
+      sizeof(UniformBufferObject),
+      &this->uniform_
+    );
 
-  // bind graphics pipeline
-  vkCmdBindPipeline(
-    this->vk_graphics_commandbuffer_, // command buffer
-    VK_PIPELINE_BIND_POINT_GRAPHICS, // pipeline type
-    this->vk_graphics_pipeline_ // graphics pipeline
-  );
+    // bind graphics pipeline
+    vkCmdBindPipeline(
+      this->vk_graphics_commandbuffer_, // command buffer
+      VK_PIPELINE_BIND_POINT_GRAPHICS, // pipeline type
+      this->vk_graphics_pipelines_[i] // graphics pipeline
+    );
 
-  // vertex data
-  VkBuffer vertexBuffers[] = {this->vk_vertex_buffer_};
-  VkDeviceSize offsets[] = {0};
-  vkCmdBindVertexBuffers(this->vk_graphics_commandbuffer_,
-    0, // vertex buffer binding index
-    1, // number of bindings
-    vertexBuffers, // vertex buffers
-    offsets // offsets
-  );
+    // vertex data
+    VkBuffer vertexBuffers[] = {this->vk_vertex_buffer_};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(this->vk_graphics_commandbuffer_,
+      0, // vertex buffer binding index
+      1, // number of bindings
+      vertexBuffers, // vertex buffers
+      offsets // offsets
+    );
 
-  // uniform buffer object
-  vkCmdBindDescriptorSets(
-    this->vk_graphics_commandbuffer_,
-    VK_PIPELINE_BIND_POINT_GRAPHICS,
-    this->vk_graphics_pipeline_layout_,
-    0,
-    1,
-    &this->vk_graphics_descriptor_set_,
-    0,
-    nullptr
-  );
+    // uniform buffer object
+    vkCmdBindDescriptorSets(
+      this->vk_graphics_commandbuffer_,
+      VK_PIPELINE_BIND_POINT_GRAPHICS,
+      this->vk_graphics_pipeline_layout_,
+      0,
+      1,
+      &this->vk_graphics_descriptor_set_,
+      0,
+      nullptr
+    );
 
-  vkCmdBindIndexBuffer(this->vk_graphics_commandbuffer_, this->vk_index_buffer_, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(this->vk_graphics_commandbuffer_, this->vk_index_buffer_, 0, VK_INDEX_TYPE_UINT32);
 
-  // draw
-  vkCmdDrawIndexed(
-    this->vk_graphics_commandbuffer_, // command buffer
-    this->indices_.size(), // num indexes
-    1, // num instances // TODO
-    0, // first index
-    0, // vertex index offset
-    0 // first instance
-  );
+    // draw
+    vkCmdDrawIndexed(
+      this->vk_graphics_commandbuffer_, // command buffer
+      this->indices_.size(), // num indexes
+      1, // num instances // TODO
+      0, // first index
+      0, // vertex index offset
+      0 // first instance
+    );
+
+    if (i < 5) {
+      vkCmdNextSubpass(this->vk_graphics_commandbuffer_, VK_SUBPASS_CONTENTS_INLINE);
+    }
+  }
 
   vkCmdEndRenderPass(this->vk_graphics_commandbuffer_);
 
@@ -1683,7 +1736,7 @@ void Context::RetrieveRenderImage(uint32_t i) {
 
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0);
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0, {0,0,0});
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
@@ -1729,7 +1782,12 @@ void Context::RetrieveDepthImage(uint32_t i) {
 
   this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 6);
   this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 0);
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 0, {0*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 1, {1*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 2, {2*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 3, {3*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 4, {2*this->render_width_, 0*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 5, {2*this->render_width_, 2*this->render_height_,0});
   this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0};
@@ -1751,15 +1809,15 @@ void Context::RetrieveDepthImage(uint32_t i) {
   this->image_retrieval_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
   this->start_time_ = std::clock();
-  uint8_t image[this->render_width_ * this->render_height_];
-  for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
+  uint8_t image[4*this->render_width_ * 3*this->render_height_];
+  for (uint32_t i = 0; i < 4 * 4*this->render_width_ * 3*this->render_height_; i += 4) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
     image[i/4] = floor((1.0 - px)*255);
   }
   std::string filename = "images/depth_" + std::to_string(i) + ".png";
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  stbi_write_png(filename.c_str(), this->render_width_, this->render_height_, 1, (void*)image, 0);
+  stbi_write_png(filename.c_str(), 4*this->render_width_, 3*this->render_height_, 1, (void*)image, 0);
   free(pixels);
   this->image_storage_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 }
@@ -1808,7 +1866,7 @@ void Context::RetrieveComputeImage() {
 
   this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-  this->CopyImage(this->vk_compute_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0);
+  this->CopyImage(this->vk_compute_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0,{0,0,0});
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
@@ -2019,14 +2077,14 @@ void Context::UpdateComputeDescriptorSets() {
 
 }
 
-void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory, uint32_t layers) {
+void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory, uint32_t layers, VkExtent3D extent) {
   VkImageCreateInfo image_info = {
     VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
     nullptr, // pNext (see documentation, must be null)
     0, // image flags
     VK_IMAGE_TYPE_2D, // image type
     format, // image format
-    {this->render_width_, this->render_height_, 1}, // image extent
+    extent, // image extent
     1, // level of detail = 1
     layers, // layers = 1
     VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
@@ -2227,14 +2285,14 @@ void Context::TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkIma
     EndSingleTimeBuffer(commandBuffer);
 }
 
-void Context::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags, uint32_t layer) {
+void Context::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags, uint32_t layer, VkOffset3D dstOffset) {
     VkCommandBuffer commandBuffer = BeginSingleTimeBuffer();
 
     VkImageSubresourceLayers subResourceSource = {};
     subResourceSource.aspectMask = aspectFlags;
     subResourceSource.baseArrayLayer = layer;
     subResourceSource.mipLevel = 0;
-    subResourceSource.layerCount = 6;
+    subResourceSource.layerCount = 1;
 
     VkImageSubresourceLayers subResourceTarget = {};
     subResourceTarget.aspectMask = aspectFlags;
@@ -2246,7 +2304,7 @@ void Context::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint
     region.srcSubresource = subResourceSource;
     region.dstSubresource = subResourceTarget;
     region.srcOffset = {0, 0, 0};
-    region.dstOffset = {0, 0, 0};
+    region.dstOffset = dstOffset;
     region.extent.width = this->render_width_;
     region.extent.height = this->render_height_;
     region.extent.depth = 1;

@@ -76,7 +76,7 @@ namespace quavis {
     void VkCompute();
 
     void CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory);
-    void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory, uint32_t layers);
+    void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory, uint32_t layers, VkExtent3D extent);
     void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview, uint32_t layer);
     void CreateGraphicsDescriptorSet(VkDescriptorSetLayout layouts[], VkDescriptorSet* descriptor_set);
     void UpdateGraphicsDescriptorSet(uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
@@ -87,7 +87,7 @@ namespace quavis {
     void CreateCommandBuffer(VkCommandPool pool, VkCommandBuffer* buffer);
 
     void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags flags, uint32_t layers);
-    void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags, uint32_t layer);
+    void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags, uint32_t layer, VkOffset3D dstOffset);
 
     VkCommandBuffer BeginSingleTimeBuffer();
     void EndSingleTimeBuffer(VkCommandBuffer commandBuffer);
@@ -138,7 +138,7 @@ namespace quavis {
     VkRenderPass vk_render_pass_;
     VkPipelineLayout vk_graphics_pipeline_layout_;
     VkPipelineLayout vk_compute_pipeline_layout_;
-    VkPipeline vk_graphics_pipeline_;
+    std::vector<VkPipeline> vk_graphics_pipelines_;
     VkPipeline vk_compute_pipeline_;
     VkPipeline vk_compute_pipeline_2_;
 
