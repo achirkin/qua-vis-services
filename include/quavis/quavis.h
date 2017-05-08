@@ -76,8 +76,8 @@ namespace quavis {
     void VkCompute();
 
     void CreateBuffer(VkBufferUsageFlags usage, VkMemoryPropertyFlags memoryflags, uint32_t size, VkBuffer* buffer, VkDeviceMemory* buffer_memory);
-    void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory);
-    void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview);
+    void CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory, uint32_t layers);
+    void CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview, uint32_t layer);
     void CreateGraphicsDescriptorSet(VkDescriptorSetLayout layouts[], VkDescriptorSet* descriptor_set);
     void UpdateGraphicsDescriptorSet(uint32_t size, VkBuffer buffer, VkDescriptorSet* descriptor_set);
     void CreateComputeDescriptorSets();
@@ -86,8 +86,8 @@ namespace quavis {
     void CreateCommandPool(VkCommandPool* pool);
     void CreateCommandBuffer(VkCommandPool pool, VkCommandBuffer* buffer);
 
-    void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags flags);
-    void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags);
+    void TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags flags, uint32_t layers);
+    void CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags, uint32_t layer);
 
     VkCommandBuffer BeginSingleTimeBuffer();
     void EndSingleTimeBuffer(VkCommandBuffer commandBuffer);
@@ -172,8 +172,18 @@ namespace quavis {
     VkDeviceMemory vk_compute_tmp_buffer_memory_;
 
     // images
-    VkImageView vk_color_imageview_;
-    VkImageView vk_depth_stencil_imageview_;
+    VkImageView vk_color_imageview_1_;
+    VkImageView vk_color_imageview_2_;
+    VkImageView vk_color_imageview_3_;
+    VkImageView vk_color_imageview_4_;
+    VkImageView vk_color_imageview_5_;
+    VkImageView vk_color_imageview_6_;
+    VkImageView vk_depth_stencil_imageview_1_;
+    VkImageView vk_depth_stencil_imageview_2_;
+    VkImageView vk_depth_stencil_imageview_3_;
+    VkImageView vk_depth_stencil_imageview_4_;
+    VkImageView vk_depth_stencil_imageview_5_;
+    VkImageView vk_depth_stencil_imageview_6_;
     VkImageView vk_compute_imageview_;
     VkImage vk_color_image_;
     VkImage vk_depth_stencil_image_;

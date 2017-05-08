@@ -121,8 +121,7 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     vkQueueWaitIdle(this->vk_queue_compute_);
     this->compute_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
     results[i] = *(float*)this->RetrieveResult();
-
-    //if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
+    if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
   }
 
   if (this->timing_mode_) {
@@ -180,8 +179,18 @@ Context::~Context() {
   vkDestroyImage(this->vk_logical_device_, this->vk_depth_stencil_staging_image_, nullptr);
 
   // destroy image views
-  vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_, nullptr);
-  vkDestroyImageView(this->vk_logical_device_, this->vk_depth_stencil_imageview_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_1_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_2_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_3_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_4_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_5_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_color_imageview_6_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_depth_stencil_imageview_1_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_depth_stencil_imageview_2_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_depth_stencil_imageview_3_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_depth_stencil_imageview_4_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_depth_stencil_imageview_5_, nullptr);
+  vkDestroyImageView(this->vk_logical_device_, this->vk_depth_stencil_imageview_6_, nullptr);
 
   // destroy fences
   vkDestroyFence(this->vk_logical_device_, this->vk_compute_fence_, nullptr);
@@ -644,48 +653,49 @@ void Context::InitializeVkShaderModules() {
 
 void Context::InitializeVkRenderPass() {
   // create attachment descriptions for color / stencil
-  VkAttachmentDescription color_attachment_description = {
-    0, // flags (see documentation, 1 option)
-    this->color_format_, // color format
-    VK_SAMPLE_COUNT_1_BIT, // num samples per fragment
-    VK_ATTACHMENT_LOAD_OP_CLEAR, // operation when loading
-    VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
-    VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
-    VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, // initial layout
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // final layout
-  };
+  std::vector<VkAttachmentDescription> attachment_descriptions = {};
+  for (int i = 0; i < 6; i++) {
+    VkAttachmentDescription color_attachment_description = {
+      0, // flags (see documentation, 1 option)
+      this->color_format_, // color format
+      VK_SAMPLE_COUNT_1_BIT, // num samples per fragment
+      VK_ATTACHMENT_LOAD_OP_CLEAR, // operation when loading
+      VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
+      VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
+      VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
+      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, // initial layout
+      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // final layout
+    };
+    attachment_descriptions.push_back(color_attachment_description);
+  }
 
-  VkAttachmentDescription depth_attachment_description = {
-    0, // flags (see documentation, 1 option)
-    this->depth_stencil_format_, // color format
-    VK_SAMPLE_COUNT_1_BIT, // num samples per fragment
-    VK_ATTACHMENT_LOAD_OP_CLEAR, // operation when loading
-    VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
-    VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
-    VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, // initial layout
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // final layout
-  };
+  for (int i = 0; i < 6; i++) {
+    VkAttachmentDescription depth_attachment_description = {
+      0, // flags (see documentation, 1 option)
+      this->depth_stencil_format_, // color format
+      VK_SAMPLE_COUNT_1_BIT, // num samples per fragment
+      VK_ATTACHMENT_LOAD_OP_CLEAR, // operation when loading
+      VK_ATTACHMENT_STORE_OP_STORE, // operation when storing
+      VK_ATTACHMENT_LOAD_OP_DONT_CARE, // stencil operation when loading
+      VK_ATTACHMENT_STORE_OP_DONT_CARE, // stencil operation when storing
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, // initial layout
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // final layout
+    };
+    attachment_descriptions.push_back(depth_attachment_description);
+  }
 
-  VkAttachmentDescription attachment_descriptions[] = {
-    color_attachment_description,
-    depth_attachment_description
-  };
-
-
-  // create attachment refernces for color / stencil
   VkAttachmentReference color_attachment_reference = {
     0, // index
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // layout
   };
 
-
   VkAttachmentReference depth_stencil_attachment_reference = {
-    1, // index
+    6, // index
     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL // layout
   };
 
+
+  //TODO: CUBEMAP: Multiple subpasses with different color_attachment_reference
   // create subpass for attachments
   VkSubpassDescription subpass_description = {
     0, // flags (see documentation, must be 0)
@@ -713,8 +723,8 @@ void Context::InitializeVkRenderPass() {
     VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO, // sType
     nullptr, // next (see documentation, must be null)
     0, // flags
-    2, // attachment count
-    attachment_descriptions, // attachment descriptions
+    attachment_descriptions.size(), // attachment count
+    attachment_descriptions.data(), // attachment descriptions
     1, // subpass count
     &subpass_description, // subpass
     1, // dependency count between subpasses
@@ -1240,7 +1250,8 @@ void Context::InitializeVkMemory() {
     VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     &this->vk_color_image_,
-    &this->vk_color_image_memory_);
+    &this->vk_color_image_memory_,
+    6);
 
   this->CreateImage(this->color_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
@@ -1248,7 +1259,8 @@ void Context::InitializeVkMemory() {
     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
     &this->vk_color_staging_image_,
-    &this->vk_color_staging_image_memory_);
+    &this->vk_color_staging_image_memory_,
+    1);
 
   // depth image
   this->CreateImage(this->depth_stencil_format_,
@@ -1257,7 +1269,8 @@ void Context::InitializeVkMemory() {
     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
     &this->vk_depth_stencil_image_,
-    &this->vk_depth_stencil_image_memory_);
+    &this->vk_depth_stencil_image_memory_,
+    6);
 
   this->CreateImage(this->depth_stencil_format_,
     VK_IMAGE_LAYOUT_PREINITIALIZED,
@@ -1265,13 +1278,22 @@ void Context::InitializeVkMemory() {
     VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
     &this->vk_depth_stencil_staging_image_,
-    &this->vk_depth_stencil_staging_image_memory_);
-
-
+    &this->vk_depth_stencil_staging_image_memory_,
+    1);
 
   // image views
-  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_);
-  this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_);
+  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_1_, 0);
+  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_2_, 1);
+  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_3_, 2);
+  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_4_, 3);
+  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_5_, 4);
+  this->CreateImageView(this->vk_depth_stencil_image_, this->depth_stencil_format_, VK_IMAGE_ASPECT_DEPTH_BIT, &this->vk_depth_stencil_imageview_6_, 5);
+  this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_1_, 0);
+  this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_2_, 1);
+  this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_3_, 2);
+  this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_4_, 3);
+  this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_5_, 4);
+  this->CreateImageView(this->vk_color_image_, this->color_format_, VK_IMAGE_ASPECT_COLOR_BIT, &this->vk_color_imageview_6_, 5);
 
   // framebuffer
   this->CreateFrameBuffer();
@@ -1305,6 +1327,16 @@ void Context::InitializeVkGraphicsCommandBuffers() {
 
   VkClearValue clear_values[] = {
     {0.0f, 0.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 0.0f, 1.0f},
+    {0.0f, 0.0f, 0.0f, 1.0f},
+    {1.0f, 0.0f},
+    {1.0f, 0.0f},
+    {1.0f, 0.0f},
+    {1.0f, 0.0f},
+    {1.0f, 0.0f},
     {1.0f, 0.0f}
   };
 
@@ -1314,7 +1346,7 @@ void Context::InitializeVkGraphicsCommandBuffers() {
     this->vk_render_pass_, // render pass
     this->vk_graphics_framebuffer_, // framebuffer
     {{0,0}, {this->render_width_, this->render_height_}}, // render area (VkRect2D)
-    2, // number of clear values
+    12, // number of clear values
     clear_values // clear values
   };
 
@@ -1483,9 +1515,9 @@ void Context::InitializeVkComputeCommandBuffers() {
 }
 
 void Context::InitializeVkImageLayouts() {
-    this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
-    this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-    this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+    this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 6);
+    this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
+    this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
 
 void Context::VkDraw() {
@@ -1650,10 +1682,10 @@ void Context::RetrieveRenderImage(uint32_t i) {
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
   vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
 
-  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
@@ -1687,7 +1719,7 @@ void Context::RetrieveRenderImage(uint32_t i) {
   free(pixels);
   this->image_storage_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
-  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
 }
 
 void Context::RetrieveDepthImage(uint32_t i) {
@@ -1696,10 +1728,10 @@ void Context::RetrieveDepthImage(uint32_t i) {
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
   vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
 
-  this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
-  this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT);
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT);
-  this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT);
+  this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 6);
+  this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 0);
+  this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
@@ -1775,10 +1807,10 @@ void Context::RetrieveComputeImage() {
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
   vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
 
-  this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->CopyImage(this->vk_compute_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT);
-  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_compute_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
+  this->CopyImage(this->vk_compute_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0);
+  this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
@@ -1913,11 +1945,11 @@ void Context::CreateComputeDescriptorSets() {
 }
 
 void Context::UpdateComputeDescriptorSets() {
-  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
 
-  VkDescriptorImageInfo image_in_info = { // TODO: COMPUTESHADERTODO - Change to bufferinfo
+  VkDescriptorImageInfo image_in_info = {
     VK_NULL_HANDLE,
-    this->vk_color_imageview_,
+    this->vk_color_imageview_1_,
     VK_IMAGE_LAYOUT_GENERAL
   };
 
@@ -1984,11 +2016,11 @@ void Context::UpdateComputeDescriptorSets() {
   };
 
   vkUpdateDescriptorSets(this->vk_logical_device_, writedescriptor_sets.size(), writedescriptor_sets.data(), 0, nullptr);
-  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
+  this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
 
 }
 
-void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory) {
+void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags memoryflags, VkImage* image, VkDeviceMemory* image_memory, uint32_t layers) {
   VkImageCreateInfo image_info = {
     VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, // sType,
     nullptr, // pNext (see documentation, must be null)
@@ -1997,7 +2029,7 @@ void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling t
     format, // image format
     {this->render_width_, this->render_height_, 1}, // image extent
     1, // level of detail = 1
-    1, // layers = 1
+    layers, // layers = 1
     VK_SAMPLE_COUNT_1_BIT, // image sampling per pixel
     tiling, // linear tiling
     usage, // used for transfer
@@ -2062,7 +2094,7 @@ void Context::CreateImage(VkFormat format, VkImageLayout layout, VkImageTiling t
   );
 }
 
-void Context::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview) {
+void Context::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags flags, VkImageView* imageview, uint32_t layer) {
   VkImageViewCreateInfo imageview_info = {
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO, // sType
     nullptr,// pNext (see documentation, must be null)
@@ -2075,8 +2107,8 @@ void Context::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags
       flags, // aspect flag
       0, // base level
       1, // level count
-      0, // base layer
-      1 // layer count
+      layer, // base layer
+      1// layer count
     }
   };
 
@@ -2092,9 +2124,19 @@ void Context::CreateImageView(VkImage image, VkFormat format, VkImageAspectFlags
 
 void Context::CreateFrameBuffer() {
   // Create Framebuffers for color & stencil (color & depth)
-  std::array<VkImageView, 2> attachments = {
-    this->vk_color_imageview_,
-    this->vk_depth_stencil_imageview_
+  std::array<VkImageView, 12> attachments = {
+    this->vk_color_imageview_1_,
+    this->vk_color_imageview_2_,
+    this->vk_color_imageview_3_,
+    this->vk_color_imageview_4_,
+    this->vk_color_imageview_5_,
+    this->vk_color_imageview_6_,
+    this->vk_depth_stencil_imageview_1_,
+    this->vk_depth_stencil_imageview_2_,
+    this->vk_depth_stencil_imageview_3_,
+    this->vk_depth_stencil_imageview_4_,
+    this->vk_depth_stencil_imageview_5_,
+    this->vk_depth_stencil_imageview_6_,
   };
 
   VkFramebufferCreateInfo framebuffer_info = {
@@ -2106,7 +2148,7 @@ void Context::CreateFrameBuffer() {
     attachments.data(), // attachments
     this->render_width_, // width
     this->render_height_, // height
-    1 // layer count
+    1
   };
 
   debug::handleVkResult(
@@ -2158,7 +2200,7 @@ void Context::CreateCommandBuffer(VkCommandPool pool, VkCommandBuffer* buffer) {
 
 /// TRANSFORMATION ROUTINES
 
-void Context::TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags flags) {
+void Context::TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags flags, uint32_t layers) {
     VkCommandBuffer commandBuffer = BeginSingleTimeBuffer();
 
     VkImageMemoryBarrier barrier = {};
@@ -2172,7 +2214,7 @@ void Context::TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkIma
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = layers;
 
     vkCmdPipelineBarrier(
         commandBuffer,
@@ -2186,18 +2228,24 @@ void Context::TransformImageLayout(VkImage image, VkImageLayout oldLayout, VkIma
     EndSingleTimeBuffer(commandBuffer);
 }
 
-void Context::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags) {
+void Context::CopyImage(VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height, VkImageAspectFlags aspectFlags, uint32_t layer) {
     VkCommandBuffer commandBuffer = BeginSingleTimeBuffer();
 
-    VkImageSubresourceLayers subResource = {};
-    subResource.aspectMask = aspectFlags;
-    subResource.baseArrayLayer = 0;
-    subResource.mipLevel = 0;
-    subResource.layerCount = 1;
+    VkImageSubresourceLayers subResourceSource = {};
+    subResourceSource.aspectMask = aspectFlags;
+    subResourceSource.baseArrayLayer = layer;
+    subResourceSource.mipLevel = 0;
+    subResourceSource.layerCount = 6;
+
+    VkImageSubresourceLayers subResourceTarget = {};
+    subResourceTarget.aspectMask = aspectFlags;
+    subResourceTarget.baseArrayLayer = 0;
+    subResourceTarget.mipLevel = 0;
+    subResourceTarget.layerCount = 1;
 
     VkImageCopy region = {};
-    region.srcSubresource = subResource;
-    region.dstSubresource = subResource;
+    region.srcSubresource = subResourceSource;
+    region.dstSubresource = subResourceTarget;
     region.srcOffset = {0, 0, 0};
     region.dstOffset = {0, 0, 0};
     region.extent.width = this->render_width_;
