@@ -12,7 +12,7 @@ layout(triangles) in;
 layout(location = 0) in vec3 teCartesianPosition[3];
 layout(location = 1) in vec3 teColor[3];
 
-layout(triangle_strip, max_vertices = 6) out;
+layout(triangle_strip, max_vertices = 18) out;
 layout(location = 0) out vec3 gCartesianPosition;
 layout(location = 1) out vec4 gSphericalPosition;
 layout(location = 2) out vec3 gColor;
@@ -63,36 +63,99 @@ void main() {
   // check for each edge whether its broken. An edge is broken
   // if its endpoints lie in different halfs of the azimuth-axis
   bool a_broken, b_broken, c_broken;
-  a_broken = abs(sphericalPosition[1][0] - sphericalPosition[0][0]) > 1;
-  b_broken = abs(sphericalPosition[2][0] - sphericalPosition[1][0]) > 1;
-  c_broken = abs(sphericalPosition[0][0] - sphericalPosition[2][0]) > 1;
+  a_broken = abs(sphericalPosition[1][0] - sphericalPosition[0][0]) >= 1;
+  b_broken = abs(sphericalPosition[2][0] - sphericalPosition[1][0]) >= 1;
+  c_broken = abs(sphericalPosition[0][0] - sphericalPosition[2][0]) >= 1;
 
-  // check for each vertex if it has an incident broken edge and whether
-  // it's on the left side
-  bool has_broken_edge[3];
-  has_broken_edge[0] = (sphericalPosition[0][0] < 0) && (a_broken || c_broken);
-  has_broken_edge[1] = (sphericalPosition[1][0] < 0) && (a_broken || b_broken);
-  has_broken_edge[2] = (sphericalPosition[2][0] < 0) && (b_broken || c_broken);
+  // used to distinguish between two degenerate cases
+  int sum_broken = int(a_broken) + int(b_broken) + int(c_broken);
 
-  // shift to the right:
-  // If a vertex is on the left side
-  // of the image and it has at least one adjacent edge that goes to the
-  // right side of the image, then push this vertex to the right (outside of the image)
-  // this creates the left side of the triangle on the right image border
-  sphericalPosition[0][0] += 2 * int(has_broken_edge[0]);
-  sphericalPosition[1][0] += 2 * int(has_broken_edge[1]);
-  sphericalPosition[2][0] += 2 * int(has_broken_edge[2]);
-  EmitSphericalTriangle(sphericalPosition);
-
-  // shift to the left
-  // If one vertex has been shifted, then the right side of the triangle
-  // is currently missing. Therefore, we're copying the whole triangle to the
-  // image's left side where the already emitted part of the triangle
-  // is not within the image
-  if (has_broken_edge[0] || has_broken_edge[1] || has_broken_edge[2]) {
-    sphericalPosition[0][0] -= 2;
-    sphericalPosition[1][0] -= 2;
-    sphericalPosition[2][0] -= 2;
+  if (sum_broken == 0) {
     EmitSphericalTriangle(sphericalPosition);
+  }
+  if (sum_broken > 0) {
+    // check for each vertex if it has an incident broken edge
+    bool has_broken_edge[3];
+    has_broken_edge[0] = (a_broken || c_broken);
+    has_broken_edge[1] = (a_broken || b_broken);
+    has_broken_edge[2] = (b_broken || c_broken);
+
+    // check for each vertex if its on the left side
+    bool is_left_sided[3];
+    is_left_sided[0] = (sphericalPosition[0][0] < 0);
+    is_left_sided[1] = (sphericalPosition[1][0] < 0);
+    is_left_sided[2] = (sphericalPosition[2][0] < 0);
+
+    // determine which vertex is non-broken, which is broken left and which is broken right
+    int unbroken_index = int(!has_broken_edge[1]) * 1 + int(!has_broken_edge[2]) * 2; // b
+    int broken_left_index = int(has_broken_edge[1] && is_left_sided[1]) * 1 + int(has_broken_edge[2] && is_left_sided[2]) * 2; // a
+    int broken_right_index = 3 - unbroken_index - broken_left_index;
+
+    if (sum_broken == 1) {
+      // determine intersection between triangle and z-axis in cartesian coordinates
+      vec2 column1 = vec2(
+        teCartesianPosition[broken_left_index].y - teCartesianPosition[broken_right_index].y,
+        teCartesianPosition[unbroken_index].y - teCartesianPosition[broken_left_index].y
+      );
+      vec2 column2 = vec2(
+        teCartesianPosition[broken_right_index].x - teCartesianPosition[broken_left_index].x,
+        teCartesianPosition[broken_left_index].x - teCartesianPosition[unbroken_index].x
+      );
+      mat2 M = mat2(column1, column2);
+      vec2 st = 1.0/determinant(M) * M * vec2(teCartesianPosition[broken_left_index].x, teCartesianPosition[broken_left_index].y);
+      float zq = (1 - st.s - st.t) * teCartesianPosition[broken_left_index].z + st.s * teCartesianPosition[unbroken_index].z + st.t * teCartesianPosition[broken_right_index].z;
+      zq /= ubo.r_max; // normalize
+
+      // compute 3 points on pole
+      vec4 qmpi = vec4(-1, -1, zq, 1);
+      vec4 qb = vec4(sphericalPosition[unbroken_index][1], -1, zq, 1);
+      vec4 qpi = vec4(1, -1, zq, 1);
+
+      vec4 sphericalPositionNew[3];
+      sphericalPositionNew[0] = sphericalPosition[broken_left_index]; // a
+      sphericalPositionNew[1] = sphericalPosition[unbroken_index]; // b
+      sphericalPositionNew[2] = sphericalPosition[broken_right_index]; // c
+
+      // emit 4 additional triangles
+      sphericalPositionNew[2] = qb; //a,b,qb
+      EmitSphericalTriangle(sphericalPositionNew);
+
+      sphericalPositionNew[0] = sphericalPosition[broken_right_index]; //c,b,qb
+      EmitSphericalTriangle(sphericalPositionNew);
+
+      sphericalPositionNew[1] = qpi; //c,qpi,qb
+      EmitSphericalTriangle(sphericalPositionNew);
+
+      sphericalPositionNew[1] = qmpi; // c,qmpi,qb
+      sphericalPositionNew[2] = sphericalPosition[broken_left_index]; //c,qb,a
+      EmitSphericalTriangle(sphericalPositionNew);
+
+      //qpi,c,a
+      sphericalPositionNew[0] = qpi;
+      sphericalPositionNew[1] = sphericalPosition[broken_right_index];
+      sphericalPositionNew[2] = sphericalPosition[broken_left_index];
+
+      // right side
+      sphericalPositionNew[2][0] += 2; // qpi,c,a'
+      EmitSphericalTriangle(sphericalPositionNew);
+
+      // left side
+      // qmpi, c', a
+      sphericalPositionNew[0][0] -= 2;
+      sphericalPositionNew[1][0] -= 2;
+      sphericalPositionNew[2][0] -= 2;
+      EmitSphericalTriangle(sphericalPositionNew);
+    }
+    else {
+      sphericalPosition[0][0] += 2 * int(has_broken_edge[0] && is_left_sided[0]);
+      sphericalPosition[1][0] += 2 * int(has_broken_edge[1] && is_left_sided[1]);
+      sphericalPosition[2][0] += 2 * int(has_broken_edge[2] && is_left_sided[2]);
+      EmitSphericalTriangle(sphericalPosition);
+
+      sphericalPosition[0][0] -= 2;
+      sphericalPosition[1][0] -= 2;
+      sphericalPosition[2][0] -= 2;
+      EmitSphericalTriangle(sphericalPosition);
+    }
   }
 }
