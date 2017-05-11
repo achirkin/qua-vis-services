@@ -49,7 +49,7 @@ Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=fa
   this->InitializeVkComputePipeline();
 }
 
-#define use_obj false
+#define use_obj true
 
 std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_max, float r_max) {
   this->uniform_.alpha_max = alpha_max;
@@ -74,9 +74,9 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
             attrib.vertices[3 * index.vertex_index + 1]
         };
         vertex.color = {
-            0.0f,
-            0.0f,
-            attrib.vertices[3 * index.vertex_index + 2]
+            attrib.normals[3 * index.normal_index + 2],
+            attrib.normals[3 * index.normal_index + 0],
+            attrib.normals[3 * index.normal_index + 1]
         };
         vertices_.push_back(vertex);
         indices_.push_back(indices_.size());
@@ -153,7 +153,7 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     this->compute_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
     results[i] = *(float*)this->RetrieveResult();
 
-    if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
+    if (this->debug_mode_ || this->line_mode_) this->RetrieveRenderImage(i);
   }
 
   if (this->timing_mode_) {
@@ -1687,7 +1687,7 @@ void Context::RetrieveRenderImage(uint32_t i) {
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
-    memcpy(&px, (uint8_t*)pixels + i, 4);
+    memcpy(&px, (uint8_t*)pixels + i*2, 4);
     image[i/4] = floor(px*255);
   }
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);

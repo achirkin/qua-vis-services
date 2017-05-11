@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PARAMS="-l 1 -a 0.1 -r 150.0"
+PARAMS="-d 1 -a 0.2 -r 5.0"
 
 mkdir -p images
 cat <<EOT > ../src/shaders/shader.vert
@@ -40,7 +40,7 @@ EOT
 pushd ../
 make
 popd
-../bin/quavis-generic-service $PARAMS -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/mooctask.geojson" < data/mooktask_grid.txt
+../bin/quavis-generic-service $PARAMS -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/mooctask.geojson" < objObservePoint.txt
 mv images images-left
 
 
@@ -83,7 +83,7 @@ EOT
 pushd ../
 make
 popd
-../bin/quavis-generic-service $PARAMS -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/mooctask.geojson" < data/mooktask_grid.txt
+../bin/quavis-generic-service $PARAMS -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/mooctask.geojson" < objObservePoint.txt
 mv images images-right
 
 mkdir -p images-result
@@ -92,3 +92,7 @@ do
   convert -append images-right/${imgname##*/} images-left/${imgname##*/} images-result/${imgname##*/}
 done
 rm -rf images-left images-right
+
+
+../bin/quavis-generic-service -l 1 -a 0.05 -r 5.0 -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/mooctask.geojson" < objObservePoint.txt
+
