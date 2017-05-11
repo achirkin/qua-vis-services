@@ -55,8 +55,12 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
   std::vector<vec3> points = geojson::parse(contents);
   std::unordered_map<Vertex, int> vertex_map = {};
   vertices_ = std::vector<Vertex>();
+  vec3 color = {255,255,255};
   for (uint32_t i = 0; i < points.size(); i++) {
-    Vertex vertex = {points[i], {255,255,255}};
+    if (i % 2 == 0) {
+      color = {rand() % 255, rand() % 255, rand() % 255};
+    }
+    Vertex vertex = {points[i], color};
     if (vertex_map.count(vertex) == 0) {
       vertex_map[vertex] = vertices_.size();
       vertices_.push_back(vertex);
@@ -121,7 +125,7 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     vkQueueWaitIdle(this->vk_queue_compute_);
     this->compute_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
     results[i] = *(float*)this->RetrieveResult();
-    if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
+    if (this->debug_mode_ || this->line_mode_) this->RetrieveRenderImage(i);
   }
 
   if (this->timing_mode_) {
@@ -465,7 +469,6 @@ void Context::InitializeVkLogicalDevice() {
   device_features.tessellationShader = VK_TRUE;
   device_features.geometryShader = VK_TRUE;
   device_features.fillModeNonSolid = VK_TRUE;
-  if (this->line_mode_) device_features.fillModeNonSolid = VK_FALSE;
   device_features.shaderStorageImageExtendedFormats = VK_TRUE;
 
   // Create lgocial device metadata
@@ -1043,7 +1046,7 @@ void Context::InitializeVkGraphicsPipeline() {
     VK_FALSE, // depth clamping
     VK_FALSE, // discard primitives before rendering?
     this->line_mode_ == false ? VK_POLYGON_MODE_FILL : VK_POLYGON_MODE_LINE, // fill polygons (alternatively: draw only edges / vertices)
-    VK_CULL_MODE_NONE, // discard one of the two faces of a polygon
+    VK_CULL_MODE_BACK_BIT, // discard one of the two faces of a polygon
     VK_FRONT_FACE_COUNTER_CLOCKWISE, // counter clockwise = front
     VK_FALSE, // depth bias // TODO: Find out whether we need depth bias
     0.0f, // depth bias constant
@@ -1399,30 +1402,28 @@ void Context::InitializeVkGraphicsCommandBuffers() {
   );
 
   for (int i = 0; i < 6; i++) {
+    this->uniform_.projection = glm::infinitePerspective((float)(M_PI / 2.0), (float)(this->render_width_/this->render_height_), 0.001f);
     this->uniform_.model = glm::translate(glm::mat4(1.0f), glm::vec3(-this->uniform_.observation_point.x, -this->uniform_.observation_point.y, -this->uniform_.observation_point.z));
-    this->uniform_.projection = glm::perspective((float)(M_PI / 2.0), float(this->render_width_/this->render_height_), 0.01f, (float)this->uniform_.r_max);
-    glm::mat4 viewMatrix = glm::mat4();
+    glm::mat4 viewMatrix = glm::mat4(1.0f);
     switch (i)
 		{
 		case 0: // POSITIVE_X
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(1.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 1:	// NEGATIVE_X
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(-1.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 2:	// POSITIVE_Y
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 3:	// NEGATIVE_Y
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,-1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 4:	// POSITIVE_Z
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,0.0f,1.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 5:	// NEGATIVE_Z
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
     }
     this->uniform_.view = viewMatrix;
@@ -1592,6 +1593,7 @@ void Context::InitializeVkComputeCommandBuffers() {
 
 void Context::InitializeVkImageLayouts() {
     this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 6);
+    this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
     this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
     this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 }
@@ -1760,12 +1762,12 @@ void Context::RetrieveRenderImage(uint32_t i) {
 
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0, {0*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 1, {2*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 2, {2*this->render_width_, 2*this->render_height_,0});
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 3, {2*this->render_width_, 0*this->render_height_,0});
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 4, {3*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 5, {1*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0, {1*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 1, {3*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 2, {0*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 3, {2*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 4, {2*this->render_width_, 0*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 5, {2*this->render_width_, 2*this->render_height_,0});
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
@@ -1786,13 +1788,12 @@ void Context::RetrieveRenderImage(uint32_t i) {
   vkUnmapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_);
   this->image_retrieval_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
-
   this->start_time_ = std::clock();
   uint8_t image[4*this->render_width_ * 3*this->render_height_];
-  for (uint32_t i = 0; i < 4 * 4*this->render_width_ * 3*this->render_height_; i += 4) {
+  for (uint32_t i = 0; i < 8 * 4*this->render_width_ * 3*this->render_height_; i += 8) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
-    image[i/4] = floor(px*255);
+    image[i/8] = floor(px*255);
   }
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
   std::string filename = "images/rendered_" + std::to_string(i) + ".png";
@@ -1810,14 +1811,15 @@ void Context::RetrieveDepthImage(uint32_t i) {
   vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
 
   this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 6);
-  this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 0, {0*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 1, {2*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 2, {2*this->render_width_, 2*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 3, {2*this->render_width_, 0*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 4, {3*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 5, {1*this->render_width_, 1*this->render_height_,0});
+  this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 0, {1*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 1, {3*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 2, {0*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 3, {2*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 4, {2*this->render_width_, 0*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 5, {2*this->render_width_, 2*this->render_height_,0});
   this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
+  this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 6);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0};
   VkSubresourceLayout subresource_layout;
@@ -1841,6 +1843,9 @@ void Context::RetrieveDepthImage(uint32_t i) {
   uint8_t image[4*this->render_width_ * 3*this->render_height_];
   for (uint32_t i = 0; i < 4 * 4*this->render_width_ * 3*this->render_height_; i += 4) {
     float px;
+    if (px != 0 && px != 1) {
+      std::cout << "FOUND ONE:" << px << std::endl;
+    }
     memcpy(&px, (uint8_t*)pixels + i, 4);
     image[i/4] = floor((1.0 - px)*255);
   }
