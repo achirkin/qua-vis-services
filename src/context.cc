@@ -122,7 +122,6 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     this->compute_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
     results[i] = *(float*)this->RetrieveResult();
     if (this->debug_mode_ || this->line_mode_) this->RetrieveDepthImage(i);
-    break;
   }
 
   if (this->timing_mode_) {
@@ -544,7 +543,7 @@ void Context::InitializeVkShaderModules() {
       &this->vk_vertex_shader_ // the allocated memory for the logical device
     )
   );
-
+/*
   // tessellation control shader
   VkShaderModuleCreateInfo tessellation_control_shader_info = {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
@@ -598,7 +597,7 @@ void Context::InitializeVkShaderModules() {
       &this->vk_geoemtry_shader_ // the allocated memory for the logical device
     )
   );
-
+*/
   // create fragment shader
   VkShaderModuleCreateInfo fragment_shader_info = {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
@@ -984,9 +983,6 @@ void Context::InitializeVkGraphicsPipeline() {
 
   VkPipelineShaderStageCreateInfo shader_stages[] = {
     vertex_shader_stage_info,
-    tessellation_control_shader_stage_info,
-    tessellation_evaluation_shader_stage_info,
-    geoemtry_shader_stage_info,
     fragment_shader_stage_info
   };
 
@@ -1010,7 +1006,7 @@ void Context::InitializeVkGraphicsPipeline() {
     VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO, // sType
     nullptr, // pNext (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, // topology of vertices
+    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, // topology of vertices
     VK_FALSE // whether there should be a special vertex index to reassemble
   };
 
@@ -1124,7 +1120,7 @@ void Context::InitializeVkGraphicsPipeline() {
       VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO, // sType
       nullptr, // next (see documentation, must be null)
       0, // pipeline create flags (have no child pipelines, so don't care)
-      5, // number of stages (we have 5 shaders for now)
+      2, // number of stages (we have 5 shaders for now)
       shader_stages, // shader stage create infos
       &vertex_input_info, // vertex input info
       &input_assembly_info, // inpt assembly info
@@ -1403,6 +1399,34 @@ void Context::InitializeVkGraphicsCommandBuffers() {
   );
 
   for (int i = 0; i < 6; i++) {
+    this->uniform_.model = glm::translate(glm::mat4(1.0f), glm::vec3(-this->uniform_.observation_point.x, -this->uniform_.observation_point.y, -this->uniform_.observation_point.z));
+    this->uniform_.projection = glm::perspective((float)(M_PI / 2.0), float(this->render_width_/this->render_height_), 0.01f, (float)this->uniform_.r_max);
+    glm::mat4 viewMatrix = glm::mat4();
+    switch (i)
+		{
+		case 0: // POSITIVE_X
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			break;
+		case 1:	// NEGATIVE_X
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			break;
+		case 2:	// POSITIVE_Y
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			break;
+		case 3:	// NEGATIVE_Y
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			break;
+		case 4:	// POSITIVE_Z
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			break;
+		case 5:	// NEGATIVE_Z
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			break;
+    }
+    this->uniform_.view = viewMatrix;
+
     vkCmdPushConstants(
       this->vk_graphics_commandbuffer_,
       this->vk_graphics_pipeline_layout_,
@@ -1736,7 +1760,12 @@ void Context::RetrieveRenderImage(uint32_t i) {
 
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
-  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0, {0,0,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 0, {0*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 1, {2*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 2, {2*this->render_width_, 2*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 3, {2*this->render_width_, 0*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 4, {3*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_color_image_, this->vk_color_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_COLOR_BIT, 5, {1*this->render_width_, 1*this->render_height_,0});
   this->TransformImageLayout(this->vk_color_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0};
@@ -1759,15 +1788,15 @@ void Context::RetrieveRenderImage(uint32_t i) {
 
 
   this->start_time_ = std::clock();
-  uint8_t image[this->render_width_ * this->render_height_];
-  for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
+  uint8_t image[4*this->render_width_ * 3*this->render_height_];
+  for (uint32_t i = 0; i < 4 * 4*this->render_width_ * 3*this->render_height_; i += 4) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
     image[i/4] = floor(px*255);
   }
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
   std::string filename = "images/rendered_" + std::to_string(i) + ".png";
-  stbi_write_png(filename.c_str(), this->render_width_, this->render_height_, 1, (void*)image, 0);
+  stbi_write_png(filename.c_str(), 4*this->render_width_, 3*this->render_height_, 1, (void*)image, 0);
   free(pixels);
   this->image_storage_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
@@ -1783,11 +1812,11 @@ void Context::RetrieveDepthImage(uint32_t i) {
   this->TransformImageLayout(this->vk_depth_stencil_image_, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 6);
   this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_PREINITIALIZED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
   this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 0, {0*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 1, {1*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 2, {2*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 3, {3*this->render_width_, 1*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 4, {2*this->render_width_, 0*this->render_height_,0});
-  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 5, {2*this->render_width_, 2*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 1, {2*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 2, {2*this->render_width_, 2*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 3, {2*this->render_width_, 0*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 4, {3*this->render_width_, 1*this->render_height_,0});
+  this->CopyImage(this->vk_depth_stencil_image_, this->vk_depth_stencil_staging_image_, this->render_width_, this->render_height_, VK_IMAGE_ASPECT_DEPTH_BIT, 5, {1*this->render_width_, 1*this->render_height_,0});
   this->TransformImageLayout(this->vk_depth_stencil_staging_image_, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_DEPTH_BIT, 1);
 
   VkImageSubresource subresource = {VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0};

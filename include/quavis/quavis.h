@@ -24,17 +24,19 @@
 #include <ctime>
 
 // glm
+#define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace quavis {
   struct UniformBufferObject {
+    glm::mat4 projection;
+    glm::mat4 view;
+    glm::mat4 model;
     vec3 observation_point;
     float r_max;
     float alpha_max;
-    mat4 projection;
-    mat4 view;
-    mat4 model;
   };
 
   /**
@@ -230,7 +232,7 @@ namespace quavis {
     };
 
     // rendering attributes
-    const uint32_t render_width_ = 512;
+    const uint32_t render_width_ = 256;
     const uint32_t render_height_ = 256;
     const size_t workgroups[3] = {256, 1, 1};
     const size_t workgroups2[3] = {1, 1, 1};
@@ -244,12 +246,12 @@ namespace quavis {
     std::vector<Vertex> vertices_ = {};
     std::vector<uint32_t> indices_ = {};
     UniformBufferObject uniform_ = {
+      glm::mat4(1.0f),
+      glm::mat4(1.0f),
+      glm::mat4(1.0f),
       vec3 {0, 0, 0},
       1000000,
-      .1,
-      mat4 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-      mat4 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
-      mat4 {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}
+      .1
     };
 
     // flags
