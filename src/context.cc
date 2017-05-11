@@ -49,20 +49,52 @@ Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=fa
   this->InitializeVkComputePipeline();
 }
 
+#define use_obj false
+
 std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_max, float r_max) {
   this->uniform_.alpha_max = alpha_max;
   this->uniform_.r_max = r_max;
-  std::vector<vec3> points = geojson::parse(contents);
-  std::unordered_map<Vertex, int> vertex_map = {};
   vertices_ = std::vector<Vertex>();
-  for (uint32_t i = 0; i < points.size(); i++) {
-    Vertex vertex = {points[i], {255,255,255}};
-    if (vertex_map.count(vertex) == 0) {
-      vertex_map[vertex] = vertices_.size();
-      vertices_.push_back(vertex);
+  
+  if(use_obj) {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err;
+    std::string path = "cabin.obj";
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
+      throw std::runtime_error(err);
     }
-    indices_.push_back(vertex_map[vertex]);
+    for (const auto& shape : shapes) {
+      for (const auto& index : shape.mesh.indices) {
+        Vertex vertex = {};
+        vertex.pos = {
+            attrib.vertices[3 * index.vertex_index + 2],
+            attrib.vertices[3 * index.vertex_index + 0],
+            attrib.vertices[3 * index.vertex_index + 1]
+        };
+        vertex.color = {
+            0.0f,
+            0.0f,
+            attrib.vertices[3 * index.vertex_index + 2]
+        };
+        vertices_.push_back(vertex);
+        indices_.push_back(indices_.size());
+      }
+    }
+  } else {
+    std::vector<vec3> points = geojson::parse(contents);
+    std::unordered_map<Vertex, int> vertex_map = {};
+    for (uint32_t i = 0; i < points.size(); i++) {
+      Vertex vertex = {points[i], {255,255,255}};
+      if (vertex_map.count(vertex) == 0) {
+        vertex_map[vertex] = vertices_.size();
+        vertices_.push_back(vertex);
+      }
+      indices_.push_back(vertex_map[vertex]);
+    }
   }
+
 
   this->start_time_ = std::clock();
   this->InitializeVkMemory();
@@ -74,16 +106,16 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
 
   std::vector<vec3> observation_points = analysispoints;
 
-  // Create a list of vertices that lie are in some triangle
-  std::unordered_set<size_t> ignore = {};
-  for (size_t o = 0; o < observation_points.size(); o++) {
-    for (size_t i = 0; i < indices_.size(); i+=3) {
-      vec2 p0, p1, p2;
-      p0 = {vertices_[indices_[i]].pos.x, vertices_[indices_[i]].pos.y};
-      p1 = {vertices_[indices_[i+1]].pos.x, vertices_[indices_[i+1]].pos.y};
-      p2 = {vertices_[indices_[i+2]].pos.x, vertices_[indices_[i+2]].pos.y};
-    }
-  }
+  //// Create a list of vertices that lie are in some triangle
+  //std::unordered_set<size_t> ignore = {};
+  //for (size_t o = 0; o < observation_points.size(); o++) {
+  //  for (size_t i = 0; i < indices_.size(); i+=3) {
+  //    vec2 p0, p1, p2;
+  //    p0 = {vertices_[indices_[i]].pos.x, vertices_[indices_[i]].pos.y};
+  //    p1 = {vertices_[indices_[i+1]].pos.x, vertices_[indices_[i+1]].pos.y};
+  //    p2 = {vertices_[indices_[i+2]].pos.x, vertices_[indices_[i+2]].pos.y};
+  //  }
+  //}
 
   this->start_time_ = std::clock();
   this->SubmitVertexData();
