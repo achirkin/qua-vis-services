@@ -107,9 +107,9 @@ void main() {
       zq /= ubo.r_max; // normalize
 
       // compute 3 points on pole
-      vec4 qmpi = vec4(-1, -1, zq, 1);
-      vec4 qb = vec4(sphericalPosition[unbroken_index][1], -1, zq, 1);
-      vec4 qpi = vec4(1, -1, zq, 1);
+      vec4 qmpi = vec4(-1, -sign(zq), zq, 1);
+      vec4 qb = vec4(sphericalPosition[unbroken_index][1], -sign(zq), zq, 1);
+      vec4 qpi = vec4(1, -sign(zq), zq, 1);
 
       vec4 sphericalPositionNew[3];
       sphericalPositionNew[0] = sphericalPosition[broken_left_index]; // a
