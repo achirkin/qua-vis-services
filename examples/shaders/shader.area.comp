@@ -39,7 +39,7 @@ float linearDepth(float depthSample) {
 
 void main()
 {
-  float weight = R_MAX;
+  float weight = 4.0/3.0*PI*R_MAX*R_MAX/(6*WIDTH*HEIGHT);
 
   // compute sum per item
   uint xpos = gl_LocalInvocationID.x * CHUNKSIZE;
@@ -51,9 +51,9 @@ void main()
     tmp2 += linearDepth(imageLoad(inputImage3, ivec2(x, gl_WorkGroupID.x)).x);
     tmp2 += linearDepth(imageLoad(inputImage4, ivec2(x, gl_WorkGroupID.x)).x);
     tmp2 += linearDepth(imageLoad(inputImage5, ivec2(x, gl_WorkGroupID.x)).x);
-    tmp += weight*tmp2;
+    tmp += tmp2;
   }
-  tmp_local[gl_LocalInvocationID.x] = tmp;
+  tmp_local[gl_LocalInvocationID.x] = weight*tmp;
   barrier();
 
   // group sum
