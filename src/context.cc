@@ -802,30 +802,29 @@ void Context::InitializeVkDescriptorSetLayout() {
   );
 
   // Compute
-  VkDescriptorSetLayoutBinding computeLayoutBindingIn = {};
-  computeLayoutBindingIn.binding = 0;
-  computeLayoutBindingIn.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-  computeLayoutBindingIn.descriptorCount = 1;
-  computeLayoutBindingIn.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+  std::vector<VkDescriptorSetLayoutBinding> bindings;
+  for (uint32_t i = 0; i < 6; i++) {
+    VkDescriptorSetLayoutBinding computeLayoutBindingIn = {};
+    computeLayoutBindingIn.binding = i;
+    computeLayoutBindingIn.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    computeLayoutBindingIn.descriptorCount = 1;
+    computeLayoutBindingIn.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    bindings.push_back(computeLayoutBindingIn);
+  }
 
   VkDescriptorSetLayoutBinding computeLayoutBindingOut = {};
-  computeLayoutBindingOut.binding = 1;
+  computeLayoutBindingOut.binding = 6;
   computeLayoutBindingOut.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   computeLayoutBindingOut.descriptorCount = 1;
   computeLayoutBindingOut.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+  bindings.push_back(computeLayoutBindingOut);
 
   VkDescriptorSetLayoutBinding computeLayoutBindingTmp = {};
-  computeLayoutBindingTmp.binding = 2;
+  computeLayoutBindingTmp.binding = 7;
   computeLayoutBindingTmp.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
   computeLayoutBindingTmp.descriptorCount = 1;
   computeLayoutBindingTmp.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-
-
-  std::vector<VkDescriptorSetLayoutBinding> bindings = {
-    computeLayoutBindingIn,
-    computeLayoutBindingOut,
-    computeLayoutBindingTmp
-  };
+  bindings.push_back(computeLayoutBindingTmp);
 
   VkDescriptorSetLayoutCreateInfo computeLayoutInfo = {};
   computeLayoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -851,7 +850,7 @@ void Context::InitializeVkDescriptorPool() {
   // compute
   VkDescriptorPoolSize computePoolSizeIn = {};
   computePoolSizeIn.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-  computePoolSizeIn.descriptorCount = 1;
+  computePoolSizeIn.descriptorCount = 6;
 
   VkDescriptorPoolSize computePoolSizeTmp = {};
   computePoolSizeTmp.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -869,7 +868,7 @@ void Context::InitializeVkDescriptorPool() {
   poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
   poolInfo.poolSizeCount = poolSizes.size();
   poolInfo.pPoolSizes = poolSizes.data();
-  poolInfo.maxSets = 2;
+  poolInfo.maxSets = 8;
 
   debug::handleVkResult(
     vkCreateDescriptorPool(this->vk_logical_device_, &poolInfo, nullptr, &this->vk_descriptor_pool_)
@@ -1402,7 +1401,7 @@ void Context::InitializeVkGraphicsCommandBuffers() {
   );
 
   for (int i = 0; i < 6; i++) {
-    this->uniform_.projection = glm::infinitePerspective((float)(M_PI / 2.0), (float)(this->render_width_/this->render_height_), 0.001f);
+    this->uniform_.projection = glm::perspective((float)(M_PI / 2.0), (float)(this->render_width_/this->render_height_), 0.001f, (float)this->uniform_.r_max);
     this->uniform_.model = glm::translate(glm::mat4(1.0f), glm::vec3(-this->uniform_.observation_point.x, -this->uniform_.observation_point.y, -this->uniform_.observation_point.z));
     glm::mat4 viewMatrix = glm::mat4(1.0f);
     switch (i)
@@ -2038,9 +2037,34 @@ void Context::CreateComputeDescriptorSets() {
 void Context::UpdateComputeDescriptorSets() {
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
 
-  VkDescriptorImageInfo image_in_info = {
+  VkDescriptorImageInfo image_in_info_1 = {
     VK_NULL_HANDLE,
     this->vk_color_imageview_1_,
+    VK_IMAGE_LAYOUT_GENERAL
+  };
+  VkDescriptorImageInfo image_in_info_2 = {
+    VK_NULL_HANDLE,
+    this->vk_color_imageview_2_,
+    VK_IMAGE_LAYOUT_GENERAL
+  };
+  VkDescriptorImageInfo image_in_info_3 = {
+    VK_NULL_HANDLE,
+    this->vk_color_imageview_3_,
+    VK_IMAGE_LAYOUT_GENERAL
+  };
+  VkDescriptorImageInfo image_in_info_4 = {
+    VK_NULL_HANDLE,
+    this->vk_color_imageview_4_,
+    VK_IMAGE_LAYOUT_GENERAL
+  };
+  VkDescriptorImageInfo image_in_info_5 = {
+    VK_NULL_HANDLE,
+    this->vk_color_imageview_5_,
+    VK_IMAGE_LAYOUT_GENERAL
+  };
+  VkDescriptorImageInfo image_in_info_6 = {
+    VK_NULL_HANDLE,
+    this->vk_color_imageview_6_,
     VK_IMAGE_LAYOUT_GENERAL
   };
 
@@ -2056,7 +2080,12 @@ void Context::UpdateComputeDescriptorSets() {
   buffer_tmp_info.range = sizeof(float)*this->workgroups[0];
 
   std::vector<VkDescriptorImageInfo> in_infos = {
-    image_in_info
+    image_in_info_1,
+    image_in_info_2,
+    image_in_info_3,
+    image_in_info_4,
+    image_in_info_5,
+    image_in_info_6,
   };
 
   std::vector<VkDescriptorBufferInfo> out_infos = {
@@ -2067,46 +2096,47 @@ void Context::UpdateComputeDescriptorSets() {
     buffer_tmp_info
   };
 
-  VkWriteDescriptorSet compute_in_descriptor_write = {};
-  compute_in_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-  compute_in_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
-  compute_in_descriptor_write.dstBinding = 0;
-  compute_in_descriptor_write.dstArrayElement = 0;
-  compute_in_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // TODO: COMPUTESHADERTODO - Change to bufferinfo
-  compute_in_descriptor_write.descriptorCount = in_infos.size();
-  compute_in_descriptor_write.pImageInfo = in_infos.data();
-  compute_in_descriptor_write.pBufferInfo = nullptr;
-  compute_in_descriptor_write.pTexelBufferView = nullptr;
+  std::vector<VkWriteDescriptorSet> write_descriptor_sets;
+
+  for (uint32_t i = 0; i < 6; i++) {
+    VkWriteDescriptorSet compute_in_descriptor_write = {};
+    compute_in_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    compute_in_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
+    compute_in_descriptor_write.dstBinding = i;
+    compute_in_descriptor_write.dstArrayElement = 0;
+    compute_in_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; // TODO: COMPUTESHADERTODO - Change to bufferinfo
+    compute_in_descriptor_write.descriptorCount = 1;
+    compute_in_descriptor_write.pImageInfo = &in_infos[i];
+    compute_in_descriptor_write.pBufferInfo = nullptr;
+    compute_in_descriptor_write.pTexelBufferView = nullptr;
+    write_descriptor_sets.push_back(compute_in_descriptor_write);
+  }
 
   VkWriteDescriptorSet compute_out_descriptor_write = {};
   compute_out_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
   compute_out_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
-  compute_out_descriptor_write.dstBinding = 1;
+  compute_out_descriptor_write.dstBinding = 6;
   compute_out_descriptor_write.dstArrayElement = 0;
   compute_out_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // TODO: COMPUTESHADERTODO - Change to bufferinfo
   compute_out_descriptor_write.descriptorCount = out_infos.size();
   compute_out_descriptor_write.pImageInfo = nullptr;
   compute_out_descriptor_write.pBufferInfo = out_infos.data();
   compute_out_descriptor_write.pTexelBufferView = nullptr;
+  write_descriptor_sets.push_back(compute_out_descriptor_write);
 
   VkWriteDescriptorSet compute_tmp_descriptor_write = {};
   compute_tmp_descriptor_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
   compute_tmp_descriptor_write.dstSet = this->vk_compute_descriptor_set_;
-  compute_tmp_descriptor_write.dstBinding = 2;
+  compute_tmp_descriptor_write.dstBinding = 7;
   compute_tmp_descriptor_write.dstArrayElement = 0;
   compute_tmp_descriptor_write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; // TODO: COMPUTESHADERTODO - Change to bufferinfo
   compute_tmp_descriptor_write.descriptorCount = tmp_infos.size();
   compute_tmp_descriptor_write.pImageInfo = nullptr;
   compute_tmp_descriptor_write.pBufferInfo = tmp_infos.data();
   compute_tmp_descriptor_write.pTexelBufferView = nullptr;
+  write_descriptor_sets.push_back(compute_tmp_descriptor_write);
 
-  std::vector<VkWriteDescriptorSet> writedescriptor_sets = {
-    compute_in_descriptor_write,
-    compute_out_descriptor_write,
-    compute_tmp_descriptor_write
-  };
-
-  vkUpdateDescriptorSets(this->vk_logical_device_, writedescriptor_sets.size(), writedescriptor_sets.data(), 0, nullptr);
+  vkUpdateDescriptorSets(this->vk_logical_device_, write_descriptor_sets.size(), write_descriptor_sets.data(), 0, nullptr);
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, 6);
 
 }
