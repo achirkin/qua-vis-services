@@ -42,7 +42,7 @@ namespace quavis {
     */
     Context(std::string cp_shader_1, std::string cp_shader_2, bool debug, bool line, bool timing);
 
-    std::vector<float> Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_min, float r_max);
+    std::vector<float> Parse(std::string path, std::vector<vec3> analysispoints, float alpha_min, float r_max);
 
     /**
     * Destroy the object. All vulkan objects are cleanly removed here.

@@ -49,19 +49,26 @@ Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=fa
   this->InitializeVkComputePipeline();
 }
 
-#define use_obj true
-
-std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_max, float r_max) {
+std::vector<float> Context::Parse(std::string path, std::vector<vec3> analysispoints, float alpha_max, float r_max) {
   this->uniform_.alpha_max = alpha_max;
   this->uniform_.r_max = r_max;
   vertices_ = std::vector<Vertex>();
-  
-  if(use_obj) {
+
+  // get file extension
+  std::string::size_type idx;
+  std::string extension = "";
+  idx = path.rfind('.');
+  if(idx != std::string::npos) extension = path.substr(idx+1);
+
+  // open file
+  std::ifstream ifs(path);
+  std::string contents ((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
+
+  if(extension == "obj") {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
     std::string err;
-    std::string path = "cabin.obj";
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
       throw std::runtime_error(err);
     }
