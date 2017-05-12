@@ -8,7 +8,7 @@
 
 using namespace quavis;
 
-Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=false, bool line=false, bool timing=false) {
+Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=false, bool line=false, int timing=false) {
   this->debug_mode_ = debug;
   this->line_mode_ = line;
   this->timing_mode_ = timing;
@@ -49,23 +49,57 @@ Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=fa
   this->InitializeVkComputePipeline();
 }
 
-std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analysispoints, float alpha_max, float r_max) {
+std::vector<float> Context::Parse(std::string path, std::vector<vec3> analysispoints, float alpha_max, float r_max) {
   this->uniform_.alpha_max = alpha_max;
   this->uniform_.r_max = r_max;
-  std::vector<vec3> points = geojson::parse(contents);
-  std::unordered_map<Vertex, int> vertex_map = {};
   vertices_ = std::vector<Vertex>();
-  vec3 color = {255,255,255};
-  for (uint32_t i = 0; i < points.size(); i++) {
-    if (i % 2 == 0) {
-      color = {rand() % 255, rand() % 255, rand() % 255};
+
+  // get file extension
+  std::string::size_type idx;
+  std::string extension = "";
+  idx = path.rfind('.');
+  if(idx != std::string::npos) extension = path.substr(idx+1);
+
+  // open file
+  std::ifstream ifs(path);
+  std::string contents ((std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()));
+
+  if(extension == "obj") {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string err;
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, path.c_str(), "", true)) {
+      throw std::runtime_error(err);
     }
-    Vertex vertex = {points[i], color};
-    if (vertex_map.count(vertex) == 0) {
-      vertex_map[vertex] = vertices_.size();
-      vertices_.push_back(vertex);
+    for (const auto& shape : shapes) {
+      for (const auto& index : shape.mesh.indices) {
+        Vertex vertex = {};
+        vertex.pos = {
+            attrib.vertices[3 * index.vertex_index + 2],
+            attrib.vertices[3 * index.vertex_index + 0],
+            attrib.vertices[3 * index.vertex_index + 1]
+        };
+        vertex.color = {
+            attrib.normals[3 * index.normal_index + 2],
+            attrib.normals[3 * index.normal_index + 0],
+            attrib.normals[3 * index.normal_index + 1]
+        };
+        vertices_.push_back(vertex);
+        indices_.push_back(indices_.size());
+      }
     }
-    indices_.push_back(vertex_map[vertex]);
+  } else {
+    std::vector<vec3> points = geojson::parse(contents);
+    std::unordered_map<Vertex, int> vertex_map = {};
+    for (uint32_t i = 0; i < points.size(); i++) {
+      Vertex vertex = {points[i], {255,255,255}};
+      if (vertex_map.count(vertex) == 0) {
+        vertex_map[vertex] = vertices_.size();
+        vertices_.push_back(vertex);
+      }
+      indices_.push_back(vertex_map[vertex]);
+    }
   }
 
   this->start_time_ = std::clock();
@@ -95,7 +129,6 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
   this->SubmitUniformData();
   this->submission_time_ = double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
-
   VkDescriptorSetLayout layouts[] = {this->vk_graphics_descriptor_set_layout_};
   this->CreateGraphicsDescriptorSet(layouts, &this->vk_graphics_descriptor_set_);
   this->UpdateGraphicsDescriptorSet(sizeof(UniformBufferObject), this->vk_uniform_buffer_, &this->vk_graphics_descriptor_set_);
@@ -108,40 +141,40 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
   this->InitializeVkComputeCommandBuffers();
 
   // MAGIIC
-  std::vector<float> results(observation_points.size());
-  for (size_t i = 0; i < observation_points.size(); i++) {
-    this->start_time_ = std::clock();
-    this->uniform_.observation_point = observation_points[i];
-    this->InitializeVkGraphicsCommandBuffers();
-    //this->SubmitUniformData();
-    vkQueueWaitIdle(this->vk_queue_graphics_);
-    this->VkDraw();
-    this->graphics_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
-
-    this->start_time_ = std::clock();
-    this->ResetResult();
-    vkQueueWaitIdle(this->vk_queue_graphics_);
-    this->VkCompute();
-    vkQueueWaitIdle(this->vk_queue_compute_);
-    this->compute_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
-    results[i] = *(float*)this->RetrieveResult();
-    if (this->debug_mode_ || this->line_mode_) this->RetrieveRenderImage(i);
+  if (this->timing_mode_ > 0) {
+    std::cout << "X Y Z Result AVGGraphicsFPS AVGComputeFPS" << std::endl;
   }
 
-  if (this->timing_mode_) {
-    std::cout << "INIT MEMORY " << this->init_memory_time_ << std::endl;
-    std::cout << "INIT IMAGE LAYOUTS " << this->init_image_layout_time_ << std::endl;
-    std::cout << "SUBMIT DATA " << this->submission_time_ << std::endl;
-    std::cout << "GRAPHICS " << this->graphics_time_ << std::endl;
-    std::cout << "COMPUTING " << this->compute_time_ << std::endl;
-    std::cout << "RESULT RETRIEVAL " << this->result_retrieval_time_ << std::endl;
-    std::cout << "IMAGE RETRIEVAL " << this->image_retrieval_time_ << std::endl;
-    std::cout << "IMAGE STORAGE " << this->image_storage_time_ << std::endl;
-    std::cout << "GRAPHICS FPS " << double(results.size()) / this->graphics_time_ << std::endl;
-    std::cout << "COMPUTING FPS " << double(results.size()) / this->compute_time_ << std::endl;
-    std::cout << "RESULT RETRIEVAL FPS " << double(results.size()) / this->result_retrieval_time_ << std::endl;
-    std::cout << "IMAGE RETRIEVAL FPS " << double(results.size()) / this->image_retrieval_time_ << std::endl;
-    std::cout << "IMAGE STORAGE FPS " << double(results.size()) / this->image_storage_time_ << std::endl;
+  // MAGIIC
+  std::vector<float> results(observation_points.size());
+  for (size_t i = 0; i < observation_points.size(); i++) {
+    int repeat = this->timing_mode_ > 0 ? this->timing_mode_ : 1;
+
+    this->start_time_ = std::clock();
+    for (int j = 0; j < repeat; j++) {
+      vkQueueWaitIdle(this->vk_queue_graphics_);
+      this->uniform_.observation_point = observation_points[i];
+      this->InitializeVkGraphicsCommandBuffers();
+      //this->SubmitUniformData();
+      this->VkDraw();
+      vkQueueWaitIdle(this->vk_queue_graphics_);
+    }
+    this->graphics_time_ = (float)repeat/(double(std::clock() - this->start_time_) / CLOCKS_PER_SEC);
+    this->ResetResult();
+
+    this->start_time_ = std::clock();
+    for (int j = 0; j < repeat; j++) {
+      vkQueueWaitIdle(this->vk_queue_graphics_);
+      vkQueueWaitIdle(this->vk_queue_compute_);
+      this->VkCompute();
+      vkQueueWaitIdle(this->vk_queue_compute_);
+    }
+    this->compute_time_ = (float)repeat/(double(std::clock() - this->start_time_) / CLOCKS_PER_SEC);
+    results[i] = *(float*)this->RetrieveResult();
+
+    std::cout << observation_points[i].x << " " << observation_points[i].y << " " << observation_points[i].z << " " << results[i] << " " << graphics_time_ << " " << compute_time_ << std::endl;
+
+    if (this->debug_mode_ || this->line_mode_) this->RetrieveRenderImage(i);
   }
 
   return results;

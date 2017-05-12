@@ -90,17 +90,15 @@ int main(int argc, char **argv) {
   while(std::cin >> x >> y >> z) {
     observation_points.push_back(quavis::vec3 { x, y, z });
   }
-  quavis::Context* context = new quavis::Context(args.cp_shader_1, args.cp_shader_2, args.debug_mode == 1 ? true : false, args.line_mode == 1 ? true : false, args.timing_mode == 1 ? true : false);
+  quavis::Context* context = new quavis::Context(
+    args.cp_shader_1,
+    args.cp_shader_2,
+    args.debug_mode == 1 ? true : false,
+    args.line_mode == 1 ? true : false,
+    args.timing_mode);
 
-  std::ifstream ifs(args.geojson_file);
-  std::string content( (std::istreambuf_iterator<char>(ifs) ), (std::istreambuf_iterator<char>()    ) );
-  std::vector<float> results = context->Parse(content, observation_points, args.max_angle, args.max_distance);
+  std::vector<float> results = context->Parse(args.geojson_file, observation_points, args.max_angle, args.max_distance);
 
-  if (args.timing_mode != 1) {
-    for (size_t i = 0; i < observation_points.size(); i++) {
-      std::cout << observation_points[i].x << " " << observation_points[i].y << " " << observation_points[i].z << " " << results[i] << std::endl;
-    }
-  }
 
   /* Start the Service */
   signal(SIGINT, exithandler);
