@@ -1,7 +1,7 @@
 #version 450
 // image settings
-#define WIDTH 512 // each work item covers a patch of size (W/N)x(H/M)
-#define HEIGHT 256
+#define WIDTH 1024 // each work item covers a patch of size (W/N)x(H/M)
+#define HEIGHT 512
 
 // local dimensions
 #define N_LOCAL 16 // the number of local work items on the x-axis
@@ -9,7 +9,7 @@
 // constants
 #define PI 3.1415926
 #define R_MAX 10000.0
-#define CHUNKSIZE 32 // WIDTH / N_LOCAL
+#define CHUNKSIZE 64 // WIDTH / N_LOCAL
 #define INVHEIGHTPI 0.04908738521234052 // PI / HEIGHT
 
 layout (local_size_x = N_LOCAL, local_size_y = 1, local_size_z = 1) in;

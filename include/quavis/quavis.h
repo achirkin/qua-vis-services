@@ -215,9 +215,9 @@ namespace quavis {
     };
 
     // rendering attributes
-    const uint32_t render_width_ = 512;
-    const uint32_t render_height_ = 256;
-    const size_t workgroups[3] = {256, 1, 1};
+    const uint32_t render_width_ = 1024;
+    const uint32_t render_height_ = 512;
+    const size_t workgroups[3] = {512, 1, 1};
     const size_t workgroups2[3] = {1, 1, 1};
     const size_t num_observation_points_x = 100;
     const VkFormat color_format_ = VK_FORMAT_R32G32_SFLOAT;
