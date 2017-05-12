@@ -40,7 +40,7 @@ namespace quavis {
     * Creates a new instance of the Context class. During its initialization,
     * the vulkan devices and pipelines are prepared for rendering / computation.
     */
-    Context(std::string cp_shader_1, std::string cp_shader_2, bool debug, bool line, bool timing);
+    Context(std::string cp_shader_1, std::string cp_shader_2, bool debug, bool line, int timing);
 
     std::vector<float> Parse(std::string path, std::vector<vec3> analysispoints, float alpha_min, float r_max);
 
@@ -237,7 +237,7 @@ namespace quavis {
     // flags
     bool debug_mode_;
     bool line_mode_;
-    bool timing_mode_;
+    int timing_mode_;
 
     // timings
     std::clock_t start_time_;
