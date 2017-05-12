@@ -2,7 +2,7 @@
 #define PI 3.14159265358979311599796346854419
 #define INV_PI 0.31830988618379069121644420192752
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(push_constant) uniform PushConsts {
   vec3 observation_point;
   float r_max;
   float alpha_max;

@@ -2,7 +2,7 @@
 #extension GL_ARB_tessellation_shader : enable
 #define ID gl_InvocationID
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(push_constant) uniform PushConsts {
   vec3 observation_point;
   float r_max;
   float alpha_max;

@@ -127,7 +127,7 @@ std::vector<float> Context::Parse(std::string path, std::vector<vec3> analysispo
   this->start_time_ = std::clock();
   this->SubmitVertexData();
   this->SubmitIndexData();
-  this->SubmitUniformData();
+  //this->SubmitUniformData();
   this->submission_time_ = double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
 
 
@@ -147,7 +147,8 @@ std::vector<float> Context::Parse(std::string path, std::vector<vec3> analysispo
   for (size_t i = 0; i < observation_points.size(); i++) {
     this->start_time_ = std::clock();
     this->uniform_.observation_point = observation_points[i];
-    this->SubmitUniformData();
+    this->InitializeVkGraphicsCommandBuffers();
+    //this->SubmitUniformData();
     vkQueueWaitIdle(this->vk_queue_graphics_);
     this->VkDraw();
     this->graphics_time_ += double(std::clock() - this->start_time_) / CLOCKS_PER_SEC;
@@ -492,7 +493,6 @@ void Context::InitializeVkLogicalDevice() {
   device_features.tessellationShader = VK_TRUE;
   device_features.geometryShader = VK_TRUE;
   device_features.fillModeNonSolid = VK_TRUE;
-  if (this->line_mode_) device_features.fillModeNonSolid = VK_FALSE;
   device_features.shaderStorageImageExtendedFormats = VK_TRUE;
 
   // Create lgocial device metadata
@@ -867,6 +867,16 @@ void Context::InitializeVkDescriptorPool() {
 }
 
 void Context::InitializeVkGraphicsPipelineLayout() {
+  VkPushConstantRange push_constant_range = {
+     VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
+     0,
+     sizeof(UniformBufferObject)
+   };
+
+   std::vector<VkPushConstantRange> push_constant_ranges = {
+     push_constant_range
+   };
+
   // Define Pipeline layout
   VkPipelineLayoutCreateInfo pipeline_layout_info = {
     VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // sType
@@ -874,8 +884,8 @@ void Context::InitializeVkGraphicsPipelineLayout() {
     0, // flags (see documentation, must be 0)
     1, // layout count
     &this->vk_graphics_descriptor_set_layout_, // layouts
-    0, // push constant range count
-    nullptr // push constant ranges
+    (uint32_t)push_constant_ranges.size(), // push constant range count
+    push_constant_ranges.data() // push constant ranges
   };
 
   // Create pipeline layout
@@ -1352,6 +1362,15 @@ void Context::InitializeVkGraphicsCommandBuffers() {
     VK_SUBPASS_CONTENTS_INLINE // store contents in primary command buffer
   );
 
+  vkCmdPushConstants(
+     this->vk_graphics_commandbuffer_,
+     this->vk_graphics_pipeline_layout_,
+     VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
+     0,
+     sizeof(UniformBufferObject),
+     &this->uniform_
+  );
+
   // bind graphics pipeline
   vkCmdBindPipeline(
     this->vk_graphics_commandbuffer_, // command buffer
@@ -1546,6 +1565,7 @@ void Context::VkCompute() {
     nullptr
   };
 
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
   debug::handleVkResult(
     vkQueueSubmit(
       this->vk_queue_compute_, // queue
@@ -1569,6 +1589,7 @@ void Context::VkCompute() {
     nullptr
   };
 
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
   debug::handleVkResult(
     vkQueueSubmit(
       this->vk_queue_compute_, // queue
@@ -2133,7 +2154,7 @@ void Context::CreateCommandPool(VkCommandPool* pool) {
   VkCommandPoolCreateInfo command_pool_info = {
     VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO, // sType
     nullptr,// pNext (see documentation, must be null)
-    0, // flags (see documentation, must be 0)
+    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, // flags (see documentation, must be 0)
     this->queue_family_index_ // the queue family
   };
 
