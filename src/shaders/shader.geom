@@ -62,8 +62,7 @@ void main() {
     EmitSphericalVertex(teCartesianPosition[1], sphericalPosition[1], teNormal[1]);
     EmitSphericalVertex(teCartesianPosition[2], sphericalPosition[2], teNormal[2]);
     EndPrimitive();
-  }
-  if (sum_broken > 0) { // we have a bad triangle, let's order vertices so that phi_a > phi_b > phi_c
+  } else { // we have a bad triangle, let's order vertices so that phi_a > phi_b > phi_c
     int index_a = 0, index_b = 1, index_c = 2;
     switch ( int(sphericalPosition[0][0] > sphericalPosition[1][0])
            | int(sphericalPosition[0][0] > sphericalPosition[2][0])<<1
@@ -139,7 +138,7 @@ void main() {
       EndPrimitive();
       
       EmitSphericalVertex(p_a   , s_ax   , teNormal[index_a]); // a'
-      EmitSphericalVertex(p_pole, s_polep, n_pole           ); // q_-pi
+      EmitSphericalVertex(p_pole, s_polem, n_pole           ); // q_-pi
       EmitSphericalVertex(p_c   , s_c    , teNormal[index_c]); // c
       EmitSphericalVertex(p_pole, s_poleb, n_pole           ); // q_b
       EmitSphericalVertex(p_b   , s_b    , teNormal[index_b]); // b
