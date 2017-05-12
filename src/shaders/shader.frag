@@ -6,5 +6,6 @@ layout(location = 1) in vec3 vColor;
 layout(location = 0) out vec4 fColor;
 
 void main() {
-  fColor = vec4(vCartesianPosition[2], vColor[0], vCartesianPosition[2], vCartesianPosition[2]);
+  // if the image should be displayed, vColor needs to be changed in the vertex!!
+  fColor = vec4(vColor, 1);
 }

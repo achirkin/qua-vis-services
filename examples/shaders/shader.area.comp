@@ -45,15 +45,15 @@ void main()
   uint xpos = gl_LocalInvocationID.x * CHUNKSIZE;
   float tmp = 0.0;
   for (uint x = xpos; x < xpos + CHUNKSIZE; x++) {
-    float tmp2 = linearDepth(imageLoad(inputImage0, ivec2(x, gl_WorkGroupID.x)).x);
-    tmp2 += linearDepth(imageLoad(inputImage1, ivec2(x, gl_WorkGroupID.x)).x);
-    tmp2 += linearDepth(imageLoad(inputImage2, ivec2(x, gl_WorkGroupID.x)).x);
-    tmp2 += linearDepth(imageLoad(inputImage3, ivec2(x, gl_WorkGroupID.x)).x);
-    tmp2 += linearDepth(imageLoad(inputImage4, ivec2(x, gl_WorkGroupID.x)).x);
-    tmp2 += linearDepth(imageLoad(inputImage5, ivec2(x, gl_WorkGroupID.x)).x);
+    float tmp2 = imageLoad(inputImage0, ivec2(x, gl_WorkGroupID.x)).x;
+    tmp2 += imageLoad(inputImage1, ivec2(x, gl_WorkGroupID.x)).x;
+    tmp2 += imageLoad(inputImage2, ivec2(x, gl_WorkGroupID.x)).x;
+    tmp2 += imageLoad(inputImage3, ivec2(x, gl_WorkGroupID.x)).x;
+    tmp2 += imageLoad(inputImage4, ivec2(x, gl_WorkGroupID.x)).x;
+    tmp2 += imageLoad(inputImage5, ivec2(x, gl_WorkGroupID.x)).x;
     tmp += tmp2;
   }
-  tmp_local[gl_LocalInvocationID.x] = weight*tmp;
+  tmp_local[gl_LocalInvocationID.x] = tmp*weight;
   barrier();
 
   // group sum

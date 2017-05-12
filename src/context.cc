@@ -92,8 +92,12 @@ std::vector<float> Context::Parse(std::string path, std::vector<vec3> analysispo
   } else {
     std::vector<vec3> points = geojson::parse(contents);
     std::unordered_map<Vertex, int> vertex_map = {};
+    vec3 color = {255,255,255};
     for (uint32_t i = 0; i < points.size(); i++) {
-      Vertex vertex = {points[i], {255,255,255}};
+      if (i % 2 == 0) {
+        color = {rand() % 255, rand() % 255, rand() % 255};
+      }
+      Vertex vertex = {points[i], color};
       if (vertex_map.count(vertex) == 0) {
         vertex_map[vertex] = vertices_.size();
         vertices_.push_back(vertex);

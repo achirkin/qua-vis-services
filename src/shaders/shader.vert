@@ -24,8 +24,7 @@ out gl_PerVertex
 };
 
 void main() {
-  // Compute vector from observer to vertex
-  vCartesianPosition = ubo.projection * ubo.view * ubo.model * vec4(inPosition, 1.0);
-  gl_Position = vCartesianPosition;
-  vColor = inColor;
+  vCartesianPosition = vec4(inPosition - ubo.observation_point, 1.0);
+  gl_Position = ubo.projection * ubo.view * ubo.model * vec4(inPosition, 1.0);
+  vColor = vec3(length(inPosition - ubo.observation_point)/ubo.r_max, 0, 0);
 }
