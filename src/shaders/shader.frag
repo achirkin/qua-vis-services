@@ -11,5 +11,6 @@ void main() {
        nor = sign(dot(gNormal, - gCartesianPosition)) * normalize(gNormal);
   float str = dot(sun, nor),
         val = clamp(0.6f + 0.5f*str - 0.7f*gSphericalPosition[2], 0.0f, 1.0f);
-  vColor = vec4( val, 1.0f, 1.0f, 1.0f); //  + dot(sun, gColor) - gSphericalPosition[2]
+  //vColor = vec4( val, 1.0f, 1.0f, 1.0f); //  + dot(sun, gColor) - gSphericalPosition[2]
+  vColor = vec4(gSphericalPosition[2],1.0f,1.0f,1.0f);
 }
