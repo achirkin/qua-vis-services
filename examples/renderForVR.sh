@@ -1,6 +1,13 @@
 #!/bin/bash
 
-PARAMS="-l 1 -a 0.1 -r 150.0"
+
+PARAMS="-l 1 -a 0.1 -r 6.0"
+OBJFILE="data/planes.obj"
+GRIDFILE="data/objObservePoint.txt"
+
+#PARAMS="-l 1 -a 0.1 -r 150.0"
+#OBJFILE="data/mooctask.geojson"
+#GRIDFILE="data/mooktask_grid.txt"
 
 mkdir -p images
 cat <<EOT > ../src/shaders/shader.vert
@@ -12,7 +19,7 @@ cat <<EOT > ../src/shaders/shader.vert
 // Half of the distance between eyes.
 #define SIDE_D 0.034
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(push_constant) uniform PushConsts {
   vec3 observation_point;
   float r_max;
   float alpha_max;
@@ -28,7 +35,7 @@ void main() {
   // Compute vector from observer to vertex
   vCartesianPosition = inPosition - ubo.observation_point;
   float r2 = dot(vCartesianPosition,vCartesianPosition),
-        scale = length(vCartesianPosition.xy) / r2;
+        scale = 1.0f / sqrt(r2);
   vec3  displacement = - cross(vec3(0,0, scale * SIDE_D), vCartesianPosition)
                        - (scale * FORWARD_D) * vec3(vCartesianPosition.x, vCartesianPosition.y, 0.0);
   vCartesianPosition = (r2 > dot(displacement,displacement))
@@ -40,7 +47,7 @@ EOT
 pushd ../
 make
 popd
-../bin/quavis-generic-service $PARAMS -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/mooctask.geojson" < data/mooktask_grid.txt
+../bin/quavis-generic-service $PARAMS -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f $OBJFILE < $GRIDFILE
 mv images images-left
 
 
@@ -55,7 +62,7 @@ cat <<EOT > ../src/shaders/shader.vert
 #define SIDE_D 0.034
 
 
-layout(binding = 0) uniform UniformBufferObject {
+layout(push_constant) uniform PushConsts {
   vec3 observation_point;
   float r_max;
   float alpha_max;
@@ -71,8 +78,8 @@ void main() {
   // Compute vector from observer to vertex
   vCartesianPosition = inPosition - ubo.observation_point;
   float r2 = dot(vCartesianPosition,vCartesianPosition),
-        scale = length(vCartesianPosition.xy) / r2;
-  vec3  displacement = + cross(vec3(0,0, scale * SIDE_D), vCartesianPosition)
+        scale = 1.0f / sqrt(r2);
+  vec3  displacement = - cross(vec3(0,0, scale * SIDE_D), vCartesianPosition)
                        - (scale * FORWARD_D) * vec3(vCartesianPosition.x, vCartesianPosition.y, 0.0);
   vCartesianPosition = (r2 > dot(displacement,displacement))
                      ? vCartesianPosition + displacement
@@ -83,7 +90,7 @@ EOT
 pushd ../
 make
 popd
-../bin/quavis-generic-service $PARAMS -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f "data/mooctask.geojson" < data/mooktask_grid.txt
+../bin/quavis-generic-service $PARAMS -s "shaders/shader.area.comp.spv" -t "shaders/shader.2.area.comp.spv" -f $OBJFILE < $GRIDFILE
 mv images images-right
 
 mkdir -p images-result
@@ -92,3 +99,5 @@ do
   convert -append images-right/${imgname##*/} images-left/${imgname##*/} images-result/${imgname##*/}
 done
 rm -rf images-left images-right
+
+
