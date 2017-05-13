@@ -125,7 +125,7 @@ void main() {
            n_pole = (1 - st.s - st.t) * teNormal[index_a] + st.s * teNormal[index_b] + st.t * teNormal[index_c];
 
       // Three spherical positions for the pole point
-      vec4 s_polep = vec4( 1, -sign(z_pole), z_pole/ubo.r_max, 1),
+      vec4 s_polep = vec4( 1, -sign(z_pole), abs(z_pole)/ubo.r_max, 1),
            s_polem = vec4(-1,     s_polep[1], s_polep[2], s_polep[3]),
            s_poleb = vec4(s_b[0], s_polep[1], s_polep[2], s_polep[3]);
       
