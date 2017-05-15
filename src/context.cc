@@ -643,8 +643,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_shader_frag_spv_len, // fragment shader size
-    (uint32_t*)src_shaders_shader_frag_spv // fragment shader code
+    (!this->line_mode_ && !this->debug_mode_) ? src_shaders_shader_frag_spv_len : src_shaders_plot_frag_spv_len,
+    (!this->line_mode_ && !this->debug_mode_)  ? (uint32_t*)src_shaders_shader_frag_spv : (uint32_t*)src_shaders_plot_frag_spv
   };
 
   debug::handleVkResult(
@@ -1728,7 +1728,7 @@ void Context::RetrieveRenderImage(uint32_t i) {
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
-    memcpy(&px, (uint8_t*)pixels + i*2, 4);
+    memcpy(&px, (uint8_t*)pixels + i*2 + 4, 4);
     image[i/4] = floor(px*255);
   }
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
