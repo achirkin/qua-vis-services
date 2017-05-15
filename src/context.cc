@@ -1097,7 +1097,7 @@ void Context::InitializeVkGraphicsPipeline() {
     VK_FALSE, // depth clamping
     VK_FALSE, // discard primitives before rendering?
     this->line_mode_ == false ? VK_POLYGON_MODE_FILL : VK_POLYGON_MODE_LINE, // fill polygons (alternatively: draw only edges / vertices)
-    VK_CULL_MODE_BACK_BIT, // discard one of the two faces of a polygon
+    VK_CULL_MODE_NONE, // discard one of the two faces of a polygon
     VK_FRONT_FACE_COUNTER_CLOCKWISE, // counter clockwise = front
     VK_FALSE, // depth bias // TODO: Find out whether we need depth bias
     0.0f, // depth bias constant
@@ -1455,28 +1455,30 @@ void Context::InitializeVkGraphicsCommandBuffers() {
   for (int i = 0; i < 6; i++) {
     this->uniform_.projection = glm::perspective((float)(M_PI / 2.0), (float)(this->render_width_/this->render_height_), 0.001f, (float)this->uniform_.r_max);
     this->uniform_.model = glm::translate(glm::mat4(1.0f), glm::vec3(-this->uniform_.observation_point.x, -this->uniform_.observation_point.y, -this->uniform_.observation_point.z));
-    glm::mat4 viewMatrix = glm::mat4(1.0f);
-    switch (i)
+    glm::mat4 viewMatrix = glm::mat4();
+		switch (i)
 		{
 		case 0: // POSITIVE_X
-			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(1.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			break;
 		case 1:	// NEGATIVE_X
-			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(-1.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			break;
 		case 2:	// POSITIVE_Y
-			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			break;
 		case 3:	// NEGATIVE_Y
-			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,-1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			break;
 		case 4:	// POSITIVE_Z
-			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,0.0f,1.0f), glm::vec3(0.0f,0.0f,1.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			break;
 		case 5:	// NEGATIVE_Z
-			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,0.0f,1.0f));
+			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 			break;
-    }
+		}
     this->uniform_.view = viewMatrix;
 
     vkCmdPushConstants(
