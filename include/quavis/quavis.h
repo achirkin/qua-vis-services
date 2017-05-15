@@ -40,7 +40,16 @@ namespace quavis {
     * Creates a new instance of the Context class. During its initialization,
     * the vulkan devices and pipelines are prepared for rendering / computation.
     */
-    Context(std::string cp_shader_1, std::string cp_shader_2, bool debug, bool line, int timing);
+    Context(std::string cp_shader_1,
+    std::string cp_shader_2,
+    bool debug,
+    bool line,
+    int timing,
+    bool disable_geom,
+    bool disable_tess,
+    int render_width,
+    int workgroups);
+
 
     std::vector<float> Parse(std::string path, std::vector<vec3> analysispoints, float alpha_min, float r_max);
 
@@ -215,10 +224,10 @@ namespace quavis {
     };
 
     // rendering attributes
-    const uint32_t render_width_ = 1024;
-    const uint32_t render_height_ = 512;
-    const size_t workgroups[3] = {512, 1, 1};
-    const size_t workgroups2[3] = {1, 1, 1};
+    uint32_t render_width_;
+    uint32_t render_height_;
+    size_t workgroups[3] = {1, 1, 1}; // set in constructor
+    size_t workgroups2[3] = {1, 1, 1};
     const size_t num_observation_points_x = 100;
     const VkFormat color_format_ = VK_FORMAT_R32G32_SFLOAT;
     const VkFormat depth_stencil_format_ = VK_FORMAT_D32_SFLOAT;
@@ -228,16 +237,14 @@ namespace quavis {
 
     std::vector<Vertex> vertices_ = {};
     std::vector<uint32_t> indices_ = {};
-    UniformBufferObject uniform_ = {
-      vec3 {0, 0, 0},
-      1000000,
-      .1
-    };
+    UniformBufferObject uniform_ = {};
 
     // flags
     bool debug_mode_;
     bool line_mode_;
     int timing_mode_;
+    bool disable_geom_;
+    bool disable_tess_;
 
     // timings
     std::clock_t start_time_;

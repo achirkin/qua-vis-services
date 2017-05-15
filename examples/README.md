@@ -7,9 +7,13 @@
  * `-s` is the first-stage compute shader (aggregating row-wise)
  * `-t` is the second-stage compute shader (aggregating column-wise)
  * `-f` is the geojson file to be analysid
- * `-d` set to 1 to store debug images into `images/` folder. Note that the results become wrong in this mode
- * `-l` set to 1 to store the images with lines-only (no filling)
- * `-u` set to 1 to print timings instead of results
+ * `-d 1` set to 1 to store debug images into `images/` folder. Note that the results become wrong in this mode
+ * `-l 1` set to 1 to store the images with lines-only (no filling)
+ * `-u <n>` set to 1 to print timings instead of results
+ * `-x` the width
+ * `-w` the workgroups
+ * `-G 1` to disable the geom-shader
+ * `-T 1` to disable the tess-shader
  * *stdin* is the list of observation points in the format
 ```
 x1 y1 z1

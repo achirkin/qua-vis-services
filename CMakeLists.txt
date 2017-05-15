@@ -61,7 +61,7 @@ add_custom_target(shaders)
 if (WIN32)
   # TODO: Compile shaders in CMake under windows
 else (WIN32)
-  file(GLOB files "${CMAKE_SOURCE_DIR}/src/shaders/shader*")
+  file(GLOB files "${CMAKE_SOURCE_DIR}/src/shaders/*")
   add_custom_command(TARGET shaders PRE_BUILD COMMAND echo "" > include/quavis/shaders.h)
   foreach(file ${files})
     string(REGEX REPLACE "^[^\\/]*[\\|/]" "" filename ${file})

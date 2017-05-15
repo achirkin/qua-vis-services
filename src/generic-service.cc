@@ -11,7 +11,20 @@ void exithandler(int param) {
 }
 
 /* Argument parsing options */
-struct arguments { char const *geojson_file; char const *cp_shader_1; char const *cp_shader_2; float max_distance; float max_angle; int debug_mode; int line_mode; int timing_mode;};
+struct arguments {
+  char const *geojson_file;
+  char const *cp_shader_1;
+  char const *cp_shader_2;
+  float max_distance;
+  float max_angle;
+  int debug_mode;
+  int line_mode;
+  int timing_mode;
+  int disable_geom;
+  int disable_tess;
+  int render_width;
+  int workgroups;
+};
 static char doc[] = "Runs the generic isovist service on a given input file.";
 static char args_doc[] = "";
 static struct argp_option options[] = {
@@ -23,6 +36,10 @@ static struct argp_option options[] = {
   {"debug", 'd', "0", 0, "debug-mode=1"},
   {"line", 'l', "0", 0, "line-mode=1"},
   {"timing", 'u', "0", 0, "timing-mode=1"},
+  {"disable_geom", 'G', "0", 0, "disable_geom=1"},
+  {"disable_tess", 'T', "0", 0, "disable_tess=1"},
+  {"width", 'x', "2048", 0, "The rendering width"},
+  {"workgroups", 'w', "1024", 0, "The number of workgroups (preferebly the height of the image)"},
   {0}
 };
 static error_t parse_opt (int key, char *arg, struct argp_state *state) {
@@ -52,6 +69,18 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
       break;
     case 'u':
       args->timing_mode = arg ? atoi(arg) : 0;
+      break;
+    case 'G':
+      args->disable_geom = arg ? atoi(arg) : 0;
+      break;
+    case 'T':
+      args->disable_tess = arg ? atoi(arg) : 0;
+      break;
+    case 'x':
+      args->render_width = arg ? atoi(arg) : 0;
+      break;
+    case 'w':
+      args->workgroups = arg ? atoi(arg) : 0;
       break;
     case ARGP_KEY_END:
       if (state->arg_num < 0) argp_usage (state);
@@ -95,7 +124,11 @@ int main(int argc, char **argv) {
     args.cp_shader_2,
     args.debug_mode == 1 ? true : false,
     args.line_mode == 1 ? true : false,
-    args.timing_mode
+    args.timing_mode,
+    args.disable_geom == 1 ? true : false,
+    args.disable_tess == 1 ? true : false,
+    args.render_width,
+    args.workgroups
   );
   std::vector<float> results = context->Parse(args.geojson_file, observation_points, args.max_angle, args.max_distance);
 

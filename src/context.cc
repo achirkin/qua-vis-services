@@ -8,10 +8,25 @@
 
 using namespace quavis;
 
-Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=false, bool line=false, int timing=0) {
+Context::Context(
+  std::string cp_shader_1,
+  std::string cp_shader_2,
+  bool debug=false,
+  bool line=false,
+  int timing=false,
+  bool disable_geom=false,
+  bool disable_tess=false,
+  int render_width=2048,
+  int workgroups=1024
+) {
   this->debug_mode_ = debug;
   this->line_mode_ = line;
   this->timing_mode_ = timing;
+  this->disable_geom_ = disable_geom;
+  this->disable_tess_ = disable_tess;
+  this->render_width_ = (uint32_t)render_width;
+  this->render_height_ = this->render_width_/2;
+  this->workgroups[0] = workgroups;
 
   // Load compute shader code
   std::ifstream cp_shader_1_stream(cp_shader_1, std::ios::ate | std::ios::binary);
@@ -574,8 +589,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_shader_tesc_spv_len, // vertex shader size
-    (uint32_t*)src_shaders_shader_tesc_spv // vertex shader code
+    (!this->disable_tess_) ? src_shaders_shader_tesc_spv_len : src_shaders_naive_tesc_spv_len,
+    (!this->disable_tess_) ? (uint32_t*)src_shaders_shader_tesc_spv : (uint32_t*)src_shaders_naive_tesc_spv
   };
 
   debug::handleVkResult(
@@ -592,8 +607,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_shader_tese_spv_len, // vertex shader size
-    (uint32_t*)src_shaders_shader_tese_spv // vertex shader code
+    (!this->disable_tess_) ? src_shaders_shader_tese_spv_len : src_shaders_naive_tese_spv_len,
+    (!this->disable_tess_) ? (uint32_t*)src_shaders_shader_tese_spv : (uint32_t*)src_shaders_naive_tese_spv
   };
 
   debug::handleVkResult(
@@ -610,8 +625,8 @@ void Context::InitializeVkShaderModules() {
     VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO, // type (see documentation)
     nullptr, // next (see documentation, must be null)
     0, // flags (see documentation, must be 0)
-    src_shaders_shader_geom_spv_len, // geoemtry shader size
-    (uint32_t*)src_shaders_shader_geom_spv // geoemtry shader code
+    (!this->disable_geom_) ? src_shaders_shader_geom_spv_len : src_shaders_naive_geom_spv_len,
+    (!this->disable_geom_) ? (uint32_t*)src_shaders_shader_geom_spv : (uint32_t*)src_shaders_naive_geom_spv
   };
 
   debug::handleVkResult(
