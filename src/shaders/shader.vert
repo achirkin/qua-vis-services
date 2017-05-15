@@ -17,6 +17,7 @@ layout(location = 1) in vec3 inColor;
 
 layout(location = 0) out vec4 vCartesianPosition;
 layout(location = 1) out vec3 vColor;
+layout(location = 2) out float rmax;
 
 out gl_PerVertex
 {
@@ -26,5 +27,6 @@ out gl_PerVertex
 void main() {
   vCartesianPosition = vec4(inPosition - ubo.observation_point, 1.0);
   gl_Position = ubo.projection * ubo.view * ubo.model * vec4(inPosition, 1.0);
-  vColor = vec3(length(inPosition - ubo.observation_point)/ubo.r_max, 0, 0);
+  rmax = ubo.r_max;
+  vColor = vec3(0, 0, 0);
 }

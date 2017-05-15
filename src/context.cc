@@ -1456,29 +1456,27 @@ void Context::InitializeVkGraphicsCommandBuffers() {
     this->uniform_.projection = glm::perspective((float)(M_PI / 2.0), (float)(this->render_width_/this->render_height_), 0.001f, (float)this->uniform_.r_max);
     this->uniform_.model = glm::translate(glm::mat4(1.0f), glm::vec3(-this->uniform_.observation_point.x, -this->uniform_.observation_point.y, -this->uniform_.observation_point.z));
     glm::mat4 viewMatrix = glm::mat4();
-		switch (i)
+    switch (i)
 		{
 		case 0: // POSITIVE_X
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(1.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 1:	// NEGATIVE_X
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(-1.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 2:	// POSITIVE_Y
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 3:	// NEGATIVE_Y
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,-1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
 			break;
 		case 4:	// POSITIVE_Z
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,0.0f,1.0f), glm::vec3(1.0f,0.0f,0.0f));
 			break;
 		case 5:	// NEGATIVE_Z
-			viewMatrix = glm::rotate(viewMatrix, glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+			viewMatrix = glm::lookAt(glm::vec3(0.f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(1.0f,0.0f,0.0f));
 			break;
-		}
+    }
     this->uniform_.view = viewMatrix;
 
     vkCmdPushConstants(
