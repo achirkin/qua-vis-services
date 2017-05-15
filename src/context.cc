@@ -8,10 +8,25 @@
 
 using namespace quavis;
 
-Context::Context(std::string cp_shader_1, std::string cp_shader_2, bool debug=false, bool line=false, int timing=false) {
+Context::Context(
+  std::string cp_shader_1,
+  std::string cp_shader_2,
+  bool debug=false,
+  bool line=false,
+  int timing=false,
+  bool disable_geom=false,
+  bool disable_tess=false,
+  int render_width=512,
+  int workgroups=512
+) {
   this->debug_mode_ = debug;
   this->line_mode_ = line;
   this->timing_mode_ = timing;
+  this->disable_geom_ = disable_geom;
+  this->disable_tess_ = disable_tess;
+  this->render_width_ = (uint32_t)render_width;
+  this->render_height_ = this->render_width_;
+  this->workgroups[0] = workgroups;
 
   // Load compute shader code
   std::ifstream cp_shader_1_stream(cp_shader_1, std::ios::ate | std::ios::binary);
