@@ -25,7 +25,7 @@ out gl_PerVertex
 };
 
 void main() {
-  vCartesianPosition = vec4(inPosition - ubo.observation_point, 1.0);
+  vCartesianPosition = vec4(inPosition - ubo.observation_point, 0.0);
   gl_Position = ubo.projection * ubo.view * ubo.model * vec4(inPosition, 1.0);
   rmax = ubo.r_max;
   vColor = vec3(0, 0, 0);
