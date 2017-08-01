@@ -42,16 +42,16 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
 
   std::vector<vec3> observation_points = analysispoints;
 
-  // Create a list of vertices that lie are in some triangle
-  std::unordered_set<size_t> ignore = {};
-  for (size_t o = 0; o < observation_points.size(); o++) {
-    for (size_t i = 0; i < indices_.size(); i+=3) {
-      vec2 p0, p1, p2;
-      p0 = {vertices_[indices_[i]].pos.x, vertices_[indices_[i]].pos.y};
-      p1 = {vertices_[indices_[i+1]].pos.x, vertices_[indices_[i+1]].pos.y};
-      p2 = {vertices_[indices_[i+2]].pos.x, vertices_[indices_[i+2]].pos.y};
-    }
-  }
+  //// Create a list of vertices that lie are in some triangle
+  //std::unordered_set<size_t> ignore = {};
+  //for (size_t o = 0; o < observation_points.size(); o++) {
+  //  for (size_t i = 0; i < indices_.size(); i+=3) {
+  //    vec2 p0, p1, p2;
+  //    p0 = {vertices_[indices_[i]].pos.x, vertices_[indices_[i]].pos.y};
+  //    p1 = {vertices_[indices_[i+1]].pos.x, vertices_[indices_[i+1]].pos.y};
+  //    p2 = {vertices_[indices_[i+2]].pos.x, vertices_[indices_[i+2]].pos.y};
+  //  }
+  //}
 
   this->SubmitVertexData();
   this->SubmitIndexData();
@@ -782,6 +782,16 @@ void Context::InitializeVkDescriptorPool() {
 }
 
 void Context::InitializeVkGraphicsPipelineLayout() {
+  VkPushConstantRange push_constant_range = {
+     VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
+     0,
+     sizeof(UniformBufferObject)
+   };
+
+   std::vector<VkPushConstantRange> push_constant_ranges = {
+     push_constant_range
+   };
+
   // Define Pipeline layout
   VkPipelineLayoutCreateInfo pipeline_layout_info = {
     VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO, // sType
@@ -789,8 +799,8 @@ void Context::InitializeVkGraphicsPipelineLayout() {
     0, // flags (see documentation, must be 0)
     1, // layout count
     &this->vk_graphics_descriptor_set_layout_, // layouts
-    0, // push constant range count
-    nullptr // push constant ranges
+    (uint32_t)push_constant_ranges.size(), // push constant range count
+    push_constant_ranges.data() // push constant ranges
   };
 
   // Create pipeline layout
@@ -1267,6 +1277,15 @@ void Context::InitializeVkGraphicsCommandBuffers() {
     VK_SUBPASS_CONTENTS_INLINE // store contents in primary command buffer
   );
 
+  vkCmdPushConstants(
+     this->vk_graphics_commandbuffer_,
+     this->vk_graphics_pipeline_layout_,
+     VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT | VK_SHADER_STAGE_GEOMETRY_BIT,
+     0,
+     sizeof(UniformBufferObject),
+     &this->uniform_
+  );
+
   // bind graphics pipeline
   vkCmdBindPipeline(
     this->vk_graphics_commandbuffer_, // command buffer
@@ -1461,6 +1480,7 @@ void Context::VkCompute() {
     nullptr
   };
 
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
   debug::handleVkResult(
     vkQueueSubmit(
       this->vk_queue_compute_, // queue
@@ -1484,6 +1504,7 @@ void Context::VkCompute() {
     nullptr
   };
 
+  vkResetFences(this->vk_logical_device_, 1, &this->vk_compute_fence_);
   debug::handleVkResult(
     vkQueueSubmit(
       this->vk_queue_compute_, // queue

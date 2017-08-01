@@ -20,37 +20,15 @@ void main()
   tcCartesianPosition[ID] = vCartesianPosition[ID];
   tcColor[ID] = vColor[ID];
 
-  // compute angles between vectors
-  float l[3];
-  l[0] = length(vCartesianPosition[0]);
-  l[1] = length(vCartesianPosition[1]);
-  l[2] = length(vCartesianPosition[2]);
+  float l0 = length(vCartesianPosition[0]),
+        l1 = length(vCartesianPosition[1]),
+        l2 = length(vCartesianPosition[2]),
+        l01 = max(1.0f , acos( dot(vCartesianPosition[0],vCartesianPosition[1]) / (l0 * l1) ) / ubo.alpha_max),
+        l02 = max(1.0f , acos( dot(vCartesianPosition[0],vCartesianPosition[2]) / (l0 * l2) ) / ubo.alpha_max),
+        l12 = max(1.0f , acos( dot(vCartesianPosition[1],vCartesianPosition[2]) / (l1 * l2) ) / ubo.alpha_max);
 
-  vec3 c[3];
-  c[0] = cross(vCartesianPosition[0],vCartesianPosition[1]);
-  c[1] = cross(vCartesianPosition[1],vCartesianPosition[2]);
-  c[2] = cross(vCartesianPosition[2],vCartesianPosition[0]);
-
-  float d[3];
-  d[0] = length(c[0]);
-  d[1] = length(c[1]);
-  d[2] = length(c[2]);
-
-  float alpha[3];
-  alpha[0] = asin(d[0] / l[0] / l[1]);
-  alpha[1] = asin(d[1] / l[1] / l[2]);
-  alpha[2] = asin(d[2] / l[2] / l[0]);
-
-  // tessellation level computed using maximum-angle heuristic
-  int tl[4];
-  tl[0] = max(1, int(ceil(alpha[0] / ubo.alpha_max)));
-  tl[1] = max(1, int(ceil(alpha[1] / ubo.alpha_max)));
-  tl[2] = max(1, int(ceil(alpha[2] / ubo.alpha_max)));
-  tl[3] = max(1, max(max(tl[0], max(tl[1], tl[2]))/2, min(tl[0], min(tl[1], tl[2]))-1));
-
-  gl_TessLevelInner[0] = tl[3];
-
-  gl_TessLevelOuter[2] = tl[0];
-  gl_TessLevelOuter[0] = tl[1];
-  gl_TessLevelOuter[1] = tl[2];
+  gl_TessLevelInner[0] = max(l01, max(l02,l12));
+  gl_TessLevelOuter[0] = l12;
+  gl_TessLevelOuter[1] = l02;
+  gl_TessLevelOuter[2] = l01;
 }
