@@ -1,5 +1,5 @@
 #include "quavis/vk/memory/allocator.h"
-#include "stb_image_write.h" // TODO
+//#include "stb_image_write.h" // TODO
 #include <iostream> //TODO
 
 namespace quavis {
