@@ -7,21 +7,53 @@
 #include <signal.h>
 #include <unistd.h>
 #include <time.h>
+#include <easylogging++.h>
 
 INITIALIZE_EASYLOGGINGPP
 
-class GenericIsovistService : luciconnect::Node {
+class GenericIsovistService : luciconnect::quaview::Service {
 
 public:
-  GenericIsovistService(std::shared_ptr<luciconnect::Connection> connection) : luciconnect::Node(connection) {}
+  GenericIsovistService(std::shared_ptr<luciconnect::Connection> connection) : luciconnect::quaview::Service(connection) {}
 
-  void Run() {
+  void Run() override {
     this->Connect();
     this->SendRun(0, "RemoteRegister", this->register_message_);
 
     while(1) {
       usleep(50);
     }
+  }
+  
+  std::string GetName() override {
+    return register_message_["serviceName"];
+  }
+
+  std::string GetDescription() override {
+    return register_message_["description"];
+  }
+
+  std::string GetUnit() {
+    return register_message_["outputs"]["units"];
+  }
+
+  json GetInputs() override {
+    return register_message_["inputs"];
+  }
+
+  json GetConstraints() override {
+    return register_message_["constraints"];
+  }
+
+  bool SupportsPointMode() override {
+    return register_message_["constraints"]["mode"];
+  }
+
+  // TODO Move computation from HandleRun if its necessary
+  std::vector<float>
+  ComputeOnPoints(std::vector<luciconnect::vec3> scenario_triangles, std::vector<luciconnect::vec3> points,
+                  json inputs) override {
+    return *new std::vector<float>{};
   }
 
 protected:

@@ -1598,6 +1598,7 @@ void Context::SubmitUniformData() {
   this->EndSingleTimeBuffer(commandbuffer);
 }
 
+/*
 void Context::RetrieveRenderImage(uint32_t i) {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
@@ -1635,7 +1636,9 @@ void Context::RetrieveRenderImage(uint32_t i) {
   free(pixels);
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
+ */
 
+/*
 void Context::RetrieveDepthImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
@@ -1673,6 +1676,7 @@ void Context::RetrieveDepthImage() {
   stbi_write_png("bin/depth.png", this->render_width_, this->render_height_, 1, (void*)image, 0);
   free(pixels);
 }
+ */
 
 void Context::ResetResult() {
   // copy from stating buffer to device local buffer
@@ -1709,6 +1713,7 @@ void* Context::RetrieveResult() {
   return result;
 }
 
+/*
 void Context::RetrieveComputeImage() {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
@@ -1734,18 +1739,19 @@ void Context::RetrieveComputeImage() {
   vkMapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_);
-/*
+*//*
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
     image[i/4] = floor(px*255);
   }
-*/
+*//*
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
   stbi_write_png("bin/computed.png", this->render_width_, this->render_height_, 4, (void*)pixels, 0);
   free(pixels);
 }
+ */
 
 
 /// CREATION ROUTINES

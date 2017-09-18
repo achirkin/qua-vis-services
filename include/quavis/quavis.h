@@ -8,8 +8,8 @@
 #include "quavis/vk/geometry/vertex.h"
 #include "quavis/vk/geometry/geojson.hpp"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
+//#include "stb_image_write.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
