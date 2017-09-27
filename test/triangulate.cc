@@ -224,6 +224,19 @@ namespace quavis {
         if(!(result[i] == expected[i])) throw;
       }
     }
+
+    void test_polygon_to_infinite_loop() {
+      std::vector<vec3> polygon = {
+        {74.71045944395425f, -23.727069709868164f, 0},
+        {74.4797736453055f, -24.762142701622114f, 0},
+        {71.35795985729047f, -23.676159794882356f, 0},
+        {69.0029188166188f, -30.465307716788327f, 0},
+        {75.44574541060805f, -32.70065889898211f, 0},
+        {78.25259814807123f, -25.021594788006293f, 0},
+        {74.71045944395425f, -23.727069709868164f, 0}
+      };
+      std::vector<vec3> result = triangulate(polygon);
+    }
   }
 }
 
@@ -233,4 +246,5 @@ int main() {
   quavis::triangulation::test_polygon_no_holes();
   quavis::triangulation::test_square_with_hole();
   quavis::triangulation::test_with_two_holes();
+  quavis::triangulation::test_polygon_to_infinite_loop();
 }

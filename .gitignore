@@ -38,3 +38,7 @@ install_manifest.txt
 CTestTestfile.cmake
 Testing
 CPack*
+
+# IDE files
+.idea/
+*.cbp
