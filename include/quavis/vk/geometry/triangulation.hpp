@@ -4,7 +4,6 @@
 #include <vector>
 #include <numeric> // iota
 #include <algorithm> // sort, rotate
-#include <iostream> // TODO: Remove
 
 #include "quavis/vk/geometry/geometry.h"
 
@@ -50,6 +49,10 @@ namespace quavis {
       b[1] = b[1] / abs(b[1]);
 
       return b;
+    }
+
+    bool middleVertexIsConvex(vec2 p0, vec2 p1, vec2 p2){
+      return (p1.x - p0.x) * (p2.y - p0.y) - (p1.y - p0.y) * (p2.x - p0.x) <= 0;
     }
 
     bool intriangle2d(vec2 p, vec2 t1, vec2 t2, vec2 t3) {
@@ -163,18 +166,17 @@ namespace quavis {
         p2 = unmarked[index3];
 
         bool found_removable_ear = false;
-        // check if we found a counter-clockwise triangle
-        if (ccw(p0, p1, p2) > 0) {
-          found_removable_ear = true;
-          // check if triangle is an ear
-          for (vec2 pi : unmarked) {
-            if (pi == p0 || pi == p1 || pi == p2) continue;
+        if ((middleVertexIsConvex(p0, p1, p2) && ccw(p0, p1, p2) < 0) || (!middleVertexIsConvex(p0, p1, p2) && ccw(p0, p1, p2) > 0)) {
+            // check if triangle is an ear
+            found_removable_ear = true;
+            for (vec2 pi : unmarked) {
+              if (pi == p0 || pi == p1 || pi == p2) continue;
 
-            if (intriangle2d(pi, p0, p1, p2)) {
-              found_removable_ear = false;
-              break;
+              if (intriangle2d(pi, p0, p1, p2)) {
+                found_removable_ear = false;
+                break;
+              }
             }
-          }
         }
 
         // If it was an ear, we clip it
