@@ -6,7 +6,7 @@
 #include <argp.h>
 #include <signal.h>
 #include <unistd.h>
-#include <easylogging++.h>
+#include <luciconnect/easylogging/easylogging++.h>
 
 INITIALIZE_EASYLOGGINGPP
 
