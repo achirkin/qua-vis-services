@@ -6,7 +6,7 @@
 #include <argp.h>
 #include <signal.h>
 #include <unistd.h>
-#include <luciconnect/easylogging/easylogging++.heasylogging++.h>
+#include <luciconnect/easylogging/easylogging++.h>
 
 INITIALIZE_EASYLOGGINGPP
 class GenericIsovistService : public luciconnect::quaview::Service {
