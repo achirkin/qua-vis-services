@@ -17,8 +17,12 @@ set (VERSION "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 find_package (Threads REQUIRED)
 find_package (Vulkan REQUIRED)
 
+# Luci-connect subdirectory
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/luci-connect)
+
 # Headers
 include_directories (${PROJECT_SOURCE_DIR}/include)
+include_directories (${PROJECT_SOURCE_DIR}/lib/luci-connect/include/)
 include_directories (${VULKAN_INCLUDE_DIR})
 
 # Linker
@@ -62,7 +66,8 @@ if (WIN32)
   # TODO: Compile shaders in CMake under windows
 else (WIN32)
   file(GLOB files "${CMAKE_SOURCE_DIR}/src/shaders/shader*")
-  add_custom_command(TARGET shaders PRE_BUILD COMMAND echo "" > include/quavis/shaders.h)
+  add_custom_command(TARGET shaders PRE_BUILD COMMAND echo "\\#ifndef _SHADERS_H_" > include/quavis/shaders.h)
+  add_custom_command(TARGET shaders PRE_BUILD COMMAND echo "\\#define _SHADERS_H_" >> include/quavis/shaders.h)
   foreach(file ${files})
     string(REGEX REPLACE "^[^\\/]*[\\|/]" "" filename ${file})
     set(filepath "src/shaders/${filename}")
@@ -70,7 +75,14 @@ else (WIN32)
     add_custom_command(TARGET shaders PRE_BUILD COMMAND xxd -i ${filepath}.spv >> include/quavis/shaders.h)
     add_custom_command(TARGET shaders POST_BUILD COMMAND rm ${filepath}.spv)
   endforeach()
+  add_custom_command(TARGET shaders PRE_BUILD COMMAND echo "\\#endif //_SHADERS_H_" >> include/quavis/shaders.h)
 endif ()
+
+# Luci-connect
+add_library(s_luciconnect STATIC IMPORTED)
+set_target_properties(s_luciconnect PROPERTIES
+        IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/lib/luci-connect/lib/libluciconnect.a")
+add_dependencies(s_luciconnect luciconnect)
 
 # Quavis
 add_library(quavis SHARED
@@ -85,25 +97,25 @@ add_executable (quavis-isovist-area
   "${CMAKE_SOURCE_DIR}/src/area-service.cc"
 )
 target_link_libraries (quavis-isovist-area quavis)
-target_link_libraries (quavis-isovist-area luciconnect)
+target_link_libraries (quavis-isovist-area s_luciconnect)
 add_dependencies(quavis-isovist-area quavis)
-add_dependencies(quavis-isovist-area luciconnect)
+add_dependencies(quavis-isovist-area s_luciconnect)
 
 add_executable (quavis-isovist-minradial
   "${CMAKE_SOURCE_DIR}/src/minradial-service.cc"
 )
 target_link_libraries (quavis-isovist-minradial quavis)
-target_link_libraries (quavis-isovist-minradial luciconnect)
+target_link_libraries (quavis-isovist-minradial s_luciconnect)
 add_dependencies(quavis-isovist-minradial quavis)
-add_dependencies(quavis-isovist-minradial luciconnect)
+add_dependencies(quavis-isovist-minradial s_luciconnect)
 
 add_executable (quavis-isovist-maxradial
   "${CMAKE_SOURCE_DIR}/src/maxradial-service.cc"
 )
 target_link_libraries (quavis-isovist-maxradial quavis)
-target_link_libraries (quavis-isovist-maxradial luciconnect)
+target_link_libraries (quavis-isovist-maxradial s_luciconnect)
 add_dependencies(quavis-isovist-maxradial quavis)
-add_dependencies(quavis-isovist-maxradial luciconnect)
+add_dependencies(quavis-isovist-maxradial s_luciconnect)
 
 
 # Install Directivey
@@ -124,8 +136,8 @@ set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Isovist Services for QUA-Server" )
 set (CPACK_COMPONENTS_ALL libraries binaries headers)
 
 set (CPACK_COMPONENT_LIBRARIES_DISPLAY_NAME "Library")
-set (CPACK_COMPONENT_LIBRARIES_DESCRIPTION "Shared Libraries")
-set (CPACK_COMPONENT_LIBRARIES_REQUIRED luciconnect)
+set (CPACK_COMPONENT_LIBRARIES_DESCRIPTION "Static Libraries")
+set (CPACK_COMPONENT_LIBRARIES_REQUIRED s_luciconnect)
 
 set (CPACK_COMPONENT_BINARIES_DISPLAY_NAME "Binaries")
 set (CPACK_COMPONENT_BINARIES_DESCRIPTION "The service binaries")

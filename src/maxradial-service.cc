@@ -6,9 +6,6 @@
 #include <argp.h>
 #include <signal.h>
 #include <unistd.h>
-#include <luciconnect/easylogging/easylogging++.h>
-
-INITIALIZE_EASYLOGGINGPP
 
 class GenericIsovistService : public luciconnect::quaview::Service {
 
@@ -164,18 +161,18 @@ void exithandler(int param) {
 void run_service(GenericIsovistService* service, int retries) {
   time_t timestamp = std::time(NULL);
   try {
-    LOG(INFO) << "Starting Service";
+    std::cout << "INFO: " << "Starting Service" << std::endl;
     service->Run();
   }
   catch (const char* what) {
-    LOG(WARNING) << "An error occurred: " << what;
-    LOG(INFO) << "Trying to reestablish the connection in 1 seconds.";
+    std::cout << "WARNING: " << "An error occurred: " << what << std::endl;
+    std::cout << "INFO: " << "Trying to reestablish the connection in 1 seconds." << std::endl;
     usleep(1000000);
     if (std::time(NULL) - timestamp < retries) {
       run_service(service, --retries);
     }
     else {
-      LOG(ERROR) << "Number of retries exceeded.";
+      std::cout << "ERROR: " << "Number of retries exceeded." << std::endl;
       exit(-1);
     }
   }
@@ -203,7 +200,7 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
       args->host = arg;
       break;
     case 'l':
-      args->loglevel = arg ? atoi(arg) : 2;
+      args->loglevel = arg ? atoi(arg) : 2;  // Not in use
       break;
     case 'r':
       args->retries = arg ? atoi(arg) : 5;
@@ -235,24 +232,6 @@ int main(int argc, char **argv) {
      reflected in arguments. */
   static struct argp argp = { options, parse_opt, args_doc, doc };
   argp_parse(&argp, argc, argv, 0, 0, &args);
-
-  /* Configure logging according to command line */
-  el::Configurations defaultConf;
-  defaultConf.setToDefault();
-  switch (args.loglevel) {
-    case 4:
-      defaultConf.set(el::Level::Warning, el::ConfigurationType::Enabled, "false");
-    case 3:
-      defaultConf.set(el::Level::Info, el::ConfigurationType::Enabled, "false");
-    case 2:
-      defaultConf.set(el::Level::Debug, el::ConfigurationType::Enabled, "false");
-    case 1:
-      defaultConf.set(el::Level::Trace, el::ConfigurationType::Enabled, "false");
-      break;
-    default:
-      break;
-  }
-  el::Loggers::reconfigureLogger("default", defaultConf);
 
   /* Start the Service */
   signal(SIGINT, exithandler);
