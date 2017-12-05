@@ -467,6 +467,12 @@ void Context::InitializeVkShaderModules() {
     comp2_shader = (uint32_t*)src_shaders_shader_2_maxradial_comp_spv;
     comp2_shader_length = src_shaders_shader_2_maxradial_comp_spv_len;
   }
+  else if (this->shader_name_ == "volume") {
+    comp_shader = (uint32_t*)src_shaders_shader_volume_comp_spv;
+    comp_shader_length = src_shaders_shader_volume_comp_spv_len;
+    comp2_shader = (uint32_t*)src_shaders_shader_2_volume_comp_spv;
+    comp2_shader_length = src_shaders_shader_2_volume_comp_spv_len;
+  }
 
   // create vertex shader
   VkShaderModuleCreateInfo vertex_shader_info = {

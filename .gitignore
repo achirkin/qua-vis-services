@@ -42,3 +42,5 @@ CPack*
 # IDE files
 .idea/
 *.cbp
+
+include/quavis/shaders\.h
