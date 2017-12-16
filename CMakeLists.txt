@@ -118,7 +118,7 @@ add_dependencies(quavis-isovist-maxradial quavis)
 add_dependencies(quavis-isovist-maxradial s_luciconnect)
 
 add_executable (quavis-isovist-volume
-  "${CMAKE_SOURCE_DIR}/src/volume-service.cpp"
+  "${CMAKE_SOURCE_DIR}/src/volume-service.cc"
 )
 target_link_libraries (quavis-isovist-volume quavis)
 target_link_libraries (quavis-isovist-volume s_luciconnect)

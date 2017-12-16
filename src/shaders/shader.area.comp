@@ -21,15 +21,18 @@ shared float tmp_local[N_LOCAL];
 
 void main()
 {
-  uint chunksize = WIDTH/N_LOCAL;
-  float weight = sin(float(gl_WorkGroupID.x)*PI/float(HEIGHT))/float(HEIGHT)/float(WIDTH)*2*PI*PI;
+  uint chunksize = HEIGHT/N_LOCAL;
 
   // compute sum per item
-  uint xpos = gl_LocalInvocationID.x * chunksize;
+  uint ypos = gl_LocalInvocationID.x * chunksize;
   float tmp = 0.0;
-  for (uint x = xpos; x < xpos + chunksize; x++) {
-    float tmp2 = imageLoad(inputImage, ivec2(x, gl_WorkGroupID.x)).x;
-    if (tmp2 > 0) tmp += weight; // because one pixel has size 1/pi*2/pi
+  for (uint y = ypos; y < ypos + chunksize; y++) {
+    if (ypos < HEIGHT/2) {
+        float loaded = imageLoad(inputImage, ivec2(gl_WorkGroupID.x, y)).x;
+        tmp = tmp == 0 ? loaded
+                       : loaded == 0 ? tmp
+                                     : min(tmp, loaded);
+    }
   }
   tmp_local[gl_LocalInvocationID.x] = tmp;
   barrier();
@@ -37,12 +40,16 @@ void main()
   // group sum
   for (uint stride = N_LOCAL >> 1; stride > 0; stride >>= 1) {
     if (gl_LocalInvocationID.x < stride) {
-      tmp_local[gl_LocalInvocationID.x] += tmp_local[gl_LocalInvocationID.x + stride];
+      tmp_local[gl_LocalInvocationID.x] = tmp_local[gl_LocalInvocationID.x] == 0
+                  ? tmp_local[gl_LocalInvocationID.x + stride]
+                  : tmp_local[gl_LocalInvocationID.x + stride] == 0
+                      ? tmp_local[gl_LocalInvocationID.x]
+                      : min(tmp_local[gl_LocalInvocationID.x], tmp_local[gl_LocalInvocationID.x + stride]);
     }
     barrier();
   }
 
   if (gl_LocalInvocationID.x == 0) {
-    tmp_global[gl_WorkGroupID.x] = tmp_local[0];
+    tmp_global[gl_WorkGroupID.x] = tmp_local[0]*tmp_local[0];
   }
 }

@@ -6,9 +6,8 @@
 // constants
 #define N_LOCAL 16
 #define PI 3.1415926
-#define R_MAX 1000.0
 
-layout (local_size_x = HEIGHT, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = WIDTH, local_size_y = 1, local_size_z = 1) in;
 layout (binding = 0, rg32f) uniform readonly image2D inputImage;
 layout (binding = 1) buffer outputBuffer {
   float isovist;
@@ -19,11 +18,11 @@ layout (binding = 2) buffer tempBuffer {
 
 void main()
 {
-  for (uint stride = HEIGHT >> 1; stride > 0; stride >>= 1) {
+  for (uint stride = WIDTH >> 1; stride > 0; stride >>= 1) {
     barrier();
     if (gl_LocalInvocationID.x < stride) {
       tmp_global[gl_LocalInvocationID.x] += tmp_global[gl_LocalInvocationID.x + stride];
     }
   }
-  isovist = tmp_global[0];
+  isovist = tmp_global[0]*PI*PI/(3.0 * HEIGHT * HEIGHT);
 }

@@ -3,14 +3,9 @@
 #define WIDTH 128 // each work item covers a patch of size (W/N)x(H/M)
 #define HEIGHT 64
 
-// local dimensions
-#define N_LOCAL 16 // the number of local work items on the x-axis
-
 // constants
+#define N_LOCAL 16
 #define PI 3.1415926
-#define R_MAX 1000.0
-#define CHUNKSIZE 8 // WIDTH / N_LOCAL
-#define INVHEIGHTPI 0.04908738521234052 // PI / HEIGHT
 
 layout (local_size_x = N_LOCAL, local_size_y = 1, local_size_z = 1) in;
 
@@ -26,13 +21,19 @@ shared float tmp_local[N_LOCAL];
 
 void main()
 {
-  float weight = R_MAX*sin(float(gl_WorkGroupID.x)*INVHEIGHTPI);
+  uint chunksize = HEIGHT/N_LOCAL;
 
   // compute sum per item
-  uint xpos = gl_LocalInvocationID.x * CHUNKSIZE;
-  float tmp = 999999999.0;
-  for (uint x = xpos; x < xpos + CHUNKSIZE; x++) {
-    tmp = min(tmp, weight*imageLoad(inputImage, ivec2(x, gl_WorkGroupID.x)).x);
+  uint ypos = gl_LocalInvocationID.x * chunksize;
+  float tmp = 0.0;
+  for (uint y = ypos; y < ypos + chunksize; y++) {
+    //compute per chunk
+    if (ypos < HEIGHT/2) {
+        float loaded = imageLoad(inputImage, ivec2(gl_WorkGroupID.x, y)).x;
+        tmp = tmp == 0 ? loaded
+                       : loaded == 0 ? tmp
+                                     : min(tmp, loaded);
+    }
   }
   tmp_local[gl_LocalInvocationID.x] = tmp;
   barrier();
@@ -40,7 +41,11 @@ void main()
   // group sum
   for (uint stride = N_LOCAL >> 1; stride > 0; stride >>= 1) {
     if (gl_LocalInvocationID.x < stride) {
-      tmp_local[gl_LocalInvocationID.x] += tmp_local[gl_LocalInvocationID.x + stride];
+      tmp_local[gl_LocalInvocationID.x] = tmp_local[gl_LocalInvocationID.x] == 0
+                  ? tmp_local[gl_LocalInvocationID.x + stride]
+                  : tmp_local[gl_LocalInvocationID.x + stride] == 0
+                      ? tmp_local[gl_LocalInvocationID.x]
+                      : min(tmp_local[gl_LocalInvocationID.x], tmp_local[gl_LocalInvocationID.x + stride]);
     }
     barrier();
   }

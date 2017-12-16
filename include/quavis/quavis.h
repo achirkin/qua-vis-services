@@ -8,8 +8,8 @@
 #include "quavis/vk/geometry/vertex.h"
 #include "quavis/vk/geometry/geojson.hpp"
 
-//#define STB_IMAGE_WRITE_IMPLEMENTATION
-//#include "stb_image_write.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tinyobjloader.h"
@@ -88,8 +88,8 @@ namespace quavis {
     void SubmitIndexData();
     void SubmitUniformData();
     void RetrieveRenderImage(uint32_t i);
-    void RetrieveDepthImage();
-    void RetrieveComputeImage();
+    void RetrieveDepthImage(uint32_t i);
+    void RetrieveComputeImage(uint32_t i);
     void* RetrieveResult();
     void ResetResult();
 
@@ -204,7 +204,7 @@ namespace quavis {
     // rendering attributes
     const uint32_t render_width_ = 128;
     const uint32_t render_height_ = 64;
-    const size_t workgroups[3] = {64, 1, 1};
+    const size_t workgroups[3] = {128, 1, 1};
     const size_t workgroups2[3] = {1, 1, 1};
     const size_t num_observation_points_x = 100;
     const VkFormat color_format_ = VK_FORMAT_R32G32_SFLOAT;
@@ -220,6 +220,10 @@ namespace quavis {
       1000000,
       .1
     };
+
+    // debug attributes
+    // TODO: Parse this parameter from command line arguments
+    bool imagesRequired = false;
   };
 }
 

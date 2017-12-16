@@ -80,6 +80,12 @@ std::vector<float> Context::Parse(std::string contents, std::vector<vec3> analys
     this->VkCompute();
     vkQueueWaitIdle(this->vk_queue_compute_);
     results[i] = *(float*)this->RetrieveResult();
+
+    if (imagesRequired) {
+      RetrieveRenderImage(i);
+      RetrieveDepthImage(i);
+      //RetrieveComputeImage(i);
+    }
   }
   return results;
 }
@@ -449,17 +455,17 @@ void Context::InitializeVkShaderModules() {
   uint32_t* comp_shader, *comp2_shader;
   size_t comp_shader_length, comp2_shader_length;
 
-  if (this->shader_name_ == "area") {
-    comp_shader = (uint32_t*)src_shaders_shader_area_comp_spv;
-    comp_shader_length = src_shaders_shader_area_comp_spv_len;
-    comp2_shader = (uint32_t*)src_shaders_shader_2_area_comp_spv;
-    comp2_shader_length = src_shaders_shader_2_area_comp_spv_len;
+  if (this->shader_name_ == "volume") {
+    comp_shader = (uint32_t*)src_shaders_shader_volume_comp_spv;
+    comp_shader_length = src_shaders_shader_volume_comp_spv_len;
+    comp2_shader = (uint32_t*)src_shaders_shader_2_volume_comp_spv;
+    comp2_shader_length = src_shaders_shader_2_volume_comp_spv_len;
   }
   else if (this->shader_name_ == "minradial") {
-      comp_shader = (uint32_t*)src_shaders_shader_minradial_comp_spv;
-      comp_shader_length = src_shaders_shader_minradial_comp_spv_len;
-      comp2_shader = (uint32_t*)src_shaders_shader_2_minradial_comp_spv;
-      comp2_shader_length = src_shaders_shader_2_minradial_comp_spv_len;
+    comp_shader = (uint32_t*)src_shaders_shader_minradial_comp_spv;
+    comp_shader_length = src_shaders_shader_minradial_comp_spv_len;
+    comp2_shader = (uint32_t*)src_shaders_shader_2_minradial_comp_spv;
+    comp2_shader_length = src_shaders_shader_2_minradial_comp_spv_len;
   }
   else if (this->shader_name_ == "maxradial") {
     comp_shader = (uint32_t*)src_shaders_shader_maxradial_comp_spv;
@@ -467,11 +473,23 @@ void Context::InitializeVkShaderModules() {
     comp2_shader = (uint32_t*)src_shaders_shader_2_maxradial_comp_spv;
     comp2_shader_length = src_shaders_shader_2_maxradial_comp_spv_len;
   }
-  else if (this->shader_name_ == "volume") {
-    comp_shader = (uint32_t*)src_shaders_shader_volume_comp_spv;
-    comp_shader_length = src_shaders_shader_volume_comp_spv_len;
-    comp2_shader = (uint32_t*)src_shaders_shader_2_volume_comp_spv;
-    comp2_shader_length = src_shaders_shader_2_volume_comp_spv_len;
+  else if (this->shader_name_ == "area") {
+    comp_shader = (uint32_t*)src_shaders_shader_area_comp_spv;
+    comp_shader_length = src_shaders_shader_area_comp_spv_len;
+    comp2_shader = (uint32_t*)src_shaders_shader_2_area_comp_spv;
+    comp2_shader_length = src_shaders_shader_2_area_comp_spv_len;
+  }
+  /*else if (this->shader_name_ == "direct_sunlight") {
+    comp_shader = (uint32_t*)src_shaders_shader_direct_sunlight_comp_spv;
+    comp_shader_length = src_shaders_shader_direct_sunlight_comp_spv_len;
+    comp2_shader = (uint32_t*)src_shaders_shader_2_direct_sunlight_comp_spv;
+    comp2_shader_length = src_shaders_shader_2_direct_sunlight_comp_spv_len;
+  }*/
+  else if (this->shader_name_ == "skyratio") {
+    comp_shader = (uint32_t*)src_shaders_shader_skyratio_comp_spv;
+    comp_shader_length = src_shaders_shader_skyratio_comp_spv_len;
+    comp2_shader = (uint32_t*)src_shaders_shader_2_skyratio_comp_spv;
+    comp2_shader_length = src_shaders_shader_2_skyratio_comp_spv_len;
   }
 
   // create vertex shader
@@ -1604,7 +1622,6 @@ void Context::SubmitUniformData() {
   this->EndSingleTimeBuffer(commandbuffer);
 }
 
-/*
 void Context::RetrieveRenderImage(uint32_t i) {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
@@ -1637,15 +1654,13 @@ void Context::RetrieveRenderImage(uint32_t i) {
     image[i/4] = floor(px*255);
   }
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  std::string filename = "bin/rendered_" + std::to_string(i) + ".png";
+  std::string filename = "debug_images/render/" + std::to_string(i) + ".png";
   stbi_write_png(filename.c_str(), this->render_width_, this->render_height_, 1, (void*)image, 0);
   free(pixels);
   this->TransformImageLayout(this->vk_color_image_, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT);
 }
- */
 
-/*
-void Context::RetrieveDepthImage() {
+void Context::RetrieveDepthImage(uint32_t i) {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
@@ -1675,14 +1690,13 @@ void Context::RetrieveDepthImage() {
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
-    image[i/4] = floor((1.0 - px)*255);
+    image[i/4] = floor((px)*255);
   }
 
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  stbi_write_png("bin/depth.png", this->render_width_, this->render_height_, 1, (void*)image, 0);
+  stbi_write_png(("debug_images/depth/" + std::to_string(i) + ".png").c_str(), this->render_width_, this->render_height_, 1, (void*)image, 0);
   free(pixels);
 }
- */
 
 void Context::ResetResult() {
   // copy from stating buffer to device local buffer
@@ -1719,8 +1733,7 @@ void* Context::RetrieveResult() {
   return result;
 }
 
-/*
-void Context::RetrieveComputeImage() {
+void Context::RetrieveComputeImage(uint32_t i) {
   vkQueueWaitIdle(this->vk_queue_graphics_);
   vkWaitForFences(this->vk_logical_device_, 1, &this->vk_compute_fence_, VK_TRUE, UINT64_MAX);
 
@@ -1745,19 +1758,18 @@ void Context::RetrieveComputeImage() {
   vkMapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_, 0, image_size, 0, (void **)&data);
   memcpy(pixels, data, image_size);
   vkUnmapMemory(this->vk_logical_device_, this->vk_color_staging_image_memory_);
-*//*
+/*
   uint8_t image[this->render_width_ * this->render_height_];
   for (uint32_t i = 0; i < 4 * this->render_width_ * this->render_height_; i += 4) {
     float px;
     memcpy(&px, (uint8_t*)pixels + i, 4);
     image[i/4] = floor(px*255);
   }
-*//*
+*/
   //int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-  stbi_write_png("bin/computed.png", this->render_width_, this->render_height_, 4, (void*)pixels, 0);
+  stbi_write_png(("debug_images/compute" + std::to_string(i) + ".png").c_str(), this->render_width_, this->render_height_, 4, (void*)pixels, 0);
   free(pixels);
 }
- */
 
 
 /// CREATION ROUTINES

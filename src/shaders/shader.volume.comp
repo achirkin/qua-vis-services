@@ -6,7 +6,6 @@
 // constants
 #define N_LOCAL 16
 #define PI 3.1415926
-#define R_MAX 1000.0
 
 layout (local_size_x = N_LOCAL, local_size_y = 1, local_size_z = 1) in;
 
@@ -22,15 +21,14 @@ shared float tmp_local[N_LOCAL];
 
 void main()
 {
-  uint chunksize = WIDTH/N_LOCAL;
-  float weight = sin(float(gl_WorkGroupID.x)*PI/float(HEIGHT))/float(HEIGHT)/float(WIDTH)*2*PI*PI/3.0;
+  uint chunksize = HEIGHT/N_LOCAL;
 
   // compute sum per item
-  uint xpos = gl_LocalInvocationID.x * chunksize;
+  uint ypos = gl_LocalInvocationID.x * chunksize;
   float tmp = 0.0;
-  for (uint x = xpos; x < xpos + chunksize; x++) {
-    float tmp2 = R_MAX*imageLoad(inputImage, ivec2(x, gl_WorkGroupID.x)).x;
-    tmp += weight*tmp2*tmp2*tmp2;
+  for (uint y = ypos; y < ypos + chunksize; y++) {
+    float r = imageLoad(inputImage, ivec2(gl_WorkGroupID.x, y)).x;
+    tmp += r * r * r * sin((y+0.5)*PI/float(HEIGHT));
   }
   tmp_local[gl_LocalInvocationID.x] = tmp;
   barrier();
