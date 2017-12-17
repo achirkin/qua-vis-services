@@ -125,6 +125,14 @@ target_link_libraries (quavis-isovist-volume s_luciconnect)
 add_dependencies(quavis-isovist-volume quavis)
 add_dependencies(quavis-isovist-volume s_luciconnect)
 
+add_executable (quavis-isovist-skyratio
+        "${CMAKE_SOURCE_DIR}/src/skyratio-service.cc"
+        )
+target_link_libraries (quavis-isovist-skyratio quavis)
+target_link_libraries (quavis-isovist-skyratio s_luciconnect)
+add_dependencies(quavis-isovist-skyratio quavis)
+add_dependencies(quavis-isovist-skyratio s_luciconnect)
+
 
 # Install Directivey
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/quavis DESTINATION include COMPONENT headers)
@@ -133,6 +141,7 @@ install(TARGETS quavis-isovist-area DESTINATION bin COMPONENT binaries)
 install(TARGETS quavis-isovist-minradial DESTINATION bin COMPONENT binaries)
 install(TARGETS quavis-isovist-maxradial DESTINATION bin COMPONENT binaries)
 install(TARGETS quavis-isovist-volume DESTINATION bin COMPONENT binaries)
+install(TARGETS quavis-isovist-skyratio DESTINATION bin COMPONENT binaries)
 
 # Packaging
 include (InstallRequiredSystemLibraries)
