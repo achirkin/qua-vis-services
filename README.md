@@ -33,6 +33,6 @@ I use wayland and integrated intel GPU on my ubuntu laptop. To make nvidia GPU c
 sudo modprobe nvidia
 export LD_LIBRARY_PATH=/usr/lib/nvidia-384:$LD_LIBRARY_PATH
 unset DISPLAY
-unset unset XDG_SESSION_TYPE
+unset XDG_SESSION_TYPE
 ```
 The commands above set up an environment to run vulkan using an nvidia GPU headless (without a display environment). 
