@@ -6,7 +6,6 @@
 // constants
 #define N_LOCAL 16
 #define PI 3.1415926
-#define R_MAX 0.0001
 
 layout (local_size_x = N_LOCAL, local_size_y = 1, local_size_z = 1) in;
 
@@ -26,20 +25,22 @@ void main()
 
   // compute sum per item
   uint ypos = gl_LocalInvocationID.x * chunksize;
+  float piH = PI/float(HEIGHT);
   float tmp = 0.0;
-  for (uint y = ypos; y < ypos + chunksize; y++) {
-     {
-      float loaded = imageLoad(inputImage, ivec2(gl_WorkGroupID.x, y)).x;
-      if (loaded == 0.0) tmp += sin((y + 0.5f)*PI/float(HEIGHT)*PI/2/float(HEIGHT)/float(HEIGHT));
+  for (uint y = ypos; y < ypos + chunksize && y*2 < HEIGHT; y++) {
+    {
+      // we rely on the fragment shader saving non-zero value to all components of output image.
+      float r = imageLoad(inputImage, ivec2(gl_WorkGroupID.x, y)).y;
+      if (r == 0.0) tmp += sin((y + 0.5f)*piH);
     }
   }
-  tmp_local[gl_LocalInvocationID.x] = tmp;
+  tmp_local[gl_LocalInvocationID.x] = tmp * PI/2/float(HEIGHT)/float(HEIGHT);
   barrier();
 
   // group sum
   for (uint stride = N_LOCAL >> 1; stride > 0; stride >>= 1) {
     if (gl_LocalInvocationID.x < stride) {
-      tmp_local[gl_LocalInvocationID.x] += tmp_local[gl_LocalInvocationID.x];
+      tmp_local[gl_LocalInvocationID.x] += tmp_local[gl_LocalInvocationID.x + stride];
     }
     barrier();
   }

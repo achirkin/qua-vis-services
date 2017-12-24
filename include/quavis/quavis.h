@@ -217,8 +217,8 @@ namespace quavis {
     std::vector<uint32_t> indices_ = {};
     UniformBufferObject uniform_ = {
       vec3 {0, 0, 0},
-      1000000,
-      .1
+      10000,
+      .3
     };
 
     // debug attributes
