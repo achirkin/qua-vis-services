@@ -220,7 +220,9 @@ void Context::InitializeVkPhysicalDevice() {
   );
   if (num_devices == 0)
     throw "No suitible device.";
-
+  
+  
+  std::cout << "Number of devices: " << num_devices << std::endl;
   // get the devices
   std::vector<VkPhysicalDevice> devices(num_devices);
   vkEnumeratePhysicalDevices(
@@ -346,12 +348,25 @@ void Context::InitializeVkPhysicalDevice() {
     device_it++;
   }
 
-  // Check if there are devices meeting the requirements
-  // if so, pick the first one (random)
+  // prefer discrete GPU.
+  // other than that, use any card meeting the requirements
+  VkPhysicalDevice dev;
+  VkPhysicalDeviceProperties props;
+  for (device_it = devices_set.begin(); device_it != devices_set.end();) {
+    vkGetPhysicalDeviceProperties(*device_it, &props);
+    if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+      dev = *device_it;
+      break;
+    }
+    device_it++;
+  }
+  std::cout << "Number of GPUs fit: " << devices_set.size() << std::endl;
   if (devices_set.size() == 0)
     throw "No suitible device";
-  else
-    this->vk_physical_device_ = *devices_set.begin();
+  else {
+    std::cout << "Selected: " << props.deviceName << std::endl;
+    this->vk_physical_device_ = dev;
+  }
 }
 
 void Context::InitializeVkLogicalDevice() {
