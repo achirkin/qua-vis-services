@@ -25,3 +25,14 @@ The project can be compiled on both Linux using CMake and the respective build s
   ```
     VK_LAYER_PATH=/usr/local/x86_64/etc/explicit_layer.d/ bin/testvulkan
   ```
+
+# Running on a descrete nvidia gpu with nvidia-prime
+
+I use wayland and integrated intel GPU on my ubuntu laptop. To make nvidia GPU compute something in such a setting, I need to do couple extra steps in bash *before* running the service:
+```bash
+sudo modprobe nvidia
+export LD_LIBRARY_PATH=/usr/lib/nvidia-384:$LD_LIBRARY_PATH
+unset DISPLAY
+unset unset XDG_SESSION_TYPE
+```
+The commands above set up an environment to run vulkan using an nvidia GPU headless (without a display environment). 
