@@ -25,13 +25,11 @@ void main()
 
   // compute sum per item
   uint ypos = gl_LocalInvocationID.x * chunksize;
-  float tmp = 0.0;
+  float tmp = 1.0;
   for (uint y = ypos; y < ypos + chunksize; y++) {
     if (ypos < HEIGHT/2) {
         float loaded = imageLoad(inputImage, ivec2(gl_WorkGroupID.x, y)).x;
-        tmp = tmp == 0 ? loaded
-                       : loaded == 0 ? tmp
-                                     : min(tmp, loaded);
+        tmp = loaded <= 0 ? tmp : min(tmp, loaded);
     }
   }
   tmp_local[gl_LocalInvocationID.x] = tmp;
